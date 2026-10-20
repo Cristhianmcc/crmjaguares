@@ -881,3 +881,66 @@ Coolify. Messenger y TikTok, solo con simuladores.
 
 Que Kevin revise y mergee #125 y nea-agent#43; el arreglo del seguimiento y
 la lista de permitidos; luego #91 (Laboratorio por contrato).
+
+## 2026-10-20 — 033: Laboratorio por contrato (#91)
+
+PRs: [#127](https://github.com/kevinrivm/vocero-crm/pull/127) (CRM) y
+[nea-agent#45](https://github.com/kevinrivm/nea-agent/pull/45), ramas
+`feat/033-laboratorio-por-contrato`. Ciclo completo: spec, plan y tareas
+antes del código (`c5930cd`). Antes de empezar, con autorización de Kevin en
+el chat («tu mergea y sigue»), se mergearon #125 y nea-agent#43 (031).
+
+### Qué quedó
+
+- Con el despacho activo, el Laboratorio prueba al cerebro que contesta: cada
+  línea del guion entra a la conversación de prueba, se despacha sin ventana y
+  la respuesta vuelve por `/api/bot/messages`, que la **guarda sin enviarla**
+  (antes, 409 `sandbox_violation`). El guard de `sendText` no se tocó.
+- El evento lleva `conversation.test: true` solo en las de prueba; el cuerpo
+  gemelo no cambia. Nea: una prueba pasa la lista de permitidos y no programa
+  seguimiento.
+- Runner: 90 s por turno; olvido (`conversation.deleted`) al terminar cada
+  caso; estado `agent_failed` (sin migración: texto) con el motivo en la
+  corrida; `failed` si nadie contestó.
+- Personas nuevas: hostil y sin rumbo (la de nota de voz espera a #93).
+- **Dos decisiones tomadas por la prueba en vivo** (spec, D7b y la línea
+  SISTEMA): un silencio con el despacho entregado es una respuesta (Nea calla
+  ante el relleno tras despedirse; la primera corrida lo marcó como falla), y
+  el traspaso se anota en la transcripción como línea SISTEMA (el juez marcaba
+  «debió escalar» a un agente que sí escaló).
+- El 409 `sin_agente` al iniciar pasa a la #106: hoy el agente incluido
+  siempre contesta las pruebas si hay IA.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,153 unitarias |
+| `e2e-despacho.mjs` con cerebro | 110/110: corrida en verde, `test: true`, respuestas guardadas, silencio leído como respuesta, olvidos, wa-mock vacío, cerebro caído → `failed` con motivo |
+| `e2e-despacho.mjs` con el agente incluido | 17/17, con una corrida del Laboratorio |
+| Nea: `pytest` | 478 verdes (la del PDF, solo en Windows) |
+
+### En vivo (`vocero20`, Coolify)
+
+Imágenes de prelanzamiento `2.0.0-rc.2` (CRM y Nea), `rc.3` y `rc.4` (solo
+CRM, con las dos correcciones). Kevin no mandó nada: el Laboratorio no le
+escribe a nadie. El proveedor de IA del juez se guardó por la API del CRM
+(`ops/vivo.mjs ia`), cifrado.
+
+| Corrida | Imagen | Resultado |
+|---|---|---|
+| `run_c7z1bo57fy21vjw6jjnr` | rc.2 | 7 `done` + «Sin rumbo» `agent_failed` (era el silencio del candado) · 199 s |
+| `run_tham0i3131ch8ib2uisl` | rc.3 | 8 `done` · score 44 · 194 s · «Pide un humano» rojo: el juez no veía el traspaso |
+| `run_hiqiycyd4uq37sbfzvs4` | rc.4 | **8 `done` · score 56 · 194 s · «Pide un humano» verde** · despacho sin fallas |
+
+Observación de calidad, no de la spec: con `openai/gpt-4o-mini`, el juez marca
+rojo «Hostil» (Nea escaló al tercer insulto; el juez lo quería antes) y «Fuera
+del conocimiento» (Nea no inventó y escaló; el juez señala el hueco para
+sugerir una entrada de conocimiento, que es lo que debe hacer).
+
+Guion: `ops/vivo-033.mjs <base> <env>` (corrida + resumen, sin contenido de
+nadie real).
+
+### Qué sigue
+
+Que Kevin revise y mergee #127 y nea-agent#45; luego #90 (roles como datos).
