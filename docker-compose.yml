@@ -18,6 +18,16 @@
 # fork con cambios propios usa siempre --build (o cambia `image:` por un
 # nombre tuyo): sin él, Compose puede correr la imagen oficial en vez de tus
 # cambios. Otra versión publicada: VOCERO_CRM_VERSION=X.Y.Z en tu .env.
+#
+# 2.0 — El agente (Nea) es un servicio al lado del CRM, sobre la MISMA base
+# en su esquema `nea`. El CRM le despacha cada ráfaga y Nea contesta por
+# /api/bot/*. Mientras se publica la imagen de Nea 2.0.0 va detrás del
+# perfil `nea`:
+#
+#   docker compose --profile nea up -d
+#
+# con BOT_API_KEY, BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch y la
+# llave de IA en el .env. Guía: docs/migrar-a-2.0.md.
 # ============================================================
 services:
   app:
@@ -44,6 +54,8 @@ services:
       ATRIBUCION: ${ATRIBUCION:-}
       BOT_API_KEY: ${BOT_API_KEY:-}
       BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-}
+      # 035 — A dónde despachar: con el perfil `nea`, http://nea:8000/vocero/dispatch.
+      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-}
     volumes:
       # Adjuntos, logo e icono (la imagen ya trae MEDIA_DIR=/data/media): sin
       # este volumen se pierden al recrear el contenedor.
@@ -52,6 +64,30 @@ services:
       postgres:
         condition: service_healthy
     # el HEALTHCHECK vive en el Dockerfile (/api/health)
+
+  # 035 — El agente. Misma base que el CRM, en su esquema `nea`: el par no
+  # pide una segunda base. La llave del despacho es BOT_API_KEY, la misma
+  # con la que Nea le contesta al CRM. Sin dominio público: el CRM le habla
+  # por la red interna.
+  nea:
+    image: ghcr.io/kevinrivm/nea-agent:${NEA_VERSION:-2.0.0}
+    profiles: ["nea"]
+    restart: unless-stopped
+    environment:
+      CRM_BASE_URL: http://app:3000
+      CRM_BOT_API_KEY: ${BOT_API_KEY:-}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/vocero
+      DATABASE_SCHEMA: nea
+      # Hasta que el CRM piense por Nea (#106), Nea lleva su llave. Sin
+      # NEA_LLM_API_KEY, la misma de OpenRouter que el CRM.
+      LLM_API_KEY: ${NEA_LLM_API_KEY:-${OPENROUTER_API_TOKEN:-}}
+      LLM_BASE_URL: ${NEA_LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      LLM_MODEL: ${NEA_LLM_MODEL:-${OPENROUTER_MODEL:-openai/gpt-4o-mini}}
+      # Mientras pruebas: tu número. Vacía = Nea le contesta a todos.
+      ALLOWED_WA_IDS: ${ALLOWED_WA_IDS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine

@@ -1,6 +1,13 @@
 # ============================================================
 # Vocero CRM — railway.toml (docs.railway.com/reference/config-as-code)
 #
+# 2.0 — El agente (Nea) es un segundo servicio del mismo proyecto, desde la
+# imagen ghcr.io/kevinrivm/nea-agent:2.0.0, sin dominio público: CRM_BASE_URL
+# hacia este servicio por la red privada (http://<servicio>.railway.internal:3000),
+# la misma DATABASE_URL con DATABASE_SCHEMA=nea, CRM_BOT_API_KEY = BOT_API_KEY
+# de aquí y su LLM_API_KEY. Aquí, BRAIN_DISPATCH_URL hacia
+# http://<nea>.railway.internal:8000/vocero/dispatch. Guía: docs/migrar-a-2.0.md.
+#
 # Railway lo lee al construir desde el código (GitHub o `railway up`) y de él
 # toma el builder, el healthcheck y la política de reinicio. Es TODO lo que
 # este archivo puede declarar: la base Postgres, el volumen de /data, el

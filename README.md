@@ -126,6 +126,11 @@ cualquier otra conversación.
 | `GET /api/bot/availability` | Con la agenda encendida: los horarios para ofrecer, que quedan registrados como ofrecidos. Con `date=AAAA-MM-DD`, todas las horas libres de ese día; `query` dice hasta dónde llega lo consultado |
 | `POST` · `PATCH /api/bot/bookings` | Con la agenda encendida: reservar (201) o mover (200) una cita, solo en un horario que se ofreció |
 
+El contrato completo, con el despacho y el aviso de olvido, está en
+[`docs/openapi.json`](docs/openapi.json) (OpenAPI 3.1) y tu instancia lo sirve
+en `GET /api/bot/openapi.json`. Si vienes de 1.x, la guía es
+[`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md).
+
 Los 409 vienen tipados (`ai_paused`, `window_closed`, `sandbox_violation`,
 `message_limit`) para que tu bot sepa si callarse, mandar plantilla o rendirse.
 `message_limit` significa que el canal no admite más mensajes hasta que el
@@ -156,7 +161,9 @@ WABA**, guardar la conexión en Configuración → WhatsApp (o rotar el token) l
 respeta: Vocero ve el override en `GET /{WABA}/subscribed_apps`, no re-suscribe
 la app —que es justo lo que lo borraría— y tampoco registra su propio webhook
 en el número, porque ese tendría prioridad y dejaría sordo a tu bot. La
-pantalla te dice a qué host se está respetando.
+pantalla te dice a qué host se está respetando y, si quieres que los mensajes
+vuelvan al CRM (por ejemplo, al pasar de Nea 1.x al despacho), ofrece
+**Recuperar el webhook**: quita ese override y deja el del número aquí.
 
 Arriba de la pantalla **Agente**, la tarjeta **«Quién responde a tus
 clientes»** dice quién está contestando: el agente incluido (encendido y con

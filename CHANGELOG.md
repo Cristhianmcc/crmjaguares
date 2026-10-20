@@ -5,6 +5,26 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## Sin publicar (será 2.0.0)
+
+El agente sale del CRM y se conecta por contrato. Guía de actualización:
+[`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md).
+
+### Nuevo
+
+- **El despacho lleva lo que el cerebro leía del webhook** (031): `adOrigen`
+  en el contexto; `fileName`, `location` y `contacts` en los mensajes.
+- **El Laboratorio prueba al cerebro que contesta** (033), por el despacho;
+  `POST /api/bot/messages` guarda las respuestas de prueba sin enviarlas.
+- **Roles como datos** (034): rol Calificador y herramientas encendidas en la
+  pantalla Agente; `role` y `tools` en `/api/bot/profile`. Migración `0021`.
+- **Contrato público** (035): [`docs/openapi.json`](docs/openapi.json),
+  servido en `GET /api/bot/openapi.json` y validado en `pnpm test`.
+- **Recuperar el webhook** (035) en Configuración → WhatsApp, para quien
+  venía con Nea 1.x delante del CRM.
+- **El par en el compose** (035): `docker compose --profile nea up -d` levanta
+  Nea al lado del CRM sobre la misma base.
+
 ## 1.6.0 — 2026-10-14
 
 La versión multicanal. Instagram, Messenger y ahora TikTok llegan a la misma

@@ -1,6 +1,13 @@
 # ============================================================
 # Vocero CRM — fly.toml (docs.fly.io/reference/configuration)
 #
+# 2.0 — El agente (Nea) es otra app de Fly al lado: `fly launch --image
+# ghcr.io/kevinrivm/nea-agent:2.0.0 --no-public-ips` con CRM_BASE_URL hacia
+# esta app por la red privada (http://<app>.internal:3000), la misma
+# DATABASE_URL con DATABASE_SCHEMA=nea, CRM_BOT_API_KEY = BOT_API_KEY de aquí y
+# su LLM_API_KEY. Aquí, BRAIN_DISPATCH_URL=http://<nea>.internal:8000/vocero/dispatch.
+# Guía: docs/migrar-a-2.0.md.
+#
 # Una Machine desde la imagen publicada (sin build en Fly), un volumen en
 # /data y el healthcheck de la app. Este archivo declara la imagen, el
 # puerto, el volumen, el healthcheck, el tamaño de la máquina y las variables

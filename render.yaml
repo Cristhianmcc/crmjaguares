@@ -27,6 +27,30 @@
 #   usuario de la app en cada arranque. MEDIA_DIR no se define: la imagen ya
 #   trae /data/media, dentro del disco.
 # ============================================================
+# 035 — El agente (Nea) va como servicio privado al lado, sobre la misma
+# base (esquema `nea`). Se descomenta al publicarse nea-agent 2.0.0; luego,
+# en el servicio `vocero`, BRAIN_DISPATCH_URL=http://vocero-nea:8000/vocero/dispatch
+# y la misma BOT_API_KEY en los dos. Guía: docs/migrar-a-2.0.md.
+#
+#  - type: pserv
+#    name: vocero-nea
+#    runtime: image
+#    image:
+#      url: ghcr.io/kevinrivm/nea-agent:2.0.0
+#    plan: starter
+#    envVars:
+#      - key: PORT
+#        value: "8000"
+#      - key: CRM_BASE_URL
+#        value: http://vocero:3000
+#      - key: DATABASE_URL
+#        fromDatabase: { name: vocero-db, property: connectionString }
+#      - key: DATABASE_SCHEMA
+#        value: nea
+#      - key: CRM_BOT_API_KEY
+#        sync: false
+#      - key: LLM_API_KEY
+#        sync: false
 services:
   - type: web
     name: vocero

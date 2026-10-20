@@ -1004,3 +1004,70 @@ tomó al detener su proceso local (la app lo relanzó). `vocero20` quedó en
 
 Que Kevin revise y mergee #128 y nea-agent#46; luego #92 (OpenAPI y guía de
 migración).
+
+## 2026-10-20 — 035: contrato público y guía de migración (#92)
+
+PR #129 (rama `feat/035-contrato-y-migracion`). Kevin autorizó mergear la 034
+y seguir con la #92.
+
+### Qué quedó
+
+- `docs/openapi.json` (OpenAPI 3.1): las diez rutas de `/api/bot/*` y, en
+  `webhooks`, el despacho y el olvido con sus cuerpos gemelos. Lo sirve
+  `GET /api/bot/openapi.json` (estático, sin llave).
+- `openapi.test.ts` lo valida contra las rutas (en las dos direcciones), los
+  409 de `/api/bot/messages`, el catálogo de herramientas y los cuerpos
+  gemelos del despacho y del olvido.
+- «Recuperar el webhook» en Configuración → WhatsApp. Quita el override
+  ajeno de la WABA y deja el del número hacia el CRM. Solo lo puede hacer
+  quien administra.
+- El compose gana el servicio `nea`, detrás del perfil `nea` hasta publicar
+  nea 2.0.0. Render trae el bloque comentado; Fly y Railway, la receta en
+  comentarios.
+- Guía `docs/migrar-a-2.0.md`; README, INSTALL-IA y CHANGELOG al día.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes; 1,172 unitarias; la ruta del OpenAPI sale estática |
+| `e2e-recuperar-webhook.mjs` (wa-mock) | 8/8 |
+| `docker compose --profile nea config` | 4 servicios; sin el perfil, los 3 de siempre |
+| `manifests-plataformas` | 30/30 |
+
+**Incidente:** el primer build de `v2.0.0-rc.6` falló, porque `.dockerignore`
+excluía `docs/` y la ruta importa el OpenAPI. Se dejó entrar solo
+`docs/openapi.json` (`6c69ddd`). El tag se movió a ese commit; el fallido no
+había publicado ninguna imagen.
+
+### En vivo (`vocero20`: CRM `2.0.0-rc.6`, Nea `2.0.0-rc.5`)
+
+Compose del servicio `dlh4zhtqg8avc2qlxfb8eodz` actualizado y desplegado por
+el MCP de Coolify. Para la prueba se usó `ops/vivo-035.mjs`.
+
+El número Soporte ya estaba en el escenario de la 035: la WABA (con un solo
+número) enrutaba a un override ajeno, el de `vocero-clase`, y el número no
+tenía ninguno. El guion guardó ese override en `../.override-waba-soporte.json`
+(fuera de todo repo), comprobó que contestara el reto y lo devolvió al
+terminar.
+
+| | UTC | Resultado |
+|---|---|---|
+| `GET /api/bot/openapi.json` | 18:32:38 | 200 · `openapi 3.1.0` · 11 rutas · webhooks `despacho`, `olvido` |
+| «Registrar en Meta» | 18:32:46 | `skipped: waba_override`, host `vocero-clase…`; el número y la WABA quedaron como estaban |
+| «Recuperar el webhook» | 18:32:49 | 200; el número apunta a `vocero20` y la WABA quedó sin override |
+| Un DM de la línea cliente | 18:32:51 | Llegó a la bandeja de `vocero20` por el webhook recuperado |
+| Devuelto | 18:33:55 | WABA → `vocero-clase` otra vez; número sin override (en ese orden, sin hueco) |
+
+El DM no tuvo respuesta, y era lo correcto: la conversación seguía en traspaso
+desde el cierre de la 034 (`handoffAt` 18:09:59). No se mandó un segundo DM
+(regla 7); el camino de respuesta no cambia en la 035 y quedó probado en la
+034. Después se reactivó la IA de esa conversación (`reactivate: true`).
+
+Fuera de esos 66 s, Soporte no se movió de `vocero-clase`.
+
+### Qué sigue
+
+Que Kevin revise y mergee #129. Luego, la #106: retirar el agente incluido,
+que el CRM piense por Nea (`/api/bot/llm`) y quitar el perfil `nea` del
+compose.

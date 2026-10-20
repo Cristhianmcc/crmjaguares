@@ -66,9 +66,14 @@ dentro: README → «Instalación» → «Otras plataformas».
 a propósito: la imagen ya la trae (`/data/media`, dentro del volumen de `/data`).
 
 Opcionales, que NO se preguntan (el usuario los agrega después; la guía de
-cada uno está en `.env.example`): `META_APP_SECRET`, `BOT_API_KEY` y
-`BRAIN_HEALTH_URL` (un cerebro externo como Nea), `AGENDA=on`,
-`ATRIBUCION=on` y `CHANNELS`.
+cada uno está en `.env.example`): `META_APP_SECRET`, `BOT_API_KEY`,
+`BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` (un cerebro externo como Nea),
+`AGENDA=on`, `ATRIBUCION=on` y `CHANNELS`.
+
+Si el usuario quiere el agente (Nea), se instala al lado del CRM y se conecta
+por el despacho: el webhook de Meta se queda en el CRM, **nunca se mueve a
+Nea**. Pasos y variables en [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md)
+(«El par»); el contrato, en [`docs/openapi.json`](docs/openapi.json).
 
 ## Ruta A — Coolify (con el MCP de Coolify)
 
