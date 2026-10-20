@@ -737,3 +737,81 @@ bandera: ningún cambio al CRM, ningún PR.
   a «mañana en la mañana» enseña los primeros huecos (hoy en la tarde). Si el
   paciente nombra fecha y hora que estén entre los 12 ofrecidos, sí reserva.
   Mitigado en las instrucciones del agente; el arreglo de fondo es una spec.
+
+## 2026-10-19 — 031: Nea entra solo por el despacho (2.0, nea#37)
+
+PRs: [#125](https://github.com/kevinrivm/vocero-crm/pull/125) (CRM) y
+[nea-agent#43](https://github.com/kevinrivm/nea-agent/pull/43), ramas
+`feat/031-nea-por-despacho` en los dos repos. Ciclo completo: spec, plan y
+tareas antes del código (`73c4450`). **Abiertos, sin mergear.**
+
+Antes de empezar, Kevin aprobó en el chat seguir con la 2.0 y las dos
+recomendaciones abiertas: el cerebro piensa por el CRM (#106, `/api/bot/llm`)
+y una sola base para el par (`DATABASE_SCHEMA`, ya en esta spec).
+
+### Qué quedó
+
+- **CRM** (aditivo): `adOrigen` en `/api/bot/context`; `fileName`, `location`
+  y `contacts` en el mensaje del despacho, solo cuando aplican (el cuerpo
+  gemelo no cambia); el simulador de WhatsApp acepta tarjetas; contrato 021
+  enmendado.
+- **Nea 2.0** (mayor): `/vocero/dispatch` es la única entrada también contra
+  la raíz (firma con `CRM_BOT_API_KEY`); el prompt nombra el canal (en
+  WhatsApp el chasis queda idéntico byte a byte); dedup por mensaje en los dos
+  modos; `DATABASE_SCHEMA`; fuera webhook, relay, coalesce, los reintentos del
+  turno (D2b, decidida al implementar) y siete variables; `POST /webhook` →
+  503 y `webhookDeMeta` en `/health`.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,149 unitarias |
+| CRM: `e2e-despacho.mjs` con cerebro | 101/101 (sección 031: 7/7) |
+| Nea: `pytest` | 475 verdes, 30 saltadas. 1 roja que ya fallaba en `main` y solo en Windows local (`pypdf` en el site de usuario; el subproceso del PDF corre con `-I`) |
+| Nea: `test_pg_store.py` contra Postgres 16 | 30/30, incluido el esquema propio |
+| Nea: `live-security-test.py` | PASS |
+| `e2e_contra_raiz.py` (Meta → CRM → despacho → Nea, una sola base, `z-ai/glm-5.3-flash`) | 9/9; mediana 8.2 s por turno; US$0.006 |
+
+### En vivo, local
+
+CRM de la rama (`next dev`, :3290) + Nea de la rama (:8290) sobre la base
+`vocero_031_vivo` (Nea en el esquema `nea`), número «Soporte» (…9518) y línea
+cliente (…9768) por Evolution. `ALLOWED_WA_IDS` de Nea con la línea cliente.
+
+| | UTC |
+|---|---|
+| Override del número movido al relevo (`ops/relay.mjs` → túnel) | 04:20:54 |
+| Override devuelto: **quitado** (el número no tenía; el tráfico vuelve a la WABA, `vocero-clase`) | 04:29:31 |
+
+- Mensaje 1 (04:21): el despacho llegó a Nea, que pidió el contexto por
+  `conversationId` y mandó «escribiendo…»; el modelo dio 401 y la conversación
+  pasó a humano con motivo `error`, como debe. Causa: una variable de usuario
+  de Windows, `OPENAI_API_KEY`, que pydantic lee antes que el `.env` de Nea. No
+  es del producto (en el contenedor no existe); Nea se relanzó sin heredarla
+  (`lanzar.py` en el scratchpad).
+- Mensaje 2 (04:26): con Nea apagada. El CRM lo guardó y lo pasó a humano: el
+  escenario 7 del e2e, en vivo.
+- Mensaje 4 (04:29, el 3 quedó detrás del traspaso hasta reactivar la IA con
+  `reactivate: true`): **Nea contestó en 20.7 s**, `delivered`, origen `ai`,
+  y en una sola respuesta atendió lo que había quedado pendiente (qué venden,
+  horario, taladros).
+- Por el relevo solo pasó tráfico de la línea cliente: 4 mensajes y 1
+  respuesta. Gasto de OpenRouter: centavos.
+
+**Pendiente de verificación humana:** un DM real de Instagram (hace falta que
+Kevin escriba desde una cuenta personal). **Pendiente:** la prueba en Coolify.
+
+### Dónde vive cada cosa
+
+| Qué | Dónde |
+|---|---|
+| Entornos de la prueba local | `vocero-crm/.env.vivo031` (ignorado por git) y `nea-vivo/.env` del scratchpad de la sesión. Los arma `ops/vivo-031.mjs entornos` desde la bóveda; ningún valor pasó por el chat |
+| Guiones nuevos | `ops/vivo-031.mjs` (`entornos`, `conversacion`, `reactivar`). `override.mjs` guarda ahora el override de la WABA como respaldo y `relay.mjs` le manda ahí lo ajeno cuando el número no tenía override |
+| Estado viejo del override | `.override-soporte.2026-10-13.json` (archivado; decía «sin devolver» desde la clase, pero ese día se quitó por decisión de Kevin) |
+| Bases locales | `vocero_031_cerebro`, `vocero_031_incluido`, `vocero_031_par`, `vocero_031_vivo` en `vocero-20-pg` (5433) |
+
+### Qué sigue
+
+Prueba en Coolify del par y el DM de Instagram; luego #91 (Laboratorio por
+contrato).
