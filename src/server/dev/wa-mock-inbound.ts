@@ -34,6 +34,8 @@ type MockMediaInput = {
   caption?: string;
   filename?: string;
   location?: Record<string, unknown>;
+  /** 031 — Las tarjetas de un mensaje `contacts`, con la forma de Meta. */
+  contacts?: Record<string, unknown>[];
 };
 
 /**
@@ -72,6 +74,10 @@ function applyMockContent(
       longitude: -101.257,
       name: "Oficina",
     };
+  } else if (type === "contacts") {
+    message.contacts = input.contacts ?? [
+      { name: { formatted_name: "Luis Gómez", first_name: "Luis" } },
+    ];
   } else if (MOCK_BINARY_TYPES.has(type)) {
     const media: Record<string, unknown> = {
       id: input.mediaId ?? `mockmedia_${nextN()}`,

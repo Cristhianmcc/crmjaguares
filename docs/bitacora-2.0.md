@@ -709,3 +709,175 @@ con la imagen `rc.7`: todo bien.
 ### Qué sigue
 
 La 2.0.0 del plan: Nea recibe el despacho también contra el raíz (nea #37).
+
+## 2026-10-15 — `vocero-clase` como consultorio médico (demo, sin código)
+
+Para el video de multicanalidad, `vocero-clase` pasa a ser el demo de un
+consultorio («Consultorio San Rafael», agente Sofía). Solo datos y una
+bandera: ningún cambio al CRM, ningún PR.
+
+- **Bandera:** `AGENDA=on` en la app `3jinuviignszpotzzmvs6nrf` (variable
+  `f3eqwfgou0o0aca9rk2chog3`, solo runtime) + deploy
+  `qlsz3nfiagogon7gf9x4zqab`. Sigue en `1.6.0` · `da32409`.
+- **Siembra:** `ops/consultorio.mjs` con `ops/negocios/consultorio.json`
+  (mismo patrón que `vocero-demos/ops/vocero.mjs`): marca e ícono, agente y
+  7 entradas de conocimiento, etapas (Nuevo paciente → Cita agendada →
+  Seguimiento pendiente → Paciente atendido / No continuó), agenda L–V 9–14 y
+  16–19, sáb 9–13, 30 min, presencial (enlace fijo sin sala). Historia: 12
+  pacientes ficticios (+1 NXX 555-01xx) y 9 citas entre el 16 y el 21 de oct.
+- **Respaldo previo** (marca «Vocero», ícono, perfil del agente, 9 entradas
+  de KB, 5 etapas) en `ops/respaldos/clase-2026-10-15T17-45-59.json`; se
+  regresa con `node ops/consultorio.mjs restaurar <archivo>`.
+- **En vivo (WhatsApp, línea cliente por Evolution, 4 mensajes):** el número
+  Soporte ya apuntaba a `vocero-clase` por el override de la WABA (no se movió
+  nada). Sofía pidió nombre y motivo, ofreció huecos reales y reservó el
+  viernes 16 a las 9:00 (`source: ai`, verificada en `/api/bookings`); la cita
+  de prueba se canceló desde la API (cancelar no avisa al paciente).
+- **Hallazgo:** `offer_slots` del agente incluido no acepta preferencia de día:
+  a «mañana en la mañana» enseña los primeros huecos (hoy en la tarde). Si el
+  paciente nombra fecha y hora que estén entre los 12 ofrecidos, sí reserva.
+  Mitigado en las instrucciones del agente; el arreglo de fondo es una spec.
+
+## 2026-10-19 — 031: Nea entra solo por el despacho (2.0, nea#37)
+
+PRs: [#125](https://github.com/kevinrivm/vocero-crm/pull/125) (CRM) y
+[nea-agent#43](https://github.com/kevinrivm/nea-agent/pull/43), ramas
+`feat/031-nea-por-despacho` en los dos repos. Ciclo completo: spec, plan y
+tareas antes del código (`73c4450`). **Abiertos, sin mergear.**
+
+Antes de empezar, Kevin aprobó en el chat seguir con la 2.0 y las dos
+recomendaciones abiertas: el cerebro piensa por el CRM (#106, `/api/bot/llm`)
+y una sola base para el par (`DATABASE_SCHEMA`, ya en esta spec).
+
+### Qué quedó
+
+- **CRM** (aditivo): `adOrigen` en `/api/bot/context`; `fileName`, `location`
+  y `contacts` en el mensaje del despacho, solo cuando aplican (el cuerpo
+  gemelo no cambia); el simulador de WhatsApp acepta tarjetas; contrato 021
+  enmendado.
+- **Nea 2.0** (mayor): `/vocero/dispatch` es la única entrada también contra
+  la raíz (firma con `CRM_BOT_API_KEY`); el prompt nombra el canal (en
+  WhatsApp el chasis queda idéntico byte a byte); dedup por mensaje en los dos
+  modos; `DATABASE_SCHEMA`; fuera webhook, relay, coalesce, los reintentos del
+  turno (D2b, decidida al implementar) y siete variables; `POST /webhook` →
+  503 y `webhookDeMeta` en `/health`.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,149 unitarias |
+| CRM: `e2e-despacho.mjs` con cerebro | 101/101 (sección 031: 7/7) |
+| Nea: `pytest` | 475 verdes, 30 saltadas. 1 roja que ya fallaba en `main` y solo en Windows local (`pypdf` en el site de usuario; el subproceso del PDF corre con `-I`) |
+| Nea: `test_pg_store.py` contra Postgres 16 | 30/30, incluido el esquema propio |
+| Nea: `live-security-test.py` | PASS |
+| `e2e_contra_raiz.py` (Meta → CRM → despacho → Nea, una sola base, `z-ai/glm-5.3-flash`) | 9/9; mediana 8.2 s por turno; US$0.006 |
+
+### En vivo, local
+
+CRM de la rama (`next dev`, :3290) + Nea de la rama (:8290) sobre la base
+`vocero_031_vivo` (Nea en el esquema `nea`), número «Soporte» (…9518) y línea
+cliente (…9768) por Evolution. `ALLOWED_WA_IDS` de Nea con la línea cliente.
+
+| | UTC |
+|---|---|
+| Override del número movido al relevo (`ops/relay.mjs` → túnel) | 04:20:54 |
+| Override devuelto: **quitado** (el número no tenía; el tráfico vuelve a la WABA, `vocero-clase`) | 04:29:31 |
+
+- Mensaje 1 (04:21): el despacho llegó a Nea, que pidió el contexto por
+  `conversationId` y mandó «escribiendo…»; el modelo dio 401 y la conversación
+  pasó a humano con motivo `error`, como debe. Causa: una variable de usuario
+  de Windows, `OPENAI_API_KEY`, que pydantic lee antes que el `.env` de Nea. No
+  es del producto (en el contenedor no existe); Nea se relanzó sin heredarla
+  (`lanzar.py` en el scratchpad).
+- Mensaje 2 (04:26): con Nea apagada. El CRM lo guardó y lo pasó a humano: el
+  escenario 7 del e2e, en vivo.
+- Mensaje 4 (04:29, el 3 quedó detrás del traspaso hasta reactivar la IA con
+  `reactivate: true`): **Nea contestó en 20.7 s**, `delivered`, origen `ai`,
+  y en una sola respuesta atendió lo que había quedado pendiente (qué venden,
+  horario, taladros).
+- Por el relevo solo pasó tráfico de la línea cliente: 4 mensajes y 1
+  respuesta. Gasto de OpenRouter: centavos.
+
+El DM real de Instagram se hizo después, en Coolify (abajo).
+
+### En vivo, Coolify (2026-10-20)
+
+Kevin autorizó en el chat montar el par en `vocero-16` desde las ramas. Tags de
+prelanzamiento `v2.0.0-rc.1` en los dos repos (sobre `1770a7a` y `f57eeba`):
+publicaron `ghcr.io/kevinrivm/vocero-crm:2.0.0-rc.1` y
+`ghcr.io/kevinrivm/nea-agent:2.0.0-rc.1` sin mover `latest`.
+
+- Servicio `vocero20-par` (`dlh4zhtqg8avc2qlxfb8eodz`): CRM
+  (`dbatl4la70eknhflxs1sfk8i`), Nea (`cgzk4ndoeg1yd1doarbzlpmq`) y Postgres
+  (`iclpugyjs0qecbetmh3bqx4v`) en un compose. **Una sola base**: Nea creó su
+  esquema `nea` y migró ahí. El CRM despacha a `http://nea:8000` por la red
+  del servicio. URL `https://vocero20.177.7.62.92.sslip.io`; healthcheck de
+  Coolify apagado en el compose. `/api/health` → `1770a7a`, verificado.
+- Claves generadas por Coolify (`SERVICE_PASSWORD_*`,
+  `SERVICE_REALBASE64_32_CIFRADO`); `BOT_API_KEY` y `CRM_BOT_API_KEY` son la
+  misma variable mágica. `ALLOWED_WA_IDS` va vacía: en WhatsApp el relevo ya
+  filtra a la línea cliente.
+- **La llave de OpenRouter de Nea** (`LLM_API_KEY`) se guardó con
+  `ops/coolify-env.mjs`, por la API REST de Coolify: **excepción a la regla 5
+  autorizada por Kevin el 2026-10-20, solo para esa variable**, porque por el
+  MCP el valor habría quedado escrito en la conversación. Lista cerrada
+  (servicio y variable); el valor no se imprimió (…09bd).
+
+| | UTC |
+|---|---|
+| Override del número movido al relevo → túnel → `vocero20` | 12:22:17 |
+| Mensaje de la línea cliente | 12:22:23 |
+| Respuesta de Nea, `delivered`, origen `ai` | 14.1 s después |
+| Override devuelto (quitado: el tráfico vuelve a la WABA, `vocero-clase`) | 12:22:40 |
+
+Un mensaje y una respuesta; por el relevo solo pasó la línea cliente.
+`brain-status` del CRM: despacho activo hacia `nea:8000`, sin fallas.
+
+| Qué | Dónde |
+|---|---|
+| Dueño de la instancia | `.env.vocero20` del espacio de trabajo (correo `OWNER_EMAIL`, contraseña generada) |
+| Llave de IA de Nea | Variable `LLM_API_KEY` del servicio; sale de `LLM_API_KEY` de la bóveda |
+| Token de WhatsApp | Cifrado en la base del CRM; sale de `WA_TOKEN` de la bóveda |
+
+### Dónde vive cada cosa
+
+| Qué | Dónde |
+|---|---|
+| Entornos de la prueba local | `vocero-crm/.env.vivo031` (ignorado por git) y `nea-vivo/.env` del scratchpad de la sesión. Los arma `ops/vivo-031.mjs entornos` desde la bóveda; ningún valor pasó por el chat |
+| Guiones nuevos | `ops/vivo-031.mjs` (`entornos`, `conversacion`, `reactivar`). `override.mjs` guarda ahora el override de la WABA como respaldo y `relay.mjs` le manda ahí lo ajeno cuando el número no tenía override |
+| Estado viejo del override | `.override-soporte.2026-10-13.json` (archivado; decía «sin devolver» desde la clase, pero ese día se quitó por decisión de Kevin) |
+| Bases locales | `vocero_031_cerebro`, `vocero_031_incluido`, `vocero_031_par`, `vocero_031_vivo` en `vocero-20-pg` (5433) |
+
+### Qué sigue
+
+#### Instagram, con DMs reales de Kevin
+
+- `ops/canales.mjs conectar` en `vocero20`: Instagram **@kevinbelier.ia** y la
+  página «Kevin Belier» por Zernio. El CRM dio de alta su webhook
+  (`vocero-vocero20.177.7.62.92.sslip.io`), limitado a las 2 cuentas de Kevin.
+- `vocero-clase` recibe los mismos DMs (su webhook, también limitado a esas
+  2 cuentas). Para que su agente no contestara encima, se **apagó de 16:22:42
+  a 16:30:36 UTC** y se volvió a encender (`answering: true`).
+- `ALLOWED_WA_IDS` de Nea: primero `ig:nadie-todavia` (nadie pasa); el primer
+  DM de Kevin (16:27:25) entró a la bandeja y Nea lo frenó en el log
+  (`allowlist: ig:…5620`); con esa identidad en la lista y un redeploy, el
+  segundo DM (16:30:03, una pregunta) **recibió respuesta de Nea a las
+  16:30:24**, `sent`, origen `ai`, sin asteriscos ni formato de WhatsApp.
+- Al terminar: webhook de Zernio de `vocero20` **desactivado** (16:30:45), no
+  borrado; el de `vocero-clase`, activo como estaba.
+
+**Hallazgo (ya estaba en `main`, no es de la 031):** el seguimiento de 4 h
+(`app/followup.py`) y el reintento de envíos (`app/sender.py`) no miran
+`ALLOWED_WA_IDS`. A las 16:23:42 Nea le mandó el empujón de seguimiento a la
+línea cliente de Kevin (la conversación de WhatsApp de las 12:22) aunque la
+lista ya no la incluía. Fue a la propia línea de Kevin; queda para un arreglo
+aparte.
+
+Con esto la 031 queda probada en vivo en WhatsApp e Instagram, en local y en
+Coolify. Messenger y TikTok, solo con simuladores.
+
+### Qué sigue
+
+Que Kevin revise y mergee #125 y nea-agent#43; el arreglo del seguimiento y
+la lista de permitidos; luego #91 (Laboratorio por contrato).

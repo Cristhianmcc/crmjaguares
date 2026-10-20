@@ -138,6 +138,17 @@ Notas que son contrato:
   vienen en el cuerpo. `mimeType` y `caption` solo aparecen si hay adjunto.
   *Diferencia con cloud*: allá `mediaId` es el id interno del adjunto y se
   descarga por `/api/brains/media`; aquí es el que acepta `/api/bot/media`.
+- **Lo que un cerebro leía del webhook de Meta viaja aquí** (031). Tres
+  llaves opcionales, después de las de arriba, y solo cuando aplican:
+  - `fileName`: el nombre del archivo, si el adjunto lo trae (un PDF, casi
+    siempre).
+  - `location`: `{latitude, longitude, name?, address?}` si `type` es
+    `location`. `name` y `address` faltan cuando la persona compartió un pin
+    suelto.
+  - `contacts`: `[{name}]` si `type` es `contacts`: los nombres de las
+    tarjetas que compartió.
+  Un mensaje que no las necesita no las lleva, así que un cuerpo de antes de
+  la 031 sigue siendo válido byte a byte.
 - **Sin `capabilities`, `brainGeneration` ni `expiresAt`.** Son de la agenda v2
   de cloud. *Diferencia con cloud*: aquí la agenda va por
   `/api/bot/availability` y `/api/bot/bookings`.
@@ -218,7 +229,10 @@ No lleva `x-vocero-dispatch-id`: no es un despacho.
 Igual que antes de que existiera el despacho:
 
 1. `GET /api/bot/context?conversationId={conversation.id}` (o por `identity`)
-   si necesitas la etapa, la ficha, el traspaso o las citas.
+   si necesitas la etapa, la ficha, el traspaso, las citas o **de qué anuncio
+   llegó la persona** (031): `adOrigen` es `{headline, body, sourceType,
+   sourceUrl, hasCtwaClid, capturedAt}` o `null`. Es lo que antes venía en el
+   `referral` del webhook de Meta; el identificador del clic no sale del CRM.
 2. `POST /api/bot/messages` con `conversationId` y `text`.
 
 Un 409 `ai_paused` al contestar significa que un humano tomó la conversación

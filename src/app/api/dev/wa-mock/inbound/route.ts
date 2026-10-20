@@ -26,6 +26,8 @@ const schema = z
     caption: z.string().optional(),
     filename: z.string().optional(),
     location: z.record(z.unknown()).optional(),
+    // 031 — tarjetas de un mensaje `contacts`, con la forma de Meta.
+    contacts: z.array(z.record(z.unknown())).max(10).optional(),
     // 016 — anuncio de origen simulado (referral)
     ctwaClid: z.string().optional(),
     adHeadline: z.string().optional(),
