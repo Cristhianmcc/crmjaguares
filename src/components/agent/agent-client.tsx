@@ -17,6 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  HERRAMIENTAS,
+  ROLES,
+  type ClaveHerramienta,
+} from "@/lib/agent-roles";
 
 type Profile = {
   enabled: boolean;
@@ -25,6 +30,9 @@ type Profile = {
   instructions: string | null;
   escalationRules: string | null;
   greeting: string | null;
+  /** 034 */
+  role: string;
+  tools: ClaveHerramienta[];
 };
 
 type KbEntry = {
@@ -42,6 +50,7 @@ export function AgentClient() {
   const [entries, setEntries] = useState<KbEntry[]>([]);
   const [kbSize, setKbSize] = useState<{ chars: number; warnAt: number; warning: boolean } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [agendaEnabled, setAgendaEnabled] = useState(false);
   // «Quién responde»: se refresca solo, porque la última llamada del cerebro
   // externo y su /health cambian sin que nadie toque esta pantalla.
   const [brain, setBrain] = useState<BrainStatusDto | null>(null);
@@ -64,6 +73,7 @@ export function AgentClient() {
       setProfile(p.profile);
       setAiConfigured(p.aiConfigured);
       setAiMensaje(p.aiMensaje ?? null);
+      setAgendaEnabled(p.agendaEnabled === true);
     }
     if (kb) setEntries(kb.entries);
     if (size) setKbSize(size);
@@ -84,6 +94,21 @@ export function AgentClient() {
         Cargando…
       </div>
     );
+  }
+
+  async function cargarPreset() {
+    const ok = window.confirm(
+      `Cargar el rol «${ROLES.calificador.etiqueta}» reemplaza las instrucciones y las reglas de escalado, y enciende todas sus herramientas. ¿Continuar?`
+    );
+    if (!ok) return;
+    await fetch("/api/agent/profile/preset", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: "calificador" }),
+    }).catch(() => null);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+    void refetch();
   }
 
   async function saveProfile(patch: Partial<Profile>) {
@@ -171,10 +196,90 @@ export function AgentClient() {
       )}
 
       <div className="grid gap-4 p-4 sm:gap-6 sm:p-6 lg:grid-cols-2">
+        <RolSection
+          profile={profile}
+          agendaEnabled={agendaEnabled}
+          despachoActivo={brain?.dispatch?.active === true}
+          onTools={(tools) => void saveProfile({ tools })}
+          onPreset={() => void cargarPreset()}
+        />
         <ProfileSection profile={profile} onSave={saveProfile} />
         <KbSection entries={entries} kbSize={kbSize} onChanged={() => void refetch()} />
       </div>
     </div>
+  );
+}
+
+/**
+ * 034 — El rol y sus herramientas. Las respeta el agente conectado por
+ * despacho (Nea); el agente incluido no las lee (sale con la #106).
+ */
+function RolSection({
+  profile,
+  agendaEnabled,
+  despachoActivo,
+  onTools,
+  onPreset,
+}: {
+  profile: Profile;
+  agendaEnabled: boolean;
+  despachoActivo: boolean;
+  onTools: (tools: ClaveHerramienta[]) => void;
+  onPreset: () => void;
+}) {
+  const rol = ROLES[profile.role as keyof typeof ROLES] ?? ROLES.calificador;
+  const visibles = HERRAMIENTAS.filter((h) => !h.agenda || agendaEnabled);
+  const encendida = (clave: ClaveHerramienta) => profile.tools.includes(clave);
+  function cambiar(clave: ClaveHerramienta, on: boolean) {
+    const siguiente = on
+      ? [...profile.tools, clave]
+      : profile.tools.filter((t) => t !== clave);
+    onTools(siguiente);
+  }
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle>
+              Rol: {rol.etiqueta}
+            </CardTitle>
+            <CardDescription>{rol.descripcion}</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={onPreset}>
+            Cargar el rol {rol.etiqueta}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!despachoActivo && (
+          <p className="text-sm text-muted-foreground">
+            Las herramientas las respeta el agente conectado por despacho (Nea).
+            El agente incluido las usa todas.
+          </p>
+        )}
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {visibles.map((h) => (
+            <li key={h.clave} className="flex items-start justify-between gap-3 rounded-md border p-3">
+              <div>
+                <p className="text-sm font-medium">{h.etiqueta}</p>
+                <p className="text-xs text-muted-foreground">{h.descripcion}</p>
+              </div>
+              <Switch
+                checked={h.fija ? true : encendida(h.clave)}
+                disabled={h.fija === true}
+                label={h.etiqueta}
+                onCheckedChange={(on) => cambiar(h.clave, on)}
+              />
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          El agente toma los cambios en unos minutos, sin redesplegar nada.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -243,7 +348,17 @@ function ProfileSection({
             onChange={(e) => setForm({ ...form, greeting: e.target.value })}
           />
         </div>
-        <Button onClick={() => void onSave(form)}>Guardar comportamiento</Button>
+        <Button
+          onClick={() => {
+            // 034 — Solo lo de esta tarjeta: el formulario guarda una copia
+            // del perfil de cuando se abrió, y mandarla entera pisaría las
+            // herramientas cambiadas después en la tarjeta del rol.
+            const { name, tone, instructions, escalationRules, greeting } = form;
+            void onSave({ name, tone, instructions, escalationRules, greeting });
+          }}
+        >
+          Guardar comportamiento
+        </Button>
       </CardContent>
     </Card>
   );

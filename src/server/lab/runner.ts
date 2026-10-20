@@ -11,6 +11,7 @@ import { encolarDespacho } from "@/server/dispatch/outbox";
 import { iniciarWorker, programarTanda } from "@/server/dispatch/worker";
 import { computeScore, judgeCase } from "@/server/lab/judge";
 import { PERSONAS, type Persona } from "@/server/lab/personas";
+import { rolDe } from "@/lib/agent-roles";
 
 /**
  * Runner del Laboratorio (FR-030/FR-034): corrida en segundo plano DENTRO del
@@ -61,8 +62,16 @@ export async function startRun(organizationId: string): Promise<string> {
     throw err;
   }
 
+  // 034 — Las personas son del rol del perfil, no una lista suelta.
+  const [perfil] = await db
+    .select({ role: schema.agentProfile.role })
+    .from(schema.agentProfile)
+    .where(eq(schema.agentProfile.organizationId, organizationId))
+    .limit(1);
+  const delRol = personasDelRol(perfil?.role);
+
   await db.insert(schema.agentTestCase).values(
-    PERSONAS.map((p) => ({
+    delRol.map((p) => ({
       id: newId("testCase"),
       organizationId,
       runId,
@@ -78,6 +87,13 @@ export async function startRun(organizationId: string): Promise<string> {
   });
 
   return runId;
+}
+
+/** 034 — Las personas del rol, en su orden; las que no existan se omiten. */
+export function personasDelRol(role: string | null | undefined): Persona[] {
+  return rolDe(role)
+    .personas.map((clave) => PERSONAS.find((p) => p.key === clave))
+    .filter((p): p is Persona => Boolean(p));
 }
 
 async function executeRun(

@@ -683,6 +683,13 @@ export const agentProfile = pgTable(
     instructions: text("instructions"),
     escalationRules: text("escalation_rules"),
     greeting: text("greeting"),
+    /** 034 — El rol del agente (`src/lib/agent-roles.ts`). */
+    role: text("role").notNull().default("calificador"),
+    /**
+     * 034 — Las herramientas encendidas, por clave del catálogo. `null` =
+     * todas: lo que tiene una instalación que actualiza.
+     */
+    tools: jsonb("tools").$type<string[]>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
