@@ -709,3 +709,31 @@ con la imagen `rc.7`: todo bien.
 ### Qué sigue
 
 La 2.0.0 del plan: Nea recibe el despacho también contra el raíz (nea #37).
+
+## 2026-10-15 — `vocero-clase` como consultorio médico (demo, sin código)
+
+Para el video de multicanalidad, `vocero-clase` pasa a ser el demo de un
+consultorio («Consultorio San Rafael», agente Sofía). Solo datos y una
+bandera: ningún cambio al CRM, ningún PR.
+
+- **Bandera:** `AGENDA=on` en la app `3jinuviignszpotzzmvs6nrf` (variable
+  `f3eqwfgou0o0aca9rk2chog3`, solo runtime) + deploy
+  `qlsz3nfiagogon7gf9x4zqab`. Sigue en `1.6.0` · `da32409`.
+- **Siembra:** `ops/consultorio.mjs` con `ops/negocios/consultorio.json`
+  (mismo patrón que `vocero-demos/ops/vocero.mjs`): marca e ícono, agente y
+  7 entradas de conocimiento, etapas (Nuevo paciente → Cita agendada →
+  Seguimiento pendiente → Paciente atendido / No continuó), agenda L–V 9–14 y
+  16–19, sáb 9–13, 30 min, presencial (enlace fijo sin sala). Historia: 12
+  pacientes ficticios (+1 NXX 555-01xx) y 9 citas entre el 16 y el 21 de oct.
+- **Respaldo previo** (marca «Vocero», ícono, perfil del agente, 9 entradas
+  de KB, 5 etapas) en `ops/respaldos/clase-2026-10-15T17-45-59.json`; se
+  regresa con `node ops/consultorio.mjs restaurar <archivo>`.
+- **En vivo (WhatsApp, línea cliente por Evolution, 4 mensajes):** el número
+  Soporte ya apuntaba a `vocero-clase` por el override de la WABA (no se movió
+  nada). Sofía pidió nombre y motivo, ofreció huecos reales y reservó el
+  viernes 16 a las 9:00 (`source: ai`, verificada en `/api/bookings`); la cita
+  de prueba se canceló desde la API (cancelar no avisa al paciente).
+- **Hallazgo:** `offer_slots` del agente incluido no acepta preferencia de día:
+  a «mañana en la mañana» enseña los primeros huecos (hoy en la tarde). Si el
+  paciente nombra fecha y hora que estén entre los 12 ofrecidos, sí reserva.
+  Mitigado en las instrucciones del agente; el arreglo de fondo es una spec.
