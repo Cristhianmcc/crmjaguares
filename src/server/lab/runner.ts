@@ -222,7 +222,7 @@ async function runConversation(
   persona: Persona,
   porDespacho: boolean
 ): Promise<{
-  transcript: { role: "cliente" | "agente"; text: string }[];
+  transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
   conversationId: string;
   /** 033 — Por qué el agente no contestó, si no contestó. */
   falla: string | null;
@@ -285,15 +285,37 @@ async function runConversation(
 
   if (porDespacho) await olvidar(organizationId, convId, contactId);
 
+  // 033 — El traspaso no es un mensaje: sin esta línea el juez no lo ve, y
+  // marcaba «debió escalar» a un agente que sí escaló.
+  const [final] = await db
+    .select({
+      handoffAt: schema.conversation.handoffAt,
+      handoffReason: schema.conversation.handoffReason,
+    })
+    .from(schema.conversation)
+    .where(eq(schema.conversation.id, convId))
+    .limit(1);
+  const traspaso = final?.handoffAt
+    ? [
+        {
+          role: "sistema" as const,
+          text: `La conversación pasó a una persona (motivo: ${final.handoffReason ?? "sin motivo"}).`,
+        },
+      ]
+    : [];
+
   return {
     conversationId: convId,
     falla,
-    transcript: messages
+    transcript: [
+      ...messages
       .filter((m) => m.text)
       .map((m) => ({
         role: m.direction === "in" ? ("cliente" as const) : ("agente" as const),
         text: m.text!,
       })),
+      ...traspaso,
+    ],
   };
 }
 

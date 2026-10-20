@@ -46,7 +46,7 @@ type Case = {
   status: string;
   veredicto: "verde" | "amarillo" | "rojo" | null;
   hallazgos: Hallazgo[];
-  transcript: { role: "cliente" | "agente"; text: string }[];
+  transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
 };
 
 const TIPO_LABELS: Record<Hallazgo["tipo"], string> = {
@@ -404,10 +404,19 @@ function CaseCard({ testCase, onApplied }: { testCase: Case; onApplied: () => vo
                 <p key={i}>
                   <span
                     className={
-                      t.role === "cliente" ? "text-info" : "text-primary"
+                      t.role === "cliente"
+                        ? "text-info"
+                        : t.role === "sistema"
+                          ? "text-muted-foreground"
+                          : "text-primary"
                     }
                   >
-                    {t.role === "cliente" ? "Cliente" : "Agente"}:
+                    {t.role === "cliente"
+                      ? "Cliente"
+                      : t.role === "sistema"
+                        ? "Sistema"
+                        : "Agente"}
+                    :
                   </span>{" "}
                   {t.text}
                 </p>
