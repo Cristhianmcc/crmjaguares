@@ -61,6 +61,12 @@ export type EventoDespacho = {
     aiEnabled: boolean;
     windowOpen: boolean;
     windowExpiresAt: string | null;
+    /**
+     * 033 — Solo en una conversación de prueba del Laboratorio, y siempre
+     * `true`. La respuesta se guarda y no se envía; el cerebro no debería
+     * tratarla como un cliente (lista de permitidos, seguimiento).
+     */
+    test?: true;
   };
   contact: {
     id: string;
@@ -104,6 +110,8 @@ export function armarEvento(datos: {
     aiEnabled: boolean;
     windowOpen: boolean;
     windowExpiresAt: Date | null;
+    /** 033 */
+    test?: boolean;
   };
   contact: { id: string; displayName: string; identity: string };
   messages: MensajeParaEvento[];
@@ -122,6 +130,8 @@ export function armarEvento(datos: {
       aiEnabled: datos.conversation.aiEnabled,
       windowOpen: datos.conversation.windowOpen,
       windowExpiresAt: datos.conversation.windowExpiresAt?.toISOString() ?? null,
+      // 033 — Solo cuando aplica, al final: el cuerpo gemelo no cambia.
+      ...(datos.conversation.test ? { test: true as const } : {}),
     },
     contact: {
       id: datos.contact.id,

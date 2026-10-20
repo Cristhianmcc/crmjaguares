@@ -132,6 +132,15 @@ Notas que son contrato:
   del último mensaje del cliente; el siguiente `POST /api/bot/messages`
   responde 409 `message_limit`. No reintentes: se levanta cuando el cliente
   vuelve a escribir, y eso te llega como un despacho nuevo.
+- **`conversation.test: true`** (033) marca una corrida del **Laboratorio**:
+  un cliente simulado con guion, una línea por despacho y sin ventana de
+  agrupado. La llave solo aparece en esas; en una conversación real falta.
+  Contesta igual que siempre, por `/api/bot/messages`: el CRM **guarda** la
+  respuesta en el hilo y no la envía a ningún lado (200). No la trates como un
+  cliente: su identidad es sintética (no la filtres por tu lista de
+  permitidos) y no le programes seguimiento. Al terminar cada caso te llega
+  `conversation.deleted` de esa conversación. El CRM espera tu respuesta hasta
+  90 s por línea.
 - **`aiEnabled: false`** no debería llegarte: una conversación en pausa no se
   despacha. Viaja para que un cerebro defensivo pueda ignorarla.
 - **`mediaId`** se descarga por `GET /api/bot/media/{mediaId}`. Los adjuntos no
@@ -237,3 +246,7 @@ Igual que antes de que existiera el despacho:
 
 Un 409 `ai_paused` al contestar significa que un humano tomó la conversación
 mientras pensabas: no insistas.
+
+En una conversación de prueba (`conversation.test`), `POST /api/bot/messages`
+responde 200 y guarda el mensaje sin enviarlo (033); hasta la 032 respondía 409
+`sandbox_violation`.

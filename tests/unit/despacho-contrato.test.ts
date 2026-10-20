@@ -131,6 +131,26 @@ describe("el evento de despacho — la forma es contrato", () => {
   });
 });
 
+describe("033 — conversation.test, solo en las del Laboratorio", () => {
+  it("una conversación de prueba lleva test: true, al final de conversation", () => {
+    const e = armarEvento({
+      ...datosMinimos(),
+      conversation: { ...datosMinimos().conversation, test: true },
+    });
+    expect(Object.keys(e.conversation).at(-1)).toBe("test");
+    expect(e.conversation.test).toBe(true);
+  });
+
+  it("una real no lleva la llave (el cuerpo gemelo no cambia)", () => {
+    const e = armarEvento({
+      ...datosMinimos(),
+      conversation: { ...datosMinimos().conversation, test: false },
+    });
+    expect("test" in e.conversation).toBe(false);
+    expect(JSON.stringify(evento())).toBe(CUERPO);
+  });
+});
+
 describe("031 — lo que el webhook le daba al cerebro, ahora en el despacho", () => {
   function unMensaje(m: Partial<Parameters<typeof armarEvento>[0]["messages"][number]>) {
     return armarEvento({

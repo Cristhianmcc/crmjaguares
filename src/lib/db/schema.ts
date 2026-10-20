@@ -975,7 +975,7 @@ export const agentTestCase = pgTable(
     veredicto: text("veredicto", { enum: ["verde", "amarillo", "rojo"] }),
     hallazgos: jsonb("hallazgos"),
     status: text("status", {
-      enum: ["pending", "running", "done", "judge_failed"],
+      enum: ["pending", "running", "done", "judge_failed", "agent_failed"],
     })
       .notNull()
       .default("pending"),

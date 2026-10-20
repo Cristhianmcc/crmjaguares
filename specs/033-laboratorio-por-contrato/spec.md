@@ -79,11 +79,13 @@ al cerebro `conversation.deleted` de esa conversación de prueba (026): la
 memoria del cerebro no crece con cada corrida, y la siguiente arranca de cero
 también por la regla del `conversation.id` nuevo.
 
-**D7 — Motivos legibles.** Sin cerebro ni agente incluido con qué contestar:
-409 al iniciar (`sin_agente`). Si el cerebro no contesta un turno a tiempo o
-el despacho cae a humano, el caso queda `error` con el motivo y la corrida
-termina `failed` con «el cerebro no contestó: …» si ninguno de los casos
-obtuvo respuesta.
+**D7 — Motivos legibles.** Si el cerebro no contesta un turno a tiempo o el
+despacho cae a humano, el caso queda `agent_failed` (estado nuevo, sin
+migración: la columna es texto), fuera del score, y el motivo va al `error` de
+la corrida; si ningún caso obtuvo respuesta, la corrida termina `failed` con
+«el agente no contestó: …». *Decidido al implementar:* el 409 `sin_agente` al
+iniciar queda para la #106: hoy, sin despacho, el agente incluido siempre
+contesta las pruebas si hay IA, y eso ya lo valida `ai_not_configured`.
 
 **D8 — Personas nuevas: `hostil` y `sin_rumbo`.** La de nota de voz queda
 fuera: necesita un adjunto servible por `/api/bot/media` sin Meta, y eso llega

@@ -260,6 +260,7 @@ export async function construirEvento(
         conv.lastInboundAt,
         windowMsFor(conv.channel)
       ),
+      test: conv.isTest,
     },
     contact: {
       id: contact.id,
