@@ -10,9 +10,9 @@ vienes.
 
 | Vienes de | Qué haces |
 |---|---|
-| **Solo el agente incluido** | Levantas Nea al lado del CRM (abajo, «El par») y le das el despacho. El perfil, el conocimiento y el Laboratorio no se tocan: ya viven en el CRM. |
+| **Solo el agente incluido** | La 2.0 lo retira: levantas Nea al lado del CRM (abajo, «El par»), le das el despacho y **vuelves a encender el agente** en la pantalla Agente. El perfil, el conocimiento, la llave de Ajustes → IA y el Laboratorio no se tocan: ya viven en el CRM, y Nea piensa con esa misma llave. Sin Nea, Vocero sigue funcionando como bandeja manual. |
 | **Nea 1.x delante del CRM** | Nada obligatorio: Nea 1.x frente a Vocero 2.0 sigue funcionando, porque `/api/bot/*` no cambió. Para pasar al despacho (y que Nea conteste Instagram, Messenger y TikTok): actualiza Nea, dale el despacho y **recupera el webhook** (abajo). |
-| **Tu propio cerebro sobre `/api/bot/*`** | Nada. Recibir el despacho es opcional; el contrato está en [`docs/openapi.json`](openapi.json). |
+| **Tu propio cerebro sobre `/api/bot/*`** | Nada. Recibir el despacho es opcional; el contrato está en [`docs/openapi.json`](openapi.json). Si lo recibes, el interruptor de la pantalla Agente decide si se despacha (ver «El interruptor»). Opcional: piensa por `/api/bot/llm` en vez de llevar tu llave. |
 
 ## El par: CRM + Nea
 
@@ -20,6 +20,11 @@ Nea es un servicio al lado del CRM. Comparten la base: Nea guarda sus tablas
 en su propio esquema (`nea`) y no toca las del CRM. El CRM le **despacha** a
 Nea cada ráfaga del cliente, firmada con `BOT_API_KEY`, y Nea contesta por
 `/api/bot/*` con esa misma llave. Meta y Zernio le hablan solo al CRM.
+
+Nea **no lleva llave de IA**: piensa por el CRM (`/api/bot/llm`) con la llave
+y el modelo de Ajustes → IA. La pones una vez, en la interfaz; si el proveedor
+la rechaza (o te quedas sin saldo), se pausa ahí mismo y la pantalla lo dice.
+Quien prefiera que Nea use su propio proveedor le pone `LLM_API_KEY`.
 
 ### docker compose
 
@@ -29,8 +34,6 @@ En tu `.env`:
 BOT_API_KEY=            # openssl rand -hex 32
 BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch
 BRAIN_HEALTH_URL=http://nea:8000/health
-# La llave de IA de Nea: sin esta, usa OPENROUTER_API_TOKEN.
-NEA_LLM_API_KEY=
 ```
 
 Y levanta el par:
@@ -53,7 +56,7 @@ Dentro del proyecto del CRM, un servicio más desde la imagen
 | `CRM_BOT_API_KEY` | El `BOT_API_KEY` del CRM |
 | `DATABASE_URL` | La misma del CRM |
 | `DATABASE_SCHEMA` | `nea` |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Tu proveedor de IA |
+| `LLM_MODEL` | Opcional: el modelo de respaldo. Sin `LLM_API_KEY`, Nea piensa por el CRM con el de Ajustes → IA |
 
 En el CRM, `BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` hacia Nea, y **redeploy**
 (un reinicio no carga variables nuevas).
@@ -63,6 +66,17 @@ En el CRM, `BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` hacia Nea, y **redeploy**
 `render.yaml` trae el servicio de Nea comentado, listo para descomentar.
 `fly.toml` y `railway.toml` dicen en sus comentarios cómo levantar a Nea como
 segunda app de la red privada.
+
+## El interruptor del agente
+
+En la 2.0 el interruptor de la pantalla Agente decide si el CRM le despacha a
+tu agente. **Encenderlo exige un agente conectado y sano** (el CRM le pregunta
+a su `/health`); sin él, la pantalla te dice qué falta. Apagarlo deja las
+conversaciones en la bandeja para tu equipo.
+
+Si ya despachabas con la 1.6 y el interruptor estaba apagado (entonces no
+importaba), **enciéndelo después de actualizar**: si no, nadie contesta. La
+tarjeta «Quién responde» lo avisa.
 
 ## Recuperar el webhook (si venías con Nea 1.x)
 
@@ -111,3 +125,5 @@ Lo que la 2.0 agregó al contrato:
 | `conversation.test` | Despacho de una corrida del Laboratorio |
 | Respuesta de prueba guardada (200 en vez de 409 `sandbox_violation`) | `POST /api/bot/messages` |
 | `role`, `tools` | `GET /api/bot/profile` |
+| `POST /api/bot/llm/{ruta}`: el CRM piensa por el cerebro con la llave de Ajustes → IA (también acepta `Authorization: Bearer`) | Ruta nueva |
+| `llm` (`path` y `model`) | `GET /api/bot/profile` |

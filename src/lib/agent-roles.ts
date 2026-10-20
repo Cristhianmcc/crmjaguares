@@ -34,7 +34,7 @@ export const HERRAMIENTAS: readonly Herramienta[] = [
     clave: "ficha",
     etiqueta: "Llenar la ficha",
     descripcion:
-      "Anota lo que aprende del cliente; el CRM mueve la etapa cuando la ficha lo pide.",
+      "Anota lo que aprende del cliente en su ficha del CRM.",
   },
   {
     clave: "agendar",

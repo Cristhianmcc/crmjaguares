@@ -10,6 +10,24 @@ imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 El agente sale del CRM y se conecta por contrato. Guía de actualización:
 [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md).
 
+### ⚠️ Rompe: hay que hacer algo a mano
+
+- **El CRM ya no trae agente** (036). Quien contesta es el cerebro que
+  conectas al lado: [Nea](https://github.com/kevinrivm/nea-agent) (MIT) u
+  otro, por el despacho (`BRAIN_DISPATCH_URL` + `BOT_API_KEY`) y
+  `/api/bot/*`. Sin cerebro, Vocero es un CRM de bandeja manual: recibe, se
+  contesta a mano, pipeline y agenda. **Si usabas el agente incluido, nadie
+  contesta después de actualizar** hasta que levantes Nea (`docker compose
+  --profile nea up -d`, o el servicio en Coolify) y vuelvas a encender el
+  agente. El perfil, el conocimiento, la llave de Ajustes → IA y el
+  Laboratorio se quedan donde estaban.
+- **El interruptor de la pantalla Agente ahora decide el despacho** (036).
+  Encendido = el CRM le despacha a tu agente; apagado = las conversaciones se
+  quedan en la bandeja. Encenderlo exige un cerebro configurado y con su
+  `/health` sano (si no, 409 `sin_cerebro`). **Si ya despachabas con la 1.6 y
+  el interruptor estaba apagado** (entonces no importaba), enciéndelo después
+  de actualizar; la tarjeta «Quién responde» lo avisa.
+
 ### Nuevo
 
 - **El despacho lleva lo que el cerebro leía del webhook** (031): `adOrigen`
@@ -24,6 +42,40 @@ El agente sale del CRM y se conecta por contrato. Guía de actualización:
   venía con Nea 1.x delante del CRM.
 - **El par en el compose** (035): `docker compose --profile nea up -d` levanta
   Nea al lado del CRM sobre la misma base.
+- **Tu agente piensa por el CRM** (036): `POST /api/bot/llm/{ruta}`, compatible
+  con OpenAI, reenvía al proveedor de Ajustes → IA con la llave guardada. La
+  llave se pone una vez, en la interfaz, y no sale del CRM; un 401 o 402 del
+  proveedor la pausa en Ajustes → IA. Sin IA, 402 `sin_credencial`. `/api/bot/*`
+  acepta también `Authorization: Bearer`.
+- **`llm` en `/api/bot/profile`** (036): `{path, model}` con el modelo de
+  Ajustes → IA, o `null` sin IA configurada. Nea 2.0 sin `LLM_API_KEY` lo usa
+  solo.
+- **«Conecta tu agente» en la guía de inicio** (036), opcional: se marca
+  cuando el despacho está configurado y el agente contesta su `/health`. Sin
+  agente, la guía dice que Vocero funciona como bandeja manual y no te deja
+  atrapado en ella.
+
+### Cambió
+
+- **El Laboratorio necesita un agente conectado** (036): las personas le
+  escriben por el despacho; sin él, crear una corrida responde 409
+  `sin_cerebro` y la pantalla lo explica. El juez sigue usando la llave de
+  Ajustes → IA.
+- **«Quién responde»** (036) deja el agente incluido y el aviso
+  `doble_respuesta`. Quedan `sin_cerebro` (informativo: bandeja manual) y
+  `apagado` (agente conectado con el interruptor apagado).
+- **Nea en el compose sin llave de IA** (036): el servicio `nea` ya no lleva
+  `LLM_API_KEY` y `.env.example` pierde `NEA_LLM_API_KEY`. Si la tenías en tu
+  `.env`, ya no se lee: puedes quitarla. Nea piensa por el CRM.
+- Ajustes → IA dice para qué es la llave: con ella piensa tu agente (a través
+  del CRM) y el juez del Laboratorio.
+
+### Se fue
+
+- El turno dentro del proceso (036): `src/server/ai/{pipeline,actions,trigger,handoff,orden-turno}.ts`,
+  el prompt del agente de `prompts.ts` (quedan `renderKb` y el prompt del
+  juez), `src/server/agenda/agent.ts` y `scripts/eval-silencios.ts`. Un fork
+  que los tocaba tiene que llevar ese comportamiento a su cerebro.
 
 ## 1.6.0 — 2026-10-14
 

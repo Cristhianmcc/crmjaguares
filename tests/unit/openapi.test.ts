@@ -28,7 +28,8 @@ function rutasDelCodigo(dir = BOT, prefijo = "/api/bot"): Record<string, string[
   for (const nombre of readdirSync(dir)) {
     const ruta = path.join(dir, nombre);
     if (!statSync(ruta).isDirectory()) continue;
-    const segmento = nombre.replace(/^\[(.+)\]$/, "{$1}");
+    // `[...ruta]` (comodín) se documenta como `{ruta}`.
+    const segmento = nombre.replace(/^\[(?:\.\.\.)?(.+)\]$/, "{$1}");
     const archivo = path.join(ruta, "route.ts");
     try {
       const fuente = readFileSync(archivo, "utf8");

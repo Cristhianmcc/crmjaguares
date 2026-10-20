@@ -28,7 +28,8 @@ dentro: README → «Instalación» → «Otras plataformas».
    - **Dominio** donde vivirá el CRM (obligatorio, ej. `crm.sunegocio.com`).
      Debe apuntar ya a la IP del VPS (registro A).
    - **Token de OpenRouter** (opcional — sin él, el CRM funciona completo
-     excepto el agente de IA y el Laboratorio; se puede agregar después).
+     como bandeja manual; es con lo que piensa el agente y el juez del
+     Laboratorio, y se puede agregar después).
    - **Ruta A o B**: A = el VPS tiene panel Coolify · B = el VPS solo tiene
      Docker.
 2. **Genera tú mismo todos los secretos** (no se los pidas). En la Ruta B,
@@ -70,10 +71,15 @@ cada uno está en `.env.example`): `META_APP_SECRET`, `BOT_API_KEY`,
 `BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` (un cerebro externo como Nea),
 `AGENDA=on`, `ATRIBUCION=on` y `CHANNELS`.
 
-Si el usuario quiere el agente (Nea), se instala al lado del CRM y se conecta
-por el despacho: el webhook de Meta se queda en el CRM, **nunca se mueve a
-Nea**. Pasos y variables en [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md)
-(«El par»); el contrato, en [`docs/openapi.json`](docs/openapi.json).
+Vocero no trae agente: sin uno conectado es un CRM de bandeja manual, y eso
+es una instalación válida. Si el usuario quiere que un agente conteste (Nea),
+se instala al lado del CRM y se conecta por el despacho: el webhook de Meta se
+queda en el CRM, **nunca se mueve a Nea**. **No le pongas llave de IA a Nea**
+(`LLM_API_KEY` vacía): piensa por el CRM (`/api/bot/llm`) con la llave y el
+modelo de Ajustes → IA, así la llave se pone una sola vez, en la app. Pasos y
+variables en [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md) («El par»); el
+contrato, en [`docs/openapi.json`](docs/openapi.json). Después, el usuario
+enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
 
 ## Ruta A — Coolify (con el MCP de Coolify)
 
@@ -146,7 +152,10 @@ docker compose up -d
 - Caddy emite el certificado HTTPS automáticamente con `DOMAIN`.
 - El compose ya monta el volumen `vocero_app_data` en `/data` (adjuntos, logo
   e icono): no hay que definir `MEDIA_DIR`.
-- Verifica: `docker compose ps` (tres servicios healthy) y
+- Con el agente (Nea): `BOT_API_KEY`, `BRAIN_DISPATCH_URL` y
+  `BRAIN_HEALTH_URL` en el `.env` (valores en `docs/migrar-a-2.0.md`) y
+  `docker compose --profile nea up -d`.
+- Verifica: `docker compose ps` (tres servicios healthy, cuatro con Nea) y
   `https://<dominio>/api/health` → `{"ok":true,"version":"1.6.0",…}` (`"mediaWritable":true` confirma el volumen).
 
 ## Cierre (obligatorio decirlo al usuario)
@@ -162,6 +171,9 @@ docker compose up -d
 >    URL exacta sigue a la vista por si tu agencia enruta desde su backend o
 >    hay que pegarla a mano). La conexión del número NO es parte de esta
 >    instalación.
+> 4. Vocero no trae agente: la **Guía de inicio** te dice si hay uno conectado.
+>    Sin él, contestas tú desde la Bandeja. Con Nea en línea, enciéndelo en la
+>    pantalla **Agente** cuando el Laboratorio te dé buen puntaje.
 
 ## Diagnóstico rápido
 

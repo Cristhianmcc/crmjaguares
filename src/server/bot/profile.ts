@@ -16,8 +16,15 @@ type KbEntry = typeof schema.kbEntry.$inferSelect;
  * 034 — `role` y `tools`: qué hace el agente y con qué herramientas (las
  * claves de `src/lib/agent-roles.ts`; `escalar` siempre). Aditivas: un cerebro
  * que no las conozca las ignora y enciende todo, como antes.
+ *
+ * 036 — `llm`: con qué piensa el cerebro sin llave propia. `path` es el proxy
+ * (`/api/bot/llm`, que le pone la llave de Ajustes → IA) y `model`, el que
+ * eligió el negocio. `null` sin proveedor de IA configurado o con la llave
+ * pausada: el cerebro no tiene con qué pensar por el CRM.
  */
-export function serializeBotProfile(profile: AgentProfile, kb: KbEntry[]) {
+export type BotLlm = { path: string; model: string } | null;
+
+export function serializeBotProfile(profile: AgentProfile, kb: KbEntry[], llm: BotLlm = null) {
   return {
     profile: {
       name: profile.name,
@@ -30,5 +37,6 @@ export function serializeBotProfile(profile: AgentProfile, kb: KbEntry[]) {
     },
     kb: renderKb(kb),
     resources: [] as { label: string; url: string }[],
+    llm,
   };
 }

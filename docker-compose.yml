@@ -78,11 +78,10 @@ services:
       CRM_BOT_API_KEY: ${BOT_API_KEY:-}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/vocero
       DATABASE_SCHEMA: nea
-      # Hasta que el CRM piense por Nea (#106), Nea lleva su llave. Sin
-      # NEA_LLM_API_KEY, la misma de OpenRouter que el CRM.
-      LLM_API_KEY: ${NEA_LLM_API_KEY:-${OPENROUTER_API_TOKEN:-}}
-      LLM_BASE_URL: ${NEA_LLM_BASE_URL:-https://openrouter.ai/api/v1}
-      LLM_MODEL: ${NEA_LLM_MODEL:-${OPENROUTER_MODEL:-openai/gpt-4o-mini}}
+      # 036 — Sin LLM_API_KEY: Nea piensa por el CRM (/api/bot/llm) con la
+      # llave de Ajustes → IA y el modelo que elegiste ahí. Este es solo el
+      # de respaldo, si el CRM todavía no tiene modelo.
+      LLM_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
       # Mientras pruebas: tu número. Vacía = Nea le contesta a todos.
       ALLOWED_WA_IDS: ${ALLOWED_WA_IDS:-}
     depends_on:

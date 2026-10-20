@@ -3,17 +3,19 @@
 [![CI](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**El CRM de WhatsApp open source con un agente de IA que se pone a prueba solo.**
+**El CRM de WhatsApp open source para tu agente de IA, con un Laboratorio que lo pone a prueba.**
 
 Vocero es un CRM self-hosted y gratuito para negocios que venden por WhatsApp:
-bandeja en tiempo real, pipeline de ventas, un agente de IA con el conocimiento
-de tu negocio y un **Laboratorio** donde clientes simulados lo evalúan antes de
-que hable con clientes reales. Una instancia = un negocio, en tu propio
-servidor, con tus datos.
+bandeja en tiempo real, pipeline de ventas, el perfil y el conocimiento de tu
+agente, y un **Laboratorio** donde clientes simulados lo evalúan antes de que
+hable con clientes reales. Una instancia = un negocio, en tu propio servidor,
+con tus datos.
 
-¿Ya tienes tu propio agente? Puedes apagar el de Vocero y conectar el tuyo por
-la [API de servicio `/api/bot/*`](#-trae-tu-propio-agente): el token de WhatsApp
-nunca sale del CRM.
+Vocero no trae agente: contesta el que conectas al lado.
+[Nea](https://github.com/kevinrivm/nea-agent) (MIT) es el recomendado y se
+levanta con el mismo `docker compose`; también puedes conectar el tuyo por el
+[contrato público](#-tu-agente-al-lado-del-crm). Sin agente, Vocero es un CRM
+de bandeja manual y contestas tú. El token de WhatsApp nunca sale del CRM.
 
 ![Bandeja de Vocero CRM](docs/screenshots/bandeja.png)
 
@@ -28,8 +30,9 @@ nunca sale del CRM.
 ## ¿Para quién es?
 
 - **Agencias de IA/automatización** que implementan CRM + agente para sus
-  clientes: despliegas una instancia por cliente en su VPS, la configuras y la
-  entregas con evidencia de calidad (el reporte del Laboratorio).
+  clientes: despliegas una instancia por cliente en su VPS (el CRM y Nea, o tu
+  propio agente), la configuras y la entregas con evidencia de calidad (el
+  reporte del Laboratorio).
 - **Negocios** que quieren atender WhatsApp con IA sin regalar sus datos a un
   SaaS: todo corre en tu servidor.
 
@@ -40,8 +43,11 @@ nunca sale del CRM.
 La pieza estelar. Seis clientes simulados —el comprador decidido, el preguntón
 de precios, el cliente enojado, el que pregunta lo que no sabes, el que exige
 un humano y el que escribe "ke onda si benden pintura"— conversan contra tu
-agente REAL en un **sandbox interno que jamás envía mensajes reales**. Un juez
-LLM independiente evalúa cada conversación y te entrega:
+agente REAL —el que tienes conectado: el CRM le despacha cada mensaje simulado
+como si fuera de un cliente— en un **sandbox que jamás envía mensajes
+reales**. Sin agente conectado, el Laboratorio te dice que lo conectes
+primero. Un juez LLM independiente, con la llave de Ajustes → IA, evalúa cada
+conversación y te entrega:
 
 - un **score 0–100** de qué tan listo está el agente,
 - **hallazgos con evidencia** (alucinaciones, huecos del conocimiento, fallas
@@ -80,8 +86,7 @@ también. Si la persona vuelve a escribir, el agente empieza de cero.
 
 Cada persona que escribe queda registrada sola y entra al pipeline
 (Nuevo → En conversación → Interesado → Cliente → Perdido, editable). Arrastra
-tarjetas, busca, agrega notas, archiva. El agente puede mover leads de etapa
-cuando detecta intención de compra.
+tarjetas, busca, agrega notas, archiva.
 
 ### 🎯 Resultados
 
@@ -97,27 +102,46 @@ vive en el CRM. Con la agenda encendida suma las citas (realizadas, no
 llegaron, canceladas). Los días se cortan en la zona horaria de la agenda; si
 no hay agenda configurada, en la de Ciudad de México.
 
-### 🤖 Agente de IA con TU conocimiento
+### 🤖 Tu agente, con TU conocimiento
 
-Configura nombre, tono, instrucciones y reglas de escalado; dale conocimiento
-en pares pregunta/respuesta y bloques libres. Responde SOLO con lo que sabe,
-agrupa ráfagas de mensajes en una respuesta, escala a humano cuando el cliente
-lo pide (con detección de respaldo), cuando él lo decide o cuando algo falla.
-Proveedor LLM por adaptador OpenRouter-compatible: usa el modelo que quieras.
+En la pantalla **Agente** configuras nombre, tono, instrucciones y reglas de
+escalado, y le das conocimiento en pares pregunta/respuesta y bloques libres.
+Todo eso vive en el CRM y el agente lo lee de ahí (`GET /api/bot/profile`):
+lo editas en un solo lugar. La llave de IA también: la pegas una vez en
+Ajustes → IA y tu agente piensa **a través del CRM**, sin copiarla a ningún
+otro sitio.
 
-### 🔌 Trae tu propio agente
+El interruptor de esa pantalla dice si el CRM le pasa las conversaciones a tu
+agente. Solo se enciende con un agente conectado y en línea; apagado, todo se
+queda en la bandeja para tu equipo.
 
-Si prefieres conducir la conversación con tu propio cerebro —un microservicio
-tuyo, en tu mismo servidor— apaga el agente de Vocero y habilita la API de
-servicio con una `BOT_API_KEY`. Tu bot conversa a través del CRM, así que **el
-token de WhatsApp nunca sale de aquí** y todo queda en la bandeja como
-cualquier otra conversación.
+### 🔌 Tu agente al lado del CRM
+
+Quien contesta es un servicio aparte, en tu mismo servidor:
+[Nea](https://github.com/kevinrivm/nea-agent) (MIT; entiende audio, imagen y
+PDF, escala a humano, agenda y da seguimiento) o un cerebro tuyo. Se conecta
+con una `BOT_API_KEY` por la API de servicio: tu agente conversa a través del
+CRM, así que **el token de WhatsApp nunca sale de aquí** y todo queda en la
+bandeja como cualquier otra conversación.
+
+Con docker compose, el par se levanta junto (la receta completa, con Coolify,
+está en [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md#el-par-crm--nea)):
+
+```bash
+# en tu .env: BOT_API_KEY, BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch
+# y BRAIN_HEALTH_URL=http://nea:8000/health
+docker compose --profile nea up -d
+```
+
+Mientras se publica la imagen 2.0.0 de Nea, el servicio va detrás del perfil
+`nea`; con el cierre de la 2.0 se levanta siempre.
 
 | Endpoint | Para qué |
 |---|---|
 | `GET /api/bot/context` | Quién es la persona, su etapa, si un humano tomó la conversación y si la ventana de 24 h sigue abierta. Con la agenda encendida, también sus citas (`booking`): la próxima, la que ya pasó sin cerrarse y la última que se cerró (cancelada, no asistió o realizada) |
 | `POST /api/bot/messages` | Responder. Sale por el mismo camino que el composer y queda marcado como IA |
-| `GET /api/bot/profile` | El perfil del agente y el knowledge base que editaste en la app |
+| `GET /api/bot/profile` | El perfil del agente y el knowledge base que editaste en la app; en `llm`, por dónde pensar y con qué modelo (`null` sin IA configurada) |
+| `POST /api/bot/llm/{ruta}` | Pensar con la llave de Ajustes → IA. Compatible con OpenAI: apunta el `base_url` de tu SDK aquí. Acepta `X-API-Key` o `Authorization: Bearer`. Sin IA configurada, 402 `sin_credencial` |
 | `PUT /api/bot/ficha` | Guardar lo que tu bot descubre del lead (claves libres: cada negocio califica distinto) |
 | `POST /api/bot/handoff` | Devolver la conversación a un humano |
 | `POST /api/bot/typing` | Marcar leído y mostrar "escribiendo…" |
@@ -142,15 +166,15 @@ llamadas por minuto; sin llave o con una mala, 30 por minuto desde la misma IP
 responden `401` y las siguientes `429` («Demasiados intentos fallidos»). Quien
 inunde la API sin llave no deja a tu bot sin servicio.
 
-**Que el CRM le pase cada turno a tu bot.** Tu bot no necesita recibir el
-webhook de Meta: con `BRAIN_DISPATCH_URL` (p. ej.
-`http://nea:8000/vocero/dispatch`) y la misma `BOT_API_KEY`, el mensaje entra
-primero a la bandeja y el CRM le hace a tu bot un `POST` firmado con lo que el
-cliente escribió desde la última respuesta, junto, después de esperar a que
-termine su ráfaga. Tu bot contesta por `POST /api/bot/messages`, como siempre.
-Es igual para WhatsApp, Instagram y Messenger, y no hay secreto de Meta que
-copiar ni cola de reenvío que vigilar. Mientras está activo, el agente incluido
-no contesta. Si tu bot no recibe el turno (tres intentos), la conversación
+**El CRM le pasa cada turno a tu agente (el despacho).** Tu agente no
+necesita recibir el webhook de Meta: con `BRAIN_DISPATCH_URL` (p. ej.
+`http://nea:8000/vocero/dispatch`), la misma `BOT_API_KEY` y el interruptor de
+la pantalla Agente encendido, el mensaje entra primero a la bandeja y el CRM
+le hace a tu agente un `POST` firmado con lo que el cliente escribió desde la
+última respuesta, junto, después de esperar a que termine su ráfaga. Tu agente
+contesta por `POST /api/bot/messages`. Es igual para WhatsApp, Instagram,
+Messenger y TikTok, y no hay secreto de Meta que copiar ni cola de reenvío que
+vigilar. Si tu agente no recibe el turno (tres intentos), la conversación
 queda con una persona y el mensaje sigue en la bandeja. El contrato del evento
 y de la firma está en
 [`specs/021-despacho-estandar/contracts/despacho.md`](specs/021-despacho-estandar/contracts/despacho.md)
@@ -165,18 +189,21 @@ pantalla te dice a qué host se está respetando y, si quieres que los mensajes
 vuelvan al CRM (por ejemplo, al pasar de Nea 1.x al despacho), ofrece
 **Recuperar el webhook**: quita ese override y deja el del número aquí.
 
-Arriba de la pantalla **Agente**, la tarjeta **«Quién responde a tus
-clientes»** dice quién está contestando: el agente incluido (encendido y con
-token de IA) o tu cerebro externo, con su última llamada a la API y —si
-defines `BRAIN_HEALTH_URL`, p. ej. `http://nea:8000/health`— si está en
-línea, su versión, su modo y cuántos mensajes le faltan por relevar. Los dos
-no se ven entre sí, así que si ambos están activos tu cliente recibe dos
-respuestas: la tarjeta lo marca en rojo y te dice cómo quitarlo (apagar el
-agente incluido o quitar la llave en Ajustes → IA). Con `BRAIN_DISPATCH_URL`
-eso ya no puede pasar, y la tarjeta gana una fila: a quién se le despacha,
-cuándo llegó el último turno y si alguno no llegó.
+**Tu agente piensa por el CRM.** `POST /api/bot/llm/{ruta}` reenvía la
+llamada tal cual al proveedor de Ajustes → IA con la llave guardada y te
+devuelve su respuesta. La llave no viaja a tu agente: si se filtra el
+servidor de tu agente, no se filtra con ella. Si el proveedor la rechaza (401)
+o se queda sin saldo (402), se pausa en Ajustes → IA y la pantalla lo dice,
+igual que si fallara en el CRM. Nea lo usa solo cuando no le pones
+`LLM_API_KEY`; con ella, piensa con su propio proveedor.
 
-Agente de referencia: [nea-agent](https://github.com/kevinrivm/nea-agent), MIT.
+Arriba de la pantalla **Agente**, la tarjeta **«Quién responde a tus
+clientes»** dice si hay un agente conectado: su última llamada a la API, a
+quién se le despacha, cuándo llegó el último turno y si alguno no llegó, y
+—con `BRAIN_HEALTH_URL`, p. ej. `http://nea:8000/health`— si está en línea,
+su versión y su modo. Sin agente, te dice que Vocero funciona como bandeja
+manual (es un aviso, no un error). Con el agente conectado y el interruptor
+apagado, te avisa que nadie está contestando.
 
 ### 📅 Agenda con huecos reales (opcional, apagada por defecto)
 
@@ -222,8 +249,7 @@ actividad te dice qué se envió, con qué acuse y, cuando no salió, por qué.
 
 No se le pide nada al usuario que el CRM ya sepa: la venta cuelga de la etapa
 ganada que ya tienes, y todo se dispara desde la misma puerta que mueve leads,
-así que reporta igual si arrastras la tarjeta tú, el agente incluido o tu propio
-bot. Si Meta se cae, el lead se mueve igual: una conversión jamás vale un
+así que reporta igual sin importar quién mueva la tarjeta. Si Meta se cae, el lead se mueve igual: una conversión jamás vale un
 movimiento bloqueado. Los gotchas de Meta que cuesta descubrir solo están en
 [`docs/atribucion-capi.md`](docs/atribucion-capi.md).
 
@@ -259,7 +285,9 @@ Meta y tu proveedor LLM opcional.
 - Un dominio apuntando al VPS (Meta exige **https** para webhooks).
 - Un número de WhatsApp en la Cloud API de Meta (ver [Conexión](#conexión-del-número-de-whatsapp)).
 - Opcional: una API key de [OpenRouter](https://openrouter.ai) (o cualquier
-  proveedor compatible) para el agente y el Laboratorio.
+  proveedor compatible) para tu agente y el juez del Laboratorio.
+- Opcional: un agente al lado del CRM ([Nea](https://github.com/kevinrivm/nea-agent)
+  u otro). Sin él, Vocero funciona como bandeja manual.
 
 ## Instalación (~15 minutos)
 
@@ -349,8 +377,8 @@ comandos exactos escritos en el propio `fly.toml`: `fly apps create`,
 `DATABASE_URL`), `fly secrets set` con los tres secretos y
 `fly deploy --ha=false`. Ese Postgres es el no gestionado (barato; Fly ya no
 lo mantiene): el gestionado es `fly mpg create` + `fly mpg attach`. La máquina
-no se apaga sola a propósito: el agente y el Laboratorio corren dentro del
-proceso.
+no se apaga sola a propósito: el despacho a tu agente y el Laboratorio corren
+dentro del proceso.
 
 **Railway** — [`railway.toml`](railway.toml) solo puede declarar el build
 (Dockerfile), el healthcheck y la política de reinicio; la base, el volumen,
@@ -381,17 +409,21 @@ solas al arrancar.
 
 1. Entra y **regístrate**: el primer registro crea tu organización y cierra el
    registro público.
-2. Lo primero que ves es la **Guía de inicio**: tres pasos —configura tu
-   agente, vincula tu proveedor de IA, conecta tu número de WhatsApp— y, con la
-   agenda encendida (`AGENDA=on`), un cuarto para tus horarios. Cada botón te
-   lleva a la pantalla que toca y al volver ves tu avance; cada paso se marca
-   solo cuando la pieza de verdad funciona. Al terminar aparece **Encender**:
-   hasta entonces el agente no le contesta a nadie y los mensajes que lleguen
-   los atiendes tú desde la Bandeja.
-3. Mientras falte un paso o el agente siga apagado, entrar a la app te lleva a
-   la guía (también está en el menú, solo para el propietario). Con todo listo
-   y el agente encendido entras directo a la Bandeja. La guía no encierra a
-   nadie: desde el menú vas a cualquier pantalla en cualquier momento.
+2. Lo primero que ves es la **Guía de inicio**: configura tu agente, vincula
+   tu proveedor de IA, conecta tu número de WhatsApp y, opcional, **conecta tu
+   agente** (Nea u otro; su dirección va en las variables de entorno, el paso
+   te lleva a la receta y se marca solo cuando el agente contesta su
+   `/health`). Con la agenda encendida (`AGENDA=on`), uno más para tus
+   horarios. Cada botón te lleva a la pantalla que toca y al volver ves tu
+   avance; cada paso se marca solo cuando la pieza de verdad funciona. Con un
+   agente conectado aparece **Encender**: hasta entonces nadie le contesta a
+   los clientes y los mensajes que lleguen los atiendes tú desde la Bandeja.
+   Sin agente, la guía te dice que Vocero funciona como bandeja manual.
+3. Mientras falte un paso —o haya un agente conectado y siga apagado—, entrar
+   a la app te lleva a la guía (también está en el menú, solo para el
+   propietario). Si no conectas agente, con los demás pasos listos entras
+   directo a la Bandeja. La guía no encierra a nadie: desde el menú vas a
+   cualquier pantalla en cualquier momento.
 4. Opcional: en la Bandeja, pulsa **"Cargar datos de demostración"** para
    explorar con la **Ferretería El Martillo** (contactos, conversaciones,
    pipeline, un knowledge base con huecos a propósito y una corrida de
@@ -506,7 +538,7 @@ Con más de un canal encendido, la Bandeja enseña el distintivo de cada
 conversación y permite filtrar por canal. El contacto, el pipeline, la ficha
 y el agente son los mismos: un lead es un lead, escriba por donde escriba.
 
-El agente escribe igual para todos los canales y Vocero lo adapta al salir:
+Tu agente escribe igual para todos los canales y Vocero lo adapta al salir:
 en Instagram, Messenger y TikTok, que no dibujan las negritas de WhatsApp, su
 texto llega sin asteriscos, con viñetas y con los enlaces legibles.
 
@@ -626,8 +658,10 @@ El detalle está en [`specs/022-canal-tiktok`](specs/022-canal-tiktok/spec.md).
 
 ## Configuración de la IA
 
-Se hace desde la app, en **Ajustes → IA**: eliges el proveedor (OpenRouter, o
-cualquier API compatible con la de OpenAI con su base URL), el modelo y pegas
+Con esta llave piensa tu agente (a través del CRM, por `/api/bot/llm`) y el
+juez del Laboratorio. Se pone una vez, en la app: en **Ajustes → IA** eliges
+el proveedor (OpenRouter, o cualquier API compatible con la de OpenAI con su
+base URL), el modelo y pegas
 tu llave. «Probar conexión» hace una llamada mínima con lo escrito antes de
 guardar, «Traer modelos» lista los del proveedor, y la ayuda plegable explica
 dónde se consigue la llave. Se guarda cifrada (AES-256-GCM, la misma
@@ -635,7 +669,7 @@ dónde se consigue la llave. Se guarda cifrada (AES-256-GCM, la misma
 sus últimos 4.
 
 Si el proveedor rechaza la llave (401) o la cuenta se queda sin saldo (402),
-el agente se pausa solo, un banner lo dice en toda la app y Ajustes → IA
+la llave se pausa sola, un banner lo dice en toda la app y Ajustes → IA
 explica cuál de las dos cosas pasó. Guardar una llave nueva —o «Probar
 conexión» con la guardada después de recargar— lo reactiva. Un 429 o un 500
 del proveedor no pausan nada: son hipos, no problemas de la llave.
@@ -653,8 +687,8 @@ OPENROUTER_BASE_URL=https://openrouter.ai/api   # o tu proveedor OpenAI-compatib
 
 Sin proveedor, todo lo demás funciona; Agente y Laboratorio enlazan a
 Ajustes → IA. Después configura el comportamiento y el conocimiento en la
-pestaña **Agente** y corre el **Laboratorio** antes de encender el agente con
-clientes reales.
+pestaña **Agente**, conecta tu agente y corre el **Laboratorio** antes de
+encenderlo con clientes reales.
 
 ## Cumplimiento con las políticas de Meta
 
@@ -693,9 +727,11 @@ nuevo. En modo directo usa un token de usuario del sistema (no expira).
 permitidos (números de prueba de Meta) o el formato es inválido. Vocero ya
 normaliza los números de México (521 → 52).
 
-**El agente no responde** — ¿Token de IA configurado? ¿Toggle global
-encendido? ¿La conversación tiene la IA activa y sin handoff? ¿Ventana de 24 h
-abierta? Revisa también los logs de la instancia.
+**El agente no responde** — Vocero no trae agente: ¿hay uno conectado? La
+tarjeta «Quién responde» de la pantalla Agente lo dice (y si su `/health`
+contesta). ¿El interruptor está encendido? ¿Llave de IA vigente en Ajustes →
+IA? ¿La conversación tiene la IA activa y sin handoff? ¿Ventana de 24 h
+abierta? Revisa también los logs de la instancia y los de tu agente.
 
 **`ENCRYPTION_KEY` inválida al arrancar** — Debe ser exactamente 32 bytes en
 base64 (44 caracteres): `openssl rand -base64 32`.
@@ -822,8 +858,8 @@ conclusión:
   garantía. Al ofrecerla, es el CRM quien tiene que poder probarla: con la
   memoria del lado del cliente, cualquier cerebro conectado por `/api/bot/*`
   podría reservar un horario que jamás se ofreció y el CRM lo aceptaría. Ahora
-  la regla es inviolable por construcción y vale igual para el agente incluido,
-  para tu bot y para el que venga.
+  la regla es inviolable por construcción y vale igual para Nea, para tu bot y
+  para el que venga.
 
 Lo que sigue fuera, y a propósito: **leer calendarios externos** para descontar
 disponibilidad. El motor calcula con lo suyo y los compromisos de fuera se

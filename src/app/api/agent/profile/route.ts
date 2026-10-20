@@ -10,6 +10,8 @@ import {
   type ClaveHerramienta,
 } from "@/lib/agent-roles";
 import { agendaEnabled } from "@/server/agenda/flag";
+import { leerConfigDespacho, urlSaludCerebro } from "@/server/brains/config";
+import { getBrainHealth } from "@/server/bot/status";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,14 @@ export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
 
+  // 036 — El interruptor decide si el CRM le despacha al cerebro. Encenderlo
+  // sin un cerebro que conteste dejaría a los clientes sin respuesta creyendo
+  // que la tienen; apagarlo siempre se puede.
+  if (body.data.enabled === true) {
+    const problema = await problemaDelCerebro();
+    if (problema) return apiError(409, "sin_cerebro", problema);
+  }
+
   const db = getDb();
   const { tools, ...resto } = body.data;
   const updated = await db
@@ -76,3 +86,20 @@ export const PUT = withAuth(async (session, req: Request) => {
   if (!updated[0]) return apiError(404, "not_found", "Perfil no encontrado");
   return Response.json({ ok: true });
 });
+
+/** Por qué no se puede encender el agente, o `null` si hay cerebro sano. */
+async function problemaDelCerebro(): Promise<string | null> {
+  const despacho = leerConfigDespacho();
+  if (!despacho.active) {
+    return despacho.problem === "sin_llave"
+      ? "Falta BOT_API_KEY: sin ella el CRM no puede despacharle a tu agente."
+      : despacho.problem === "url"
+        ? "BRAIN_DISPATCH_URL no es una dirección válida."
+        : "No hay un agente conectado. Conéctalo (BRAIN_DISPATCH_URL) y vuelve a encenderlo.";
+  }
+  const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
+  if (salud && !salud.reachable) {
+    return `Tu agente (${despacho.host}) no contesta. Revisa que esté corriendo y vuelve a intentar.`;
+  }
+  return null;
+}

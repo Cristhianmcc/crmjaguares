@@ -1071,3 +1071,66 @@ Fuera de esos 66 s, Soporte no se movió de `vocero-clase`.
 Que Kevin revise y mergee #129. Luego, la #106: retirar el agente incluido,
 que el CRM piense por Nea (`/api/bot/llm`) y quitar el perfil `nea` del
 compose.
+
+## 2026-10-20 — 036: retiro del agente incluido (#106)
+
+PR #130 (rama `feat/036-retiro-agente-incluido`) y nea-agent#47 (rama
+`feat/036-pensar-por-el-crm`). Kevin autorizó mergear la 035 y seguir con la
+#106. Las dos decisiones de producto ya estaban tomadas: el cerebro piensa por
+el CRM y el par usa una sola base.
+
+### Qué quedó
+
+- El CRM no trae agente. Se fueron el turno dentro del proceso, el prompt del
+  agente y `agenda/agent` con sus pruebas. La ingesta solo despacha.
+- `POST /api/bot/llm/{ruta}`: proxy compatible con OpenAI que usa la llave de
+  Ajustes → IA. `BOT_API_KEY` vale también como Bearer. Un 401 o 402 del
+  proveedor pausa la llave. El perfil gana `llm {path, model}`.
+- El interruptor del Agente ahora significa «el CRM despacha». Encenderlo
+  exige cerebro configurado y con `/health` sano; si no, 409 `sin_cerebro`.
+- El Laboratorio solo prueba por despacho. «Quién responde» avisa con
+  `sin_cerebro` o `apagado`. La guía de inicio gana el paso «Conecta tu
+  agente», opcional: sin él, Vocero es una bandeja manual.
+- Nea, con `LLM_API_KEY` vacía, piensa por el CRM con el modelo del perfil. Su
+  `/health` gana el campo `llm`.
+- Compose y Coolify: Nea sin llave de IA. Se borró `LLM_API_KEY` del servicio
+  `vocero20-par` (`dlh4zhtqg8avc2qlxfb8eodz`). Desde ahora no hay secreto de
+  IA fuera de Ajustes → IA del CRM.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,137 unitarias (nuevas: proxy 11, interruptor 9) |
+| Arnés E2E contra un cerebro falso compartido (`scripts/lib/cerebro-falso.mjs`) | selftest 280/280, despacho 134/134, importar 38/38, resultados 71/71, tiktok 52/52, ventana-social 58/58, eliminar 57/57, roles 15/15, recuperar-webhook 8/8 |
+| Nea: `pytest` | 507 verdes (25 nuevas); la del PDF falla solo en Windows |
+| Interfaz | Capturas en claro, oscuro y móvil (390 px) del estado sin cerebro |
+
+### En vivo (`vocero20`: CRM y Nea `2.0.0-rc.7`)
+
+Compose actualizado y desplegado por el MCP de Coolify. Nea arrancó con «LLM_API_KEY
+vacía: Nea piensa por el CRM». «Quién responde» quedó así: encendido, IA
+activa (OpenRouter `…09bd`, `openai/gpt-4o-mini`), sin avisos, Nea `2.0.0-rc.7`
+en línea. Para la prueba se usó `ops/vivo-036.mjs`.
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto (relevo por túnel) | 22:03:06 / 22:03:23 | Un DM de la línea cliente. Nea contestó en 12.3 s (134 caracteres, `delivered`). En los logs de Nea: «pienso con openai/gpt-4o-mini» y `POST /api/bot/llm/chat/completions` → 200 |
+| Laboratorio | 22:03:44 – 22:07:11 | 8/8 casos contestados por la Nea conectada y juzgados, sin fallas de entrega. Score 56: refleja el poco conocimiento cargado en `vocero20`, no el mecanismo |
+
+Un mensaje de la línea cliente y una respuesta; por el relevo solo pasó esa
+línea. Soporte quedó como estaba: el número sin override y la WABA hacia
+`vocero-clase`.
+
+**Pendiente, de antes de la 036:** el log de Nea avisa que
+`LLM_TRANSCRIBE_MODEL` sigue en `whisper-1`, y por un proveedor compatible
+(ahora el CRM) las notas de voz van a fallar. Hay que elegir un modelo que oiga.
+
+**Cambio de producto a revisar:** con el agente incluido se fue la acción de
+mover un lead de etapa (`move_stage`). `/api/bot/*` no tiene ruta para eso,
+así que hoy ningún cerebro puede mover etapas.
+
+### Qué sigue
+
+Que Kevin revise y mergee #130 y nea-agent#47. Después, #93 (almacenamiento),
+el tag 2.0.0 (que quita el perfil `nea` del compose) y el starter 3.0.0.

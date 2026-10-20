@@ -2,9 +2,7 @@ import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { publish } from "@/server/events/bus";
-import { runAgentTurn } from "@/server/ai/pipeline";
 import { renderKb } from "@/server/ai/prompts";
-import { leerConfigDespacho } from "@/server/brains/config";
 import { construirEventoOlvido } from "@/server/brains/contract";
 import { avisarOlvido } from "@/server/brains/deliver";
 import { encolarDespacho } from "@/server/dispatch/outbox";
@@ -19,15 +17,14 @@ import { rolDe } from "@/lib/agent-roles";
  * global de 10 minutos, y lock de concurrencia por índice parcial UNIQUE en
  * BD (máx. 1 corrida `running` por organización).
  *
- * Sandbox (FR-031): las conversaciones se crean con is_test=true; el pipeline
- * del agente persiste las respuestas sin tocar la API, y el sender real lanza
- * si algo intenta enviarlas.
+ * Sandbox (FR-031): las conversaciones se crean con is_test=true y el sender
+ * real lanza si algo intenta enviarlas.
  *
- * 033 — Con el despacho activo, el Laboratorio prueba al cerebro que de
- * verdad contesta: cada línea entra como un mensaje del cliente, se le
- * despacha sin ventana de agrupado, y su respuesta vuelve por
- * `/api/bot/messages`, que la guarda sin enviarla. Sin despacho, contra el
- * agente incluido, como siempre.
+ * 033 — El Laboratorio prueba al cerebro que de verdad contesta: cada línea
+ * entra como un mensaje del cliente, se le despacha sin ventana de agrupado, y
+ * su respuesta vuelve por `/api/bot/messages`, que la guarda sin enviarla.
+ * 036 — Ya no hay agente incluido contra el cual correr: sin despacho, la
+ * corrida no arranca (`POST /api/lab/runs` responde 409 `sin_cerebro`).
  */
 
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
@@ -150,8 +147,6 @@ async function runAllCases(
   let done = 0;
   const total = cases.length;
   publishProgress(organizationId, runId, "running", done, total);
-  // 033 — Quién contesta en producción es quien se prueba.
-  const porDespacho = leerConfigDespacho().active;
   const fallas: string[] = [];
 
   for (const testCase of cases) {
@@ -165,8 +160,7 @@ async function runAllCases(
 
     const { transcript, conversationId, falla } = await runConversation(
       organizationId,
-      persona,
-      porDespacho
+      persona
     );
 
     if (falla) {
@@ -235,8 +229,7 @@ async function runAllCases(
 /** Conversa el guion completo contra el agente real; corta al primer handoff. */
 async function runConversation(
   organizationId: string,
-  persona: Persona,
-  porDespacho: boolean
+  persona: Persona
 ): Promise<{
   transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
   conversationId: string;
@@ -276,14 +269,9 @@ async function runConversation(
       .set({ lastInboundAt: now, lastMessageAt: now, updatedAt: now })
       .where(eq(schema.conversation.id, convId));
 
-    // Turno REAL del agente, secuencial y sin debounce (FR-030). 033 — Por
-    // despacho cuando es el cerebro externo quien contesta en producción.
-    if (porDespacho) {
-      falla = await turnoPorDespacho(organizationId, convId, messageId, now);
-      if (falla) break;
-    } else {
-      await runAgentTurn(convId);
-    }
+    // Turno REAL del cerebro, secuencial y sin debounce (FR-030, 033).
+    falla = await turnoPorDespacho(organizationId, convId, messageId, now);
+    if (falla) break;
 
     const convRows = await db
       .select({ handoffAt: schema.conversation.handoffAt })
@@ -299,7 +287,7 @@ async function runConversation(
     .where(eq(schema.message.conversationId, convId))
     .orderBy(asc(schema.message.createdAt));
 
-  if (porDespacho) await olvidar(organizationId, convId, contactId);
+  await olvidar(organizationId, convId, contactId);
 
   // 033 — El traspaso no es un mensaje: sin esta línea el juez no lo ve, y
   // marcaba «debió escalar» a un agente que sí escaló.

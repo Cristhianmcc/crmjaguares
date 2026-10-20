@@ -93,7 +93,13 @@ describe("serializeBotProfile", () => {
       },
       kb: "P: ¿Cuánto cuesta?\nR: $800.",
       resources: [],
+      llm: null,
     });
+  });
+
+  it("036 — llm: el proxy y el modelo del negocio cuando hay con qué pensar", () => {
+    const llm = { path: "/api/bot/llm", model: "openai/gpt-4o-mini" };
+    expect(serializeBotProfile(profileRow(), [], llm).llm).toEqual(llm);
   });
 
   it("opcionales vacíos viajan como null, no como cadenas", () => {

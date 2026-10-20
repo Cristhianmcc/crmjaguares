@@ -23,7 +23,8 @@ import {
 } from "@/server/attribution/referral";
 import { registrarAnuncioDeOrigen } from "@/server/attribution/store";
 import { onLeadActivity } from "@/server/inbox/lead-activity";
-import { maybeRunAgentTurn } from "@/server/ai/trigger";
+import { despachoActivo } from "@/server/brains/config";
+import { despacharAlCerebro } from "@/server/dispatch/encolar";
 
 /** Tipos de contenido soportados; el resto se ignora sin error. */
 const SUPPORTED_TYPES = new Set([
@@ -528,7 +529,9 @@ export async function ingestInboundMessage(input: {
     data: { conversation: { id: conversation.id } },
   });
 
-  await maybeRunAgentTurn(conversation.id, organizationId, message.id);
+  // 036 — Quien contesta es el cerebro conectado; sin él, una persona. El
+  // 025: `message.id` es lo que el despacho le debe al cerebro.
+  if (despachoActivo()) await despacharAlCerebro(conversation.id, organizationId, message.id);
 }
 
 function toDate(timestamp: string): Date {
