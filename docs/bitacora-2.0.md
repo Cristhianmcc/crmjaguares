@@ -799,8 +799,7 @@ cliente (…9768) por Evolution. `ALLOWED_WA_IDS` de Nea con la línea cliente.
 - Por el relevo solo pasó tráfico de la línea cliente: 4 mensajes y 1
   respuesta. Gasto de OpenRouter: centavos.
 
-**Pendiente de verificación humana:** un DM real de Instagram (hace falta que
-Kevin escriba desde una cuenta personal).
+El DM real de Instagram se hizo después, en Coolify (abajo).
 
 ### En vivo, Coolify (2026-10-20)
 
@@ -852,5 +851,33 @@ Un mensaje y una respuesta; por el relevo solo pasó la línea cliente.
 
 ### Qué sigue
 
-El DM de Instagram en `vocero20` cuando Kevin pueda escribir; luego #91
-(Laboratorio por contrato).
+#### Instagram, con DMs reales de Kevin
+
+- `ops/canales.mjs conectar` en `vocero20`: Instagram **@kevinbelier.ia** y la
+  página «Kevin Belier» por Zernio. El CRM dio de alta su webhook
+  (`vocero-vocero20.177.7.62.92.sslip.io`), limitado a las 2 cuentas de Kevin.
+- `vocero-clase` recibe los mismos DMs (su webhook, también limitado a esas
+  2 cuentas). Para que su agente no contestara encima, se **apagó de 16:22:42
+  a 16:30:36 UTC** y se volvió a encender (`answering: true`).
+- `ALLOWED_WA_IDS` de Nea: primero `ig:nadie-todavia` (nadie pasa); el primer
+  DM de Kevin (16:27:25) entró a la bandeja y Nea lo frenó en el log
+  (`allowlist: ig:…5620`); con esa identidad en la lista y un redeploy, el
+  segundo DM (16:30:03, una pregunta) **recibió respuesta de Nea a las
+  16:30:24**, `sent`, origen `ai`, sin asteriscos ni formato de WhatsApp.
+- Al terminar: webhook de Zernio de `vocero20` **desactivado** (16:30:45), no
+  borrado; el de `vocero-clase`, activo como estaba.
+
+**Hallazgo (ya estaba en `main`, no es de la 031):** el seguimiento de 4 h
+(`app/followup.py`) y el reintento de envíos (`app/sender.py`) no miran
+`ALLOWED_WA_IDS`. A las 16:23:42 Nea le mandó el empujón de seguimiento a la
+línea cliente de Kevin (la conversación de WhatsApp de las 12:22) aunque la
+lista ya no la incluía. Fue a la propia línea de Kevin; queda para un arreglo
+aparte.
+
+Con esto la 031 queda probada en vivo en WhatsApp e Instagram, en local y en
+Coolify. Messenger y TikTok, solo con simuladores.
+
+### Qué sigue
+
+Que Kevin revise y mergee #125 y nea-agent#43; el arreglo del seguimiento y
+la lista de permitidos; luego #91 (Laboratorio por contrato).

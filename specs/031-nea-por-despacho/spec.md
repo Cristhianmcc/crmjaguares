@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-19
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; gates, e2e del par y prueba en vivo (WhatsApp e Instagram, local y Coolify) en verde. Bitácora del 2026-10-19 y 20.
 
 **Input**: primera pieza de la 2.0.0 (`PLAN-2.0.md`, aprobado por el dueño el
 2026-10-13): kevinrivm/nea-agent#37. Kevin aprobó en el chat del 2026-10-19
