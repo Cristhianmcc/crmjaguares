@@ -800,7 +800,46 @@ cliente (…9768) por Evolution. `ALLOWED_WA_IDS` de Nea con la línea cliente.
   respuesta. Gasto de OpenRouter: centavos.
 
 **Pendiente de verificación humana:** un DM real de Instagram (hace falta que
-Kevin escriba desde una cuenta personal). **Pendiente:** la prueba en Coolify.
+Kevin escriba desde una cuenta personal).
+
+### En vivo, Coolify (2026-10-20)
+
+Kevin autorizó en el chat montar el par en `vocero-16` desde las ramas. Tags de
+prelanzamiento `v2.0.0-rc.1` en los dos repos (sobre `1770a7a` y `f57eeba`):
+publicaron `ghcr.io/kevinrivm/vocero-crm:2.0.0-rc.1` y
+`ghcr.io/kevinrivm/nea-agent:2.0.0-rc.1` sin mover `latest`.
+
+- Servicio `vocero20-par` (`dlh4zhtqg8avc2qlxfb8eodz`): CRM
+  (`dbatl4la70eknhflxs1sfk8i`), Nea (`cgzk4ndoeg1yd1doarbzlpmq`) y Postgres
+  (`iclpugyjs0qecbetmh3bqx4v`) en un compose. **Una sola base**: Nea creó su
+  esquema `nea` y migró ahí. El CRM despacha a `http://nea:8000` por la red
+  del servicio. URL `https://vocero20.177.7.62.92.sslip.io`; healthcheck de
+  Coolify apagado en el compose. `/api/health` → `1770a7a`, verificado.
+- Claves generadas por Coolify (`SERVICE_PASSWORD_*`,
+  `SERVICE_REALBASE64_32_CIFRADO`); `BOT_API_KEY` y `CRM_BOT_API_KEY` son la
+  misma variable mágica. `ALLOWED_WA_IDS` va vacía: en WhatsApp el relevo ya
+  filtra a la línea cliente.
+- **La llave de OpenRouter de Nea** (`LLM_API_KEY`) se guardó con
+  `ops/coolify-env.mjs`, por la API REST de Coolify: **excepción a la regla 5
+  autorizada por Kevin el 2026-10-20, solo para esa variable**, porque por el
+  MCP el valor habría quedado escrito en la conversación. Lista cerrada
+  (servicio y variable); el valor no se imprimió (…09bd).
+
+| | UTC |
+|---|---|
+| Override del número movido al relevo → túnel → `vocero20` | 12:22:17 |
+| Mensaje de la línea cliente | 12:22:23 |
+| Respuesta de Nea, `delivered`, origen `ai` | 14.1 s después |
+| Override devuelto (quitado: el tráfico vuelve a la WABA, `vocero-clase`) | 12:22:40 |
+
+Un mensaje y una respuesta; por el relevo solo pasó la línea cliente.
+`brain-status` del CRM: despacho activo hacia `nea:8000`, sin fallas.
+
+| Qué | Dónde |
+|---|---|
+| Dueño de la instancia | `.env.vocero20` del espacio de trabajo (correo `OWNER_EMAIL`, contraseña generada) |
+| Llave de IA de Nea | Variable `LLM_API_KEY` del servicio; sale de `LLM_API_KEY` de la bóveda |
+| Token de WhatsApp | Cifrado en la base del CRM; sale de `WA_TOKEN` de la bóveda |
 
 ### Dónde vive cada cosa
 
@@ -813,5 +852,5 @@ Kevin escriba desde una cuenta personal). **Pendiente:** la prueba en Coolify.
 
 ### Qué sigue
 
-Prueba en Coolify del par y el DM de Instagram; luego #91 (Laboratorio por
-contrato).
+El DM de Instagram en `vocero20` cuando Kevin pueda escribir; luego #91
+(Laboratorio por contrato).
