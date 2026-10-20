@@ -46,7 +46,7 @@ type Case = {
   status: string;
   veredicto: "verde" | "amarillo" | "rojo" | null;
   hallazgos: Hallazgo[];
-  transcript: { role: "cliente" | "agente"; text: string }[];
+  transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
 };
 
 const TIPO_LABELS: Record<Hallazgo["tipo"], string> = {
@@ -312,6 +312,11 @@ function Report({
               intentarlo.
             </p>
           )}
+          {run.status === "done" && run.error && (
+            <p className="text-sm text-warning-text">
+              Sin respuesta del agente: {run.error}
+            </p>
+          )}
         </CardHeader>
         {run.status === "done" && (
           <CardContent>
@@ -329,6 +334,12 @@ function Report({
               <p className="mt-3 text-xs text-warning-text">
                 {cases.filter((c) => c.status === "judge_failed").length} caso(s) sin
                 veredicto (el juez no respondió válido); excluidos del score.
+              </p>
+            )}
+            {cases.some((c) => c.status === "agent_failed") && (
+              <p className="mt-3 text-xs text-warning-text">
+                {cases.filter((c) => c.status === "agent_failed").length} caso(s) sin
+                respuesta del agente; excluidos del score.
               </p>
             )}
           </CardContent>
@@ -369,6 +380,9 @@ function CaseCard({ testCase, onApplied }: { testCase: Case; onApplied: () => vo
             {c.status === "judge_failed" && (
               <Badge variant="secondary">sin veredicto</Badge>
             )}
+            {c.status === "agent_failed" && (
+              <Badge variant="secondary">el agente no contestó</Badge>
+            )}
           </span>
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {c.hallazgos.length > 0 && `${c.hallazgos.length} hallazgo(s)`}
@@ -390,10 +404,19 @@ function CaseCard({ testCase, onApplied }: { testCase: Case; onApplied: () => vo
                 <p key={i}>
                   <span
                     className={
-                      t.role === "cliente" ? "text-info" : "text-primary"
+                      t.role === "cliente"
+                        ? "text-info"
+                        : t.role === "sistema"
+                          ? "text-muted-foreground"
+                          : "text-primary"
                     }
                   >
-                    {t.role === "cliente" ? "Cliente" : "Agente"}:
+                    {t.role === "cliente"
+                      ? "Cliente"
+                      : t.role === "sistema"
+                        ? "Sistema"
+                        : "Agente"}
+                    :
                   </span>{" "}
                   {t.text}
                 </p>

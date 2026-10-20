@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
-import { newId } from "@/lib/db/ids";
 import { scoped } from "@/lib/db/tenant";
 import { moveLeadToStage as moveLeadThroughHistory } from "@/server/leads/stage-history";
 import { getEnv } from "@/lib/env";
@@ -30,6 +29,7 @@ import {
 import { agendaEnabled } from "@/server/agenda/flag";
 import { bookSlot, offerSlots } from "@/server/agenda/agent";
 import { getOffers, mapaDeHuecosParaModelo } from "@/server/agenda/offers";
+import { guardarRespuestaDePrueba } from "@/server/lab/sandbox";
 
 /**
  * Turno del agente (FR-021..FR-025).
@@ -448,22 +448,11 @@ async function persistTestOutbound(
   conversation: Conversation,
   text: string
 ): Promise<void> {
-  const db = getDb();
-  await db.insert(schema.message).values({
-    id: newId("message"),
+  await guardarRespuestaDePrueba({
     organizationId: conversation.organizationId,
     conversationId: conversation.id,
-    direction: "out",
-    type: "text",
     text,
-    status: "sent",
-    aiGenerated: true,
-    origin: "ai",
   });
-  await db
-    .update(schema.conversation)
-    .set({ lastMessageAt: new Date(), updatedAt: new Date() })
-    .where(eq(schema.conversation.id, conversation.id));
 }
 
 export async function applyHandoff(

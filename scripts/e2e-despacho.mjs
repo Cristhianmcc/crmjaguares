@@ -121,6 +121,8 @@ async function levantarCerebro(url) {
     modo: "ok",
     lentoMs: 3000,
     recibidos: [],
+    /** 033 — Lo que contestó `/api/bot/messages` a las respuestas de prueba. */
+    respuestasDePrueba: [],
   };
   const server = createServer((req, res) => {
     if (req.method !== "POST" || (req.url ?? "").split("?")[0] !== url.pathname) {
@@ -156,7 +158,26 @@ async function levantarCerebro(url) {
       if (estado.modo === "500") return responder(500);
       if (estado.modo === "422") return responder(422);
       if (estado.modo === "lento") return setTimeout(() => responder(200), estado.lentoMs);
-      return responder(200);
+      responder(200);
+      // 033 — A una conversación de prueba del Laboratorio, este cerebro
+      // contesta de verdad, por `/api/bot/messages`, como lo haría Nea.
+      if (evento?.conversation?.test === true && !evento.type) {
+        const ultimo = evento.messages.at(-1)?.text ?? "";
+        // Como Nea con el candado de cierre: ante el relleno final, calla.
+        if (ultimo === "sale") return;
+        setTimeout(() => {
+          fetch(`${BASE}/api/bot/messages`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-api-key": BOT_KEY },
+            body: JSON.stringify({
+              conversationId: evento.conversation.id,
+              text: `Respuesta de prueba a «${ultimo.slice(0, 40)}»`,
+            }),
+          })
+            .then(async (r) => estado.respuestasDePrueba.push({ status: r.status, json: await r.json().catch(() => null) }))
+            .catch((err) => estado.respuestasDePrueba.push({ status: 0, error: String(err) }));
+        }, 200);
+      }
     });
   });
   const escuchar = () =>
@@ -1068,31 +1089,84 @@ async function pausas(cerebro) {
 }
 
 async function laboratorio(cerebro) {
-  console.log("\n== AC13: el Laboratorio no se despacha ==");
+  console.log("\n== 033: el Laboratorio prueba al cerebro por el contrato ==");
+  await api("/api/dev/wa-mock/outbox", { method: "DELETE" });
   const total = cerebro.estado.recibidos.length;
   const run = await api("/api/lab/runs", { method: "POST" });
   if (!run.res.ok) {
-    console.log(`  SKIP no se pudo iniciar una corrida (${run.res.status}): ${JSON.stringify(run.json)}`);
+    ok("se pudo iniciar una corrida del Laboratorio", false, `${run.res.status} ${JSON.stringify(run.json)}`);
     return;
   }
   const id = run.json?.runId ?? run.json?.id;
-  const fin = await hasta(
+  const final = await hasta(
     async () => {
       const r = (await api(`/api/lab/runs/${id}`)).json;
       const st = r?.run?.status ?? r?.status;
-      return st && st !== "running" ? st : null;
+      return st && st !== "running" ? r : null;
     },
-    180000,
-    1000
+    600000,
+    2000
   );
-  ok("la corrida del Laboratorio terminó (con el agente incluido)", fin === "done", String(fin));
-  await sleep(TRAS_LA_VENTANA);
+  const estadoFinal = final?.run?.status ?? final?.status;
+  ok("la corrida terminó en verde contra el cerebro", estadoFinal === "done", JSON.stringify(final?.run ?? final)?.slice(0, 300));
   const nuevos = cerebro.estado.recibidos.slice(total);
+  const turnos = nuevos.filter((r) => !r.evento?.type);
+  const olvidos = nuevos.filter((r) => r.evento?.type === "conversation.deleted");
+  ok("al cerebro le llegaron los turnos de la corrida", turnos.length >= 8, `${turnos.length} despachos`);
   ok(
-    "ningún cliente simulado llegó al cerebro",
-    nuevos.length === 0,
-    JSON.stringify(nuevos.map((r) => r.evento?.contact?.displayName))
+    "todos con conversation.test: true y la firma válida",
+    turnos.length > 0 && turnos.every((r) => r.evento?.conversation?.test === true && r.firmaOk),
+    JSON.stringify(turnos.slice(0, 2).map((r) => r.evento?.conversation))
   );
+  ok(
+    "un despacho de prueba no espera la ventana de agrupado",
+    turnos.length > 0 && turnos.every((r) => r.evento.messages.length === 1),
+    JSON.stringify(turnos.map((r) => r.evento.messages.length))
+  );
+  ok(
+    "/api/bot/messages guardó cada respuesta de prueba (200, sin 409)",
+    cerebro.estado.respuestasDePrueba.length > 0 &&
+      cerebro.estado.respuestasDePrueba.every((r) => r.status === 200 && r.json?.messageId),
+    JSON.stringify(cerebro.estado.respuestasDePrueba.filter((r) => r.status !== 200).slice(0, 3))
+  );
+  const casos = final?.cases ?? [];
+  ok(
+    "un silencio del cerebro con el despacho entregado no es una falla (sin_rumbo)",
+    casos.length > 0 && casos.every((c) => c.status !== "agent_failed"),
+    JSON.stringify(casos.map((c) => [c.persona, c.status]))
+  );
+  ok(
+    "las transcripciones traen lo que contestó el cerebro",
+    casos.length >= 8 &&
+      casos.every((c) => (c.transcript ?? []).some((t) => t.role === "agente" && t.text.startsWith("Respuesta de prueba"))),
+    JSON.stringify(casos.map((c) => [c.persona, (c.transcript ?? []).length]))
+  );
+  ok("después de cada caso le llegó el olvido", olvidos.length >= casos.length && casos.length > 0, `${olvidos.length} olvidos para ${casos.length} casos`);
+  const outbox = (await api("/api/dev/wa-mock/outbox")).json?.outbox ?? [];
+  ok("ningún mensaje de la corrida salió por WhatsApp (wa-mock vacío)", outbox.length === 0, `${outbox.length} envíos`);
+
+  console.log("\n== 033: con el cerebro caído, la corrida dice por qué ==");
+  cerebro.estado.modo = "500";
+  const caida = await api("/api/lab/runs", { method: "POST" });
+  const idCaida = caida.json?.runId;
+  const t0 = Date.now();
+  const finCaida = await hasta(
+    async () => {
+      const r = (await api(`/api/lab/runs/${idCaida}`)).json;
+      const st = r?.run?.status ?? r?.status;
+      return st && st !== "running" ? r : null;
+    },
+    600000,
+    2000
+  );
+  cerebro.estado.modo = "ok";
+  const runCaida = finCaida?.run ?? finCaida;
+  ok(
+    "la corrida terminó failed con un motivo legible",
+    runCaida?.status === "failed" && /el agente no contestó/.test(runCaida?.error ?? ""),
+    JSON.stringify({ status: runCaida?.status, error: runCaida?.error })
+  );
+  ok("sin colgarse (menos de 2 min por caso)", Date.now() - t0 < 8 * 120000, `${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1246,6 +1320,37 @@ async function tarjeta(cerebro, url) {
 // 025 — Sin cerebro externo: el agente incluido
 // ---------------------------------------------------------------------------
 
+/**
+ * 033 — Sin despacho, el Laboratorio sigue probando al agente incluido (ese
+ * camino se va con la #106).
+ */
+async function laboratorioIncluido() {
+  console.log("\n== 033: sin despacho, el Laboratorio prueba al agente incluido ==");
+  await api("/api/dev/wa-mock/outbox", { method: "DELETE" });
+  const run = await api("/api/lab/runs", { method: "POST" });
+  if (!run.res.ok) {
+    ok("se pudo iniciar una corrida", false, `${run.res.status} ${JSON.stringify(run.json)}`);
+    return;
+  }
+  const final = await hasta(
+    async () => {
+      const r = (await api(`/api/lab/runs/${run.json.runId}`)).json;
+      return r?.run?.status && r.run.status !== "running" ? r : null;
+    },
+    600000,
+    2000
+  );
+  ok("la corrida terminó en verde", final?.run?.status === "done", JSON.stringify(final?.run));
+  const casos = final?.cases ?? [];
+  ok(
+    "con respuestas del agente incluido en cada caso",
+    casos.length >= 8 && casos.every((c) => (c.transcript ?? []).some((t) => t.role === "agente")),
+    JSON.stringify(casos.map((c) => [c.persona, c.status, (c.transcript ?? []).length]))
+  );
+  const outbox = (await api("/api/dev/wa-mock/outbox")).json?.outbox ?? [];
+  ok("y nada salió por WhatsApp", outbox.length === 0, `${outbox.length} envíos`);
+}
+
 async function guionIncluido() {
   console.log("== Setup: operador, WhatsApp y agente incluido ENCENDIDO ==");
   await preparar();
@@ -1265,6 +1370,7 @@ async function guionIncluido() {
   try {
     await incluidoEnVuelo();
     await incluidoPersona();
+    await laboratorioIncluido();
   } finally {
     await iaMock("?reset=1&demoraMs=0");
   }

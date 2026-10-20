@@ -91,7 +91,7 @@ export function buildAgentSystemPrompt(input: {
 /** Prompt del juez del Laboratorio: UNA llamada por conversación (FR-032). */
 export function buildJudgePrompt(input: {
   persona: string;
-  transcript: { role: "cliente" | "agente"; text: string }[];
+  transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
   kbText: string;
   behaviorText: string;
 }): { system: string; user: string } {
@@ -103,10 +103,14 @@ export function buildJudgePrompt(input: {
     "- `sugerencia` es opcional: inclúyela cuando una nueva entrada P/R del knowledge base evitaría el problema.",
     "- Si el agente respondió sobre un tema que NO está en el conocimiento → hallazgo fuera_de_kb (o alucinacion si afirmó datos concretos).",
     "- Si el cliente pidió un humano y no hubo escalado → debio_escalar.",
+    "- Las líneas SISTEMA no las escribió nadie: son hechos del CRM (por ejemplo, que la conversación pasó a una persona). Un traspaso registrado ahí ES un escalado.",
   ].join("\n");
 
   const transcript = input.transcript
-    .map((t) => `${t.role === "cliente" ? "CLIENTE" : "AGENTE"}: ${t.text}`)
+    .map(
+      (t) =>
+        `${t.role === "cliente" ? "CLIENTE" : t.role === "sistema" ? "SISTEMA" : "AGENTE"}: ${t.text}`
+    )
     .join("\n");
 
   const user = [
