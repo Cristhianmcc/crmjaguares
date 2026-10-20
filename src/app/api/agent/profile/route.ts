@@ -3,6 +3,13 @@ import { apiError, parseBody, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { estadoIaDe, mensajeDeEstado } from "@/lib/ai/provider";
+import {
+  CLAVES_HERRAMIENTA,
+  herramientasEfectivas,
+  rolDe,
+  type ClaveHerramienta,
+} from "@/lib/agent-roles";
+import { agendaEnabled } from "@/server/agenda/flag";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +31,12 @@ export const GET = withAuth(async (session) => {
       instructions: p.instructions,
       escalationRules: p.escalationRules,
       greeting: p.greeting,
+      // 034
+      role: rolDe(p.role).clave,
+      tools: herramientasEfectivas(p.tools),
     },
+    // 034 — Sin la bandera, la pantalla no ofrece agendar ni reprogramar.
+    agendaEnabled: agendaEnabled(),
     aiConfigured: estado.activa,
     // Por qué no (sin configurar, llave rechazada, sin saldo): la pantalla
     // Agente lo dice con el enlace a Ajustes → IA.
@@ -39,6 +51,11 @@ const putSchema = z.object({
   instructions: z.string().max(8000).nullable().optional(),
   escalationRules: z.string().max(4000).nullable().optional(),
   greeting: z.string().max(1000).nullable().optional(),
+  // 034 — Solo claves del catálogo; `escalar` se guarda siempre.
+  tools: z
+    .array(z.enum(CLAVES_HERRAMIENTA as [ClaveHerramienta, ...ClaveHerramienta[]]))
+    .max(CLAVES_HERRAMIENTA.length)
+    .optional(),
 });
 
 export const PUT = withAuth(async (session, req: Request) => {
@@ -46,9 +63,14 @@ export const PUT = withAuth(async (session, req: Request) => {
   if (!body.ok) return body.response;
 
   const db = getDb();
+  const { tools, ...resto } = body.data;
   const updated = await db
     .update(schema.agentProfile)
-    .set({ ...body.data, updatedAt: new Date() })
+    .set({
+      ...resto,
+      ...(tools ? { tools: herramientasEfectivas(tools) } : {}),
+      updatedAt: new Date(),
+    })
     .where(scoped(schema.agentProfile.organizationId, session.organizationId))
     .returning();
   if (!updated[0]) return apiError(404, "not_found", "Perfil no encontrado");
