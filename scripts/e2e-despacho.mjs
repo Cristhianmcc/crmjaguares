@@ -361,6 +361,7 @@ async function guion(cerebro, url) {
   await mientrasPiensa(cerebro);
   await personaEnLaVentana(cerebro);
   await adjunto(cerebro);
+  await loQueDabaElWebhook(cerebro);
   await otrosCanales(cerebro);
   await pausas(cerebro);
   await laboratorio(cerebro);
@@ -685,6 +686,84 @@ async function adjunto(cerebro) {
       `${media.status} ${media.headers.get("content-type")} ${bytes} bytes`
     );
   }
+}
+
+/**
+ * 031 — Lo que un cerebro delante del CRM leía del webhook de Meta y ahora le
+ * llega por el despacho o por el contexto: el anuncio de origen, la ubicación,
+ * las tarjetas de contacto y el nombre del documento.
+ */
+async function loQueDabaElWebhook(cerebro) {
+  console.log("\n== 031: anuncio, ubicación, tarjeta y PDF llegan al cerebro ==");
+  const nombre = `Eli Webhook ${MARCA}`;
+  const tel = telefono(11);
+  const titular = `Clases de salsa ${MARCA}`;
+  await entranteWa(tel, nombre, `vengo del anuncio ${MARCA}`, { adHeadline: titular });
+  const conv = await convDe(nombre);
+  if (!conv) return ok("la conversación existe", false);
+  await hasta(() => cerebro.de(conv.id)[0], COALESCE + 12000);
+
+  const porConv = await bot(`/api/bot/context?conversationId=${conv.id}`);
+  ok(
+    "el contexto trae adOrigen con el titular del anuncio",
+    porConv.json?.adOrigen?.headline === titular,
+    JSON.stringify(porConv.json?.adOrigen)
+  );
+  ok(
+    "y no trae el identificador del clic",
+    porConv.json?.adOrigen && !("ctwaClid" in porConv.json.adOrigen),
+    JSON.stringify(porConv.json?.adOrigen)
+  );
+  const sinAnuncio = await bot(`/api/bot/context?identity=${telefono(4)}`);
+  ok(
+    "una conversación que no vino de un anuncio trae adOrigen null",
+    sinAnuncio.res.status === 200 && sinAnuncio.json?.adOrigen === null,
+    `${sinAnuncio.res.status} ${JSON.stringify(sinAnuncio.json?.adOrigen)}`
+  );
+
+  const antes = cerebro.de(conv.id).length;
+  await entranteWa(tel, nombre, undefined, {
+    type: "location",
+    location: { latitude: 19.4326, longitude: -99.1332, name: "Zócalo", address: "Centro, CDMX" },
+  });
+  await entranteWa(tel, nombre, undefined, {
+    type: "contacts",
+    contacts: [{ name: { formatted_name: "Luis Gómez", first_name: "Luis" } }],
+  });
+  await entranteWa(tel, nombre, undefined, {
+    type: "document",
+    mediaId: `doc${RUN}`,
+    mimeType: "application/pdf",
+    filename: "cotizacion.pdf",
+  });
+  const llego = await hasta(() => {
+    const nuevos = cerebro.de(conv.id).slice(antes);
+    const ultimo = nuevos.at(-1);
+    return ultimo && ultimo.evento.messages.some((m) => m.type === "document") ? ultimo : null;
+  }, COALESCE + 15000);
+  const msgs = llego?.evento.messages ?? [];
+  const ubicacion = msgs.find((m) => m.type === "location");
+  const tarjeta = msgs.find((m) => m.type === "contacts");
+  const pdf = msgs.find((m) => m.type === "document");
+  ok(
+    "la ubicación viaja con coordenadas, nombre y dirección",
+    ubicacion?.location?.latitude === 19.4326 &&
+      ubicacion?.location?.longitude === -99.1332 &&
+      ubicacion?.location?.name === "Zócalo" &&
+      ubicacion?.location?.address === "Centro, CDMX",
+    JSON.stringify(ubicacion)
+  );
+  ok(
+    "la tarjeta viaja con el nombre del contacto",
+    JSON.stringify(tarjeta?.contacts) === JSON.stringify([{ name: "Luis Gómez" }]),
+    JSON.stringify(tarjeta)
+  );
+  ok(
+    "el PDF viaja con su nombre de archivo, después de caption",
+    pdf?.fileName === "cotizacion.pdf" && Object.keys(pdf).at(-1) === "fileName",
+    JSON.stringify(pdf)
+  );
+  ok("y la firma sigue siendo válida", llego?.firmaOk === true);
 }
 
 /**

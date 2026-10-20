@@ -7,6 +7,7 @@ import { findContactByIdentity } from "@/server/inbox/identity";
 import { isWindowOpen, windowRemainingMs } from "@/server/inbox/window";
 import { windowMsFor } from "@/server/channels/capabilities";
 import { citasParaContexto } from "@/server/agenda/context";
+import { anuncioDelContacto } from "@/server/attribution/store";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,12 @@ export const dynamic = "force-dynamic";
  * conversación. Lo que aquí sale es lo que solo el CRM sabe — quién es la
  * persona, si un humano tomó el control y si la ventana de 24 h sigue abierta
  * (y, con la agenda encendida, qué citas tiene: `booking`).
+ *
+ * 031 — `adOrigen`: de qué anuncio llegó la persona, o `null`. Antes un
+ * cerebro delante del CRM lo leía del `referral` del webhook de Meta; con el
+ * despacho el webhook ya no le llega, y esto es lo que lo reemplaza. Misma
+ * llave y misma forma que en Vocero Cloud. El `ctwa_clid` no sale: solo si
+ * existe.
  */
 export async function GET(req: Request) {
   const denied = requireBotKey(req);
@@ -90,7 +97,7 @@ export async function GET(req: Request) {
     return apiError(404, "not_found", "Conversación no encontrada");
   }
 
-  const [leadRows, booking] = await Promise.all([
+  const [leadRows, booking, anuncio] = await Promise.all([
     db
       .select({ lead: schema.lead, stage: schema.pipelineStage })
       .from(schema.lead)
@@ -106,6 +113,7 @@ export async function GET(req: Request) {
       )
       .limit(1),
     citasParaContexto(organizationId, contact.id),
+    anuncioDelContacto(organizationId, contact.id),
   ]);
 
   return Response.json({
@@ -140,6 +148,16 @@ export async function GET(req: Request) {
     },
     lead: leadRows[0]
       ? { id: leadRows[0].lead.id, stageName: leadRows[0].stage.name }
+      : null,
+    adOrigen: anuncio
+      ? {
+          headline: anuncio.headline,
+          body: anuncio.body,
+          sourceType: anuncio.sourceType,
+          sourceUrl: anuncio.sourceUrl,
+          hasCtwaClid: anuncio.hasCtwaClid,
+          capturedAt: anuncio.capturedAt,
+        }
       : null,
     /**
      * 015 — Las citas del contacto. FALTA con la agenda apagada (o si no se
