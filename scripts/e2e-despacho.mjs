@@ -163,6 +163,8 @@ async function levantarCerebro(url) {
       // contesta de verdad, por `/api/bot/messages`, como lo haría Nea.
       if (evento?.conversation?.test === true && !evento.type) {
         const ultimo = evento.messages.at(-1)?.text ?? "";
+        // Como Nea con el candado de cierre: ante el relleno final, calla.
+        if (ultimo === "sale") return;
         setTimeout(() => {
           fetch(`${BASE}/api/bot/messages`, {
             method: "POST",
@@ -1128,6 +1130,11 @@ async function laboratorio(cerebro) {
     JSON.stringify(cerebro.estado.respuestasDePrueba.filter((r) => r.status !== 200).slice(0, 3))
   );
   const casos = final?.cases ?? [];
+  ok(
+    "un silencio del cerebro con el despacho entregado no es una falla (sin_rumbo)",
+    casos.length > 0 && casos.every((c) => c.status !== "agent_failed"),
+    JSON.stringify(casos.map((c) => [c.persona, c.status]))
+  );
   ok(
     "las transcripciones traen lo que contestó el cerebro",
     casos.length >= 8 &&

@@ -36,6 +36,11 @@ export const TURNO_TIMEOUT_MS = 90_000;
 const SONDEO_MS = 500;
 /** Tras la primera respuesta, lo que se espera por más mensajes o un traspaso. */
 const QUIETUD_MS = 1_500;
+/**
+ * Entregado el despacho, cuánto se espera la respuesta antes de leer el
+ * silencio como respuesta. Un turno de Nea con el modelo tarda de 3 a 20 s.
+ */
+export const SILENCIO_MS = 45_000;
 
 export class RunConflictError extends Error {}
 
@@ -296,9 +301,11 @@ async function runConversation(
  * 033 — Un turno contra el cerebro externo: se le despacha la línea y se
  * espera, con tope, lo primero que pase.
  *
- * Devuelve null si contestó (o traspasó: también es una respuesta), o el
- * motivo si no: no llegó nada a tiempo, o el despacho cayó a humano porque el
- * cerebro no lo aceptó.
+ * Devuelve null si contestó, traspasó o CALLÓ: un cerebro que recibió el
+ * despacho y no escribe también está contestando (Nea calla ante el relleno
+ * después de despedirse: es el candado de cierre, y el juez lo evalúa). Es una
+ * falla solo si el despacho no se entregó: el cerebro no lo aceptó (cayó a
+ * humano) o no lo recibió a tiempo.
  */
 async function turnoPorDespacho(
   organizationId: string,
@@ -317,6 +324,7 @@ async function turnoPorDespacho(
   programarTanda(notBefore);
 
   const limite = Date.now() + TURNO_TIMEOUT_MS;
+  let entregadoEn: number | null = null;
   while (Date.now() < limite) {
     await dormir(SONDEO_MS);
     const [conv] = await db
@@ -354,8 +362,14 @@ async function turnoPorDespacho(
       return `el cerebro no aceptó el despacho (${despacho.lastError ?? "sin detalle"})`;
     }
     if (conv?.handoffAt) return null; // traspasó sin despedirse: es su respuesta
+    if (despacho?.status === "entregado") {
+      entregadoEn ??= Date.now();
+      // Lo recibió y no escribe: se le da su tiempo de pensar y, si sigue
+      // callado, ese silencio es su respuesta.
+      if (Date.now() - entregadoEn >= SILENCIO_MS) return null;
+    }
   }
-  return `el cerebro no contestó en ${TURNO_TIMEOUT_MS / 1000} s`;
+  return `el cerebro no recibió el despacho en ${TURNO_TIMEOUT_MS / 1000} s`;
 }
 
 /** 033 — Que el cerebro olvide la conversación de prueba al terminar el caso. */

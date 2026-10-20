@@ -87,6 +87,14 @@ la corrida; si ningún caso obtuvo respuesta, la corrida termina `failed` con
 iniciar queda para la #106: hoy, sin despacho, el agente incluido siempre
 contesta las pruebas si hay IA, y eso ya lo valida `ai_not_configured`.
 
+**D7b — Un silencio con el despacho entregado es una respuesta** (decidido
+tras la prueba en vivo del 2026-10-20). Nea calla a propósito ante el relleno
+después de despedirse (candado de cierre): la primera corrida en `vocero20`
+marcó «Sin rumbo» como `agent_failed` por eso. Entregado el despacho, el runner
+espera la respuesta hasta 45 s; si no llega, el silencio queda en la
+transcripción y el juez lo evalúa. Falla es solo un despacho que no se
+entregó.
+
 **D8 — Personas nuevas: `hostil` y `sin_rumbo`.** La de nota de voz queda
 fuera: necesita un adjunto servible por `/api/bot/media` sin Meta, y eso llega
 con el almacenamiento (#93). Las personas como datos del rol son de la #90.
