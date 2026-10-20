@@ -72,6 +72,14 @@ variable vieja en el entorno se ignora; si están `META_APP_SECRET` o
 que es conducta**: turno, herramientas, adjuntos, candado de cierre,
 seguimiento, hostilidad, formato, prompt, perfil y agenda.
 
+**D2b — Salen también los reintentos del turno (`TURN_RETRY_DELAYS`).**
+Decidido durante la implementación, al ver que solo corrían en el camino del
+webhook: Nea 1.x repetía la ráfaga hasta diez minutos porque el relay podía no
+haberle entregado el mensaje al CRM todavía. Con el despacho el CRM acaba de
+mandarlo; si no contesta al leer el contexto, el error sube a la cola durable,
+que le pasa la conversación a una persona (`error`) en cuanto el CRM vuelva.
+Es lo que ya hacía cloud.
+
 **D3 — La tabla `relay_queue` se queda, sin uso, en esta versión.** Puede
 guardar mensajes que el relay no alcanzó a entregar antes de actualizar; una
 actualización no tira datos. Se borra en una versión siguiente.
