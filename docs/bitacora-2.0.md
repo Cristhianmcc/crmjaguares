@@ -944,3 +944,63 @@ nadie real).
 ### Qué sigue
 
 Que Kevin revise y mergee #127 y nea-agent#45; luego #90 (roles como datos).
+
+## 2026-10-20 — 034: roles como datos (#90)
+
+PRs: [#128](https://github.com/kevinrivm/vocero-crm/pull/128) (CRM) y
+[nea-agent#46](https://github.com/kevinrivm/nea-agent/pull/46), ramas
+`feat/034-roles-como-datos`. Ciclo completo: spec, plan y tareas antes del
+código (`337c37a`). Antes de empezar, con autorización de Kevin en el chat,
+se mergearon #127 y nea-agent#45 (033) y se cerró #91.
+
+### Qué quedó
+
+- `agent_profile.role` (`calificador`) y `agent_profile.tools` (jsonb; `null`
+  = todas), migración aditiva `0021_roles_como_datos`.
+- Catálogo con claves estables (`ficha`, `agendar`, `reprogramar`, `salida`,
+  `escalar`; `escalar` no se apaga) y el rol Calificador como bloque
+  (instrucciones, reglas de escalado, herramientas y las 8 personas) en
+  `src/lib/agent-roles.ts`.
+- `GET /api/bot/profile` gana `role` y `tools`; `PUT /api/agent/profile`
+  acepta `tools`; `POST /api/agent/profile/preset` carga el rol.
+- Pantalla Agente: tarjeta del rol con un interruptor por herramienta (las de
+  agenda solo con `AGENDA=on`) y el preset con confirmación. Guardar el
+  comportamiento ya no pisa las herramientas.
+- El Laboratorio corre las personas del rol.
+- Nea: le enseña al modelo solo las encendidas; sin `agendar`, se porta como
+  contra un CRM sin agenda; sin `tools`, todas.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,161 unitarias |
+| `e2e-roles.mjs` | 15/15 |
+| Migración | Base vacía; base en `0020` con un perfil (queda Calificador con todas, conserva instrucciones); re-ejecutable |
+| Pantalla | Capturas en claro, oscuro y móvil (390 px) |
+| Nea: `pytest` | 485 verdes (la del PDF, solo en Windows) |
+
+### En vivo (`vocero20`, imágenes `2.0.0-rc.5`)
+
+`AGENDA=on` y `ALLOWED_WA_IDS` borrada del servicio (en WhatsApp el relevo ya
+filtra a la línea cliente; el webhook de Instagram de `vocero20` sigue
+desactivado). Horario de pruebas L–S 9–19 con `ops/vivo-034.mjs agenda`.
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto (1) | 18:03:38 / 18:03:54 | «agendar» encendida: «cita mañana en la tarde» → Nea ofreció 15:00, 15:30 y 16:00 (14.3 s) |
+| «agendar» y «reprogramar» apagadas desde la API de la pantalla | 18:04:02 | Sin redeploy; se esperó el TTL del perfil de Nea (5 min) |
+| Override movido / devuelto (2) | 18:09:46 / 18:10:02 | «para el viernes en la mañana» → «no agendamos citas por aquí» y traspaso al equipo (12.7 s) |
+
+Dos mensajes de la línea cliente y dos respuestas; por el relevo solo pasó
+esa línea. Al terminar, `vocero20` volvió a todas las herramientas.
+
+**Incidente:** a mitad del redeploy, el token de Coolify de la bóveda dejó de
+valer (401). Kevin puso uno nuevo (…318b) en `.env`; el MCP de Coolify lo
+tomó al detener su proceso local (la app lo relanzó). `vocero20` quedó en
+503 hasta el siguiente deploy.
+
+### Qué sigue
+
+Que Kevin revise y mergee #128 y nea-agent#46; luego #92 (OpenAPI y guía de
+migración).
