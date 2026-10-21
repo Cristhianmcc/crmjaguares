@@ -31,19 +31,19 @@ Quien prefiera que Nea use su propio proveedor le pone `LLM_API_KEY`.
 En tu `.env`:
 
 ```bash
-BOT_API_KEY=            # openssl rand -hex 32
-BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch
-BRAIN_HEALTH_URL=http://nea:8000/health
+BOT_API_KEY=            # openssl rand -hex 32 (pnpm init-env ya la genera)
 ```
+
+`BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` ya apuntan a Nea por defecto
+(`http://nea:8000`). Para no usar agente (bandeja manual), déjalas vacías en el
+`.env`: `BRAIN_DISPATCH_URL=` y `BRAIN_HEALTH_URL=`.
 
 Y levanta el par:
 
 ```bash
-docker compose --profile nea up -d
+docker compose up -d
 ```
 
-Mientras se publica la imagen 2.0.0 de Nea, el servicio va detrás del perfil
-`nea`; con el cierre de la 2.0 se levanta siempre.
 
 ### Coolify
 
@@ -63,7 +63,7 @@ En el CRM, `BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` hacia Nea, y **redeploy**
 
 ### Render, Fly y Railway
 
-`render.yaml` trae el servicio de Nea comentado, listo para descomentar.
+`render.yaml` trae el servicio de Nea (`vocero-nea`) con el despacho ya cableado.
 `fly.toml` y `railway.toml` dicen en sus comentarios cómo levantar a Nea como
 segunda app de la red privada.
 

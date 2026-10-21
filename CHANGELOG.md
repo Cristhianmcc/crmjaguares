@@ -5,10 +5,29 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
-## Sin publicar (será 2.0.0)
+## 2.0.0 — 2026-10-20
 
-El agente sale del CRM y se conecta por contrato. Guía de actualización:
-[`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md).
+El agente sale del CRM y se conecta por contrato. Vocero se queda con lo suyo
+—bandeja, pipeline, agenda, perfil del agente, conocimiento, la llave de IA y
+el Laboratorio— y contesta [Nea](https://github.com/kevinrivm/nea-agent) (MIT)
+u otro cerebro conectado al lado. Sin agente, Vocero es una bandeja manual.
+
+### Actualizar desde 1.6.0
+
+Es mayor: hay algo que hacer a mano. La guía completa, por caso (solo el
+agente incluido, Nea 1.x delante, cerebro propio), es
+[`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md). Lo corto:
+
+1. Respalda la base, como siempre.
+2. **docker compose**: `git pull`; si tu `.env` no tiene `BOT_API_KEY`,
+   agrégala (`openssl rand -hex 32`); y `docker compose up -d`: levanta el CRM
+   2.0.0 y Nea 2.0.0 sobre la misma base, con el despacho ya cableado. **Coolify**: la etiqueta `2.0.0` y un servicio más para Nea (guía,
+   «El par»). Las migraciones corren solas.
+3. Enciende el agente en la pantalla Agente: desde la 2.0 ese interruptor
+   decide si el CRM le despacha a tu agente, y solo se enciende con el agente
+   conectado y sano.
+4. Si tu número recibía los webhooks en Nea 1.x, **recupera el webhook** en
+   Configuración → WhatsApp.
 
 ### ⚠️ Rompe: hay que hacer algo a mano
 
@@ -18,8 +37,7 @@ El agente sale del CRM y se conecta por contrato. Guía de actualización:
   `/api/bot/*`. Sin cerebro, Vocero es un CRM de bandeja manual: recibe, se
   contesta a mano, pipeline y agenda. **Si usabas el agente incluido, nadie
   contesta después de actualizar** hasta que levantes Nea (`docker compose
-  --profile nea up -d`, o el servicio en Coolify) y vuelvas a encender el
-  agente. El perfil, el conocimiento, la llave de Ajustes → IA y el
+  up -d`, o el servicio en Coolify) y vuelvas a encender el agente. El perfil, el conocimiento, la llave de Ajustes → IA y el
   Laboratorio se quedan donde estaban.
 - **El interruptor de la pantalla Agente ahora decide el despacho** (036).
   Encendido = el CRM le despacha a tu agente; apagado = las conversaciones se
@@ -40,8 +58,9 @@ El agente sale del CRM y se conecta por contrato. Guía de actualización:
   servido en `GET /api/bot/openapi.json` y validado en `pnpm test`.
 - **Recuperar el webhook** (035) en Configuración → WhatsApp, para quien
   venía con Nea 1.x delante del CRM.
-- **El par en el compose** (035): `docker compose --profile nea up -d` levanta
-  Nea al lado del CRM sobre la misma base.
+- **El par en el compose** (035): `docker compose up -d` levanta Nea al lado
+  del CRM sobre la misma base, con el despacho ya cableado. Render trae el
+  servicio `vocero-nea`; `pnpm init-env` genera `BOT_API_KEY`.
 - **Tu agente piensa por el CRM** (036): `POST /api/bot/llm/{ruta}`, compatible
   con OpenAI, reenvía al proveedor de Ajustes → IA con la llave guardada. La
   llave se pone una vez, en la interfaz, y no sale del CRM; un 401 o 402 del
@@ -54,6 +73,10 @@ El agente sale del CRM y se conecta por contrato. Guía de actualización:
   cuando el despacho está configurado y el agente contesta su `/health`. Sin
   agente, la guía dice que Vocero funciona como bandeja manual y no te deja
   atrapado en ella.
+- **Tu agente mueve al lead de etapa** (038): `POST /api/bot/stage`, solo hacia
+  adelante y a etapas abiertas (ganar o perder lo decide una persona), con la
+  herramienta «Mover de etapa» del rol; el contexto trae `lead.nextStages`.
+  Nea 2.0 la usa.
 - **Adjuntos en un bucket S3-compatible** (037), opcional y apagado por
   defecto: `MEDIA_STORE=bucket` y las `MEDIA_BUCKET_*`. Lo nuevo va al bucket
   y lo viejo se sigue leyendo del volumen (sin migrar); si el bucket falla al

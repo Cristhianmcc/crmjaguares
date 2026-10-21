@@ -20,15 +20,13 @@
 # cambios. Otra versión publicada: VOCERO_CRM_VERSION=X.Y.Z en tu .env.
 #
 # 2.0 — El agente (Nea) es un servicio al lado del CRM, sobre la MISMA base
-# en su esquema `nea`. El CRM le despacha cada ráfaga y Nea contesta por
-# /api/bot/*. Mientras se publica la imagen de Nea 2.0.0 va detrás del
-# perfil `nea`:
-#
-#   docker compose --profile nea up -d
-#
-# con BOT_API_KEY y BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch en el
-# .env. Nea no lleva llave de IA: piensa por el CRM con la de Ajustes → IA
-# (036). Guía: docs/migrar-a-2.0.md.
+# en su esquema `nea`, y se levanta con todo lo demás. El CRM le despacha cada
+# ráfaga a http://nea:8000 y Nea contesta por /api/bot/*, con la BOT_API_KEY
+# del .env (`pnpm init-env` la genera). Nea no lleva llave de IA: piensa por
+# el CRM con la de Ajustes → IA (036). Para conectar otro cerebro, cambia
+# BRAIN_DISPATCH_URL y BRAIN_HEALTH_URL en el .env; para no usar ninguno
+# (bandeja manual), déjalas vacías: BRAIN_DISPATCH_URL= y BRAIN_HEALTH_URL=.
+# Guía: docs/migrar-a-2.0.md.
 #
 # 037 — Adjuntos en un bucket S3-compatible (opcional; por defecto, el volumen
 # de abajo). Con MEDIA_STORE=bucket y las MEDIA_BUCKET_* en el .env, el perfil
@@ -41,7 +39,7 @@
 # ============================================================
 services:
   app:
-    image: ghcr.io/kevinrivm/vocero-crm:${VOCERO_CRM_VERSION:-1.6.0}
+    image: ghcr.io/kevinrivm/vocero-crm:${VOCERO_CRM_VERSION:-2.0.0}
     build: .
     restart: unless-stopped
     environment:
@@ -63,9 +61,10 @@ services:
       AGENDA: ${AGENDA:-}
       ATRIBUCION: ${ATRIBUCION:-}
       BOT_API_KEY: ${BOT_API_KEY:-}
-      BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-}
-      # 035 — A dónde despachar: con el perfil `nea`, http://nea:8000/vocero/dispatch.
-      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-}
+      # 2.0 — El cerebro: por defecto, el servicio `nea` de abajo. Con la
+      # variable definida pero vacía en el .env, ninguno (bandeja manual).
+      BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL-http://nea:8000/health}
+      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL-http://nea:8000/vocero/dispatch}
       # 037 — Vacía = disco. `bucket` + las MEDIA_BUCKET_* = el bucket; con el
       # perfil `bucket`, MEDIA_BUCKET_ENDPOINT=http://minio:9000.
       MEDIA_STORE: ${MEDIA_STORE:-}
@@ -89,7 +88,6 @@ services:
   # por la red interna.
   nea:
     image: ghcr.io/kevinrivm/nea-agent:${NEA_VERSION:-2.0.0}
-    profiles: ["nea"]
     restart: unless-stopped
     environment:
       CRM_BASE_URL: http://app:3000
@@ -99,7 +97,7 @@ services:
       # 036 — Sin LLM_API_KEY: Nea piensa por el CRM (/api/bot/llm) con la
       # llave de Ajustes → IA y el modelo que elegiste ahí. Este es solo el
       # de respaldo, si el CRM todavía no tiene modelo.
-      LLM_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      LLM_MODEL: ${OPENROUTER_MODEL:-z-ai/glm-5.3-flash}
       # Mientras pruebas: tu número. Vacía = Nea le contesta a todos.
       ALLOWED_WA_IDS: ${ALLOWED_WA_IDS:-}
     depends_on:
