@@ -1314,3 +1314,91 @@ Antes del merge, el compose sin perfiles se levantó en una carpeta aparte con
 **Pendiente de la 2.0:** starter 3.0.0. `vocero20` sigue con las `rc`
 (CRM `rc.9`, Nea `rc.10`, MinIO adentro, GLM en Ajustes → IA); hay que
 pasarlo a `2.0.0` o limpiarlo (PLAN-2.0).
+
+## 2026-10-21 — Ensayo en vivo del starter 3.0.0
+
+Kevin pidió el ensayo: una instalación nueva con el starter en `vocero-16`
+(dominio sslip) y un WhatsApp por el relevo. Al terminar había que devolver
+los overrides del número y de la WABA a `vocero-clase`.
+
+**El starter.** Rama `feat/3.0.0-vocero-2.0` del worktree `ensayo-starter`
+(`1c4f544` y, tras el ensayo, `421d82c`). Decisiones de Kevin:
+- Nea es una segunda app interna sobre la base del CRM;
+- `AGENTE` vale `"nea"` o `"ninguno"`.
+
+El `.env` del ensayo se armó desde la bóveda sin imprimir secretos: dominio
+`ensayo30.177.7.62.92.sslip.io`, `AGENTE="nea"`, solo WhatsApp, versiones
+2.0.0 y `z-ai/glm-5.3-flash`.
+
+### Instalación (fases 0–2, siguiendo el starter)
+
+| Recurso en `vocero-16` | UUID |
+|---|---|
+| Postgres `ensayo30-postgres` | `e5bjsmt2ahbzc7pkfkldnmud` |
+| CRM `vocero-crm-ensayo30` (`vocero-crm:2.0.0`, alias `vocero-crm`) | `dpmhlzuxtcwfnr6jkinra2o6` (deploy `ojs5rewbb94flsd5p2hr2iul`) |
+| Nea `nea-ensayo30` (`nea-agent:2.0.0`, alias `nea`, sin dominio) | `oxscyojlwrwvhvookx8ikd8c` (deploys `krbvgocdv9zlosxuknrwllgf` y `mtjn8qyrzjsxmjgsd4acoujm`) |
+
+- `/api/health`: `2.0.0` · `97aa639`, con commit verificado.
+- Nea: «piensa por el CRM».
+- Los alias resuelven en las dos direcciones.
+- `brain-status`: encendido, IA activa, despacho activo, Nea en línea, sin
+  aviso.
+- `canales.mjs ia` guardó la llave (`…09bd`).
+- Tiempos: fase 0 en 0.5 min, fase 1 hasta la organización en 1.5 min, fase
+  2 en 1 min.
+- Dueño: `ensayo30@vocero.test`; su contraseña está solo en el `.env` del
+  ensayo.
+
+### Soporte y el mensaje en vivo
+
+`ops/ensayo-300.mjs` guarda los dos overrides y comprueba que el de la WABA
+conteste el reto. Después pasa el número al relevo y al final devuelve: la
+WABA primero y el número después. Lo ajeno a la línea cliente iba al override
+guardado de `vocero-clase`.
+
+| Intento | UTC | Qué pasó |
+|---|---|---|
+| 1 | 12:04:03 – 12:06:27 | `conectar` del starter se detuvo como debe: «La WABA manda sus webhooks a otro sitio (vocero-clase…)». `--reemplazar` no cubre ese caso y el mensaje manda a `recuperar`. `recuperar` → «Confirmado en Meta»; el relevo entró a las 12:04:43. El DM llegó a la bandeja, pero **Nea no contestó**: `allowlist: 52…9768 fuera de ALLOWED_WA_IDS` |
+| 2 | 12:08:16 – 12:08:25 | Se cortó antes del DM: 429 en el inicio de sesión (10 cada 10 min por IP; la espera del guion iniciaba sesión en cada vuelta) |
+| 3 | 12:17:55 – 12:18:24 | `recuperar` → relevo (12:18:05) → DM (12:18:06) → **Nea contestó en 13.3 s** (268 caracteres). Por el relevo solo pasó la línea cliente |
+
+En los tres casos, el devuelto quedó en «número sin override · WABA →
+`vocero-clase`», igual que antes.
+
+**Causa del intento 1, que es un error real.** La bóveda guarda el teléfono
+con `+`, el starter lo copió tal cual a `ALLOWED_WA_IDS`, y Nea 2.0.0 no le
+quita el `+`: la lista nunca coincide con la identidad del CRM (solo
+dígitos). Hay dos arreglos:
+- en el starter (`421d82c`), que escribe solo dígitos y lo avisa;
+- en Nea, kevinrivm/nea-agent#50 (será 2.0.1): la lista acepta `+`,
+  espacios y guiones. Sin mergear.
+
+Para el ensayo se corrigieron `ALLOWED_WA_IDS` y `TESTER_WA_IDS` en
+`nea-ensayo30` por el MCP, con un redeploy.
+
+### Tropiezos del starter que faltan
+
+El subagente de la instalación anotó catorce. Los que hay que arreglar antes
+de publicar la 3.0.0:
+- `precheck` no ve el override de la WABA y solo avisa del número.
+- El MCP de la sesión no es 3.5.1 exacto: pedir «≥ 3.5.1».
+- El DNS no puede comparar IPs con `host.docker.internal`.
+- Pasar secretos por el MCP los mete al contexto, y `bulk_update` devuelve
+  `real_value` en claro.
+- Revisar alias de otras instalaciones cuesta caro y no cubre servicios de
+  compose.
+- El proyecto se llama `vocero` y la app `vocero-crm`, y chocan con lo que
+  ya hay en el servidor.
+- `imagen.sh viva` falla mientras se emite el certificado.
+- Coolify le pone dominio a Nea por defecto.
+- `desplegar-nea` dice que necesita WhatsApp antes de su paso 7.
+- No hay un comando para leer `brain-status` ni la guía.
+- Git Bash reescribe las rutas `/api/…`.
+- No dice en qué forma va `ALLOWED_WA_IDS` (ya corregido en `421d82c`).
+
+### Qué quedó
+
+- La instalación `ensayo30` sigue arriba en `vocero-16` para revisarla. Se
+  borra cuando Kevin diga.
+- El starter 3.0.0 no se ha publicado: ni tag, ni zip, ni merge a la copia
+  maestra.
