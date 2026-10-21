@@ -1402,3 +1402,47 @@ de publicar la 3.0.0:
   borra cuando Kevin diga.
 - El starter 3.0.0 no se ha publicado: ni tag, ni zip, ni merge a la copia
   maestra.
+
+## 2026-10-21 — Nea 2.0.1
+
+Kevin autorizó mergear kevinrivm/nea-agent#50 y publicar Nea 2.0.1. Arregla
+`ALLOWED_WA_IDS` y `TESTER_WA_IDS`, que ahora aceptan el teléfono con `+`,
+espacios o guiones (hallado en el ensayo del starter 3.0.0).
+
+- Merge `aed4515`. Tag `v2.0.1` sobre ese commit. Release «Nea 2.0.1 —
+  ALLOWED_WA_IDS acepta el teléfono con +», marcado como Latest.
+- Imagen `ghcr.io/kevinrivm/nea-agent:2.0.1` = `2.0` = `latest`
+  (`sha256:cf867d73…6effcf`). Dentro de la imagen, `NEA_VERSION=2.0.1`,
+  commit `aed4515` y el arreglo presente.
+
+**Incidente.** El primer `gh pr merge` falló por una carrera con el push del
+commit que fechaba el CHANGELOG («Head branch is out of date»). Aun así, el
+tag `v2.0.1` se creó sobre `main`, que todavía estaba en `63cf73d`, el código
+de la 2.0.0. Durante unos 15 minutos, `2.0.1`, `2.0` y `latest` apuntaron a
+una imagen sin el arreglo. Se borraron el release y el tag, se mergeó, se
+volvió a etiquetar sobre `aed4515`, y el workflow reescribió las tres
+etiquetas. Ninguna instancia usó esa imagen: `vocero20` está en `rc.10` y el
+ensayo en `2.0.0`. Lección: comprobar que el merge terminó antes de crear el
+tag.
+
+## 2026-10-21 — Starter 3.0.0 publicado (en local)
+
+Kevin autorizó publicarlo. El starter no tiene remoto: se publica en la copia
+maestra y como zip, igual que la 2.2.0 y la 2.3.0.
+
+- La copia maestra (`Vocero-cloud astra/vocero-starter-v2`) avanzó a
+  `512a1ac` (`--ff-only` desde `feat/3.0.0-vocero-2.0`). Tag `v3.0.0`:
+  «Vocero Starter 3.0.0 — Vocero CRM 2.0.0 + Nea 2.0.1».
+- Zip `Vocero-cloud astra/vocero-starter-v3.0.0.zip` (`git archive` del tag):
+  40 archivos, sin `.env` ni `INSTALACION.md`, sin `agente-incluido` ni
+  `mover-webhook`.
+- Fija `VOCERO_CRM_VERSION="2.0.0"` y `NEA_VERSION="2.0.1"`.
+- Los trece tropiezos del ensayo están corregidos (`450614e`), y los caminos
+  nuevos se probaron en solo lectura contra el ensayo: `precheck` avisa del
+  override de la WABA de `vocero-clase` desde la fase 0, y `guia` y
+  `agente estado --json` salen limpios y sin llaves.
+
+**Sin hacer:** borrar la instalación `ensayo30` de `vocero-16` (Nea
+`oxscyojlwrwvhvookx8ikd8c`, CRM `dpmhlzuxtcwfnr6jkinra2o6` y Postgres
+`e5bjsmt2ahbzc7pkfkldnmud`). El borrado por el MCP pidió confirmación y quedó
+rechazado; queda pendiente de Kevin, que puede hacerlo desde el panel.
