@@ -1292,3 +1292,25 @@ En local, con GLM: mueve con los dos mensajes de la prueba y no mueve con
 | Override movido / devuelto | 03:09:26 / 03:09:44 | «Me interesa contratarlos, ¿cómo le hacemos para empezar?» → respuesta en 16.0 s y el lead pasó de «Nuevo» a «Interesado» |
 
 Un mensaje de la línea cliente. Soporte quedó como estaba. **Pasa.**
+
+## 2026-10-20 — Publicación de 2.0.0
+
+Kevin autorizó mergear y publicar `v2.0.0`, primero Nea y luego el CRM, y
+mover `latest`.
+
+| Repo | PR | Tag | Imagen (`2.0.0` = `2.0` = `latest`) | Release |
+|---|---|---|---|---|
+| nea-agent | #49 (CHANGELOG: la 038 y «Actualizar desde 1.x» al día) | `v2.0.0` (`63cf73d`) | `sha256:f3d587d7…ffeee` | «Nea 2.0.0 — el despacho es la única entrada», Latest |
+| vocero-crm | #134 (versión, compose sin el perfil `nea`, `init-env` con `BOT_API_KEY`, Render con `vocero-nea`, la imagen 2.0.0 en guías y manifiestos, CHANGELOG con «Actualizar desde 1.6.0») | `v2.0.0` (`97aa639`) | `sha256:af254e93…55b34` | «Vocero CRM 2.0.0 — el agente es un servicio», Latest |
+
+El orden importa: el compose y Render del CRM apuntan a `nea-agent:2.0.0`, así
+que esa imagen tenía que existir primero. `latest` lo mueve solo el workflow
+`imagen` con un tag sin prerelease (los `rc` no lo tocaron).
+
+Antes del merge, el compose sin perfiles se levantó en una carpeta aparte con
+`rc.9` y `rc.10`: CRM y Nea sobre la misma base, el despacho cableado a
+`http://nea:8000` con su llave, y Nea con `llm: crm`.
+
+**Pendiente de la 2.0:** starter 3.0.0. `vocero20` sigue con las `rc`
+(CRM `rc.9`, Nea `rc.10`, MinIO adentro, GLM en Ajustes → IA); hay que
+pasarlo a `2.0.0` o limpiarlo (PLAN-2.0).
