@@ -13,6 +13,7 @@
 
 export type ClaveHerramienta =
   | "ficha"
+  | "etapa"
   | "agendar"
   | "reprogramar"
   | "salida"
@@ -35,6 +36,14 @@ export const HERRAMIENTAS: readonly Herramienta[] = [
     etiqueta: "Llenar la ficha",
     descripcion:
       "Anota lo que aprende del cliente en su ficha del CRM.",
+  },
+  {
+    // 038 — Solo hacia adelante y entre etapas abiertas: ganar o perder un
+    // trato lo decide una persona.
+    clave: "etapa",
+    etiqueta: "Mover de etapa",
+    descripcion:
+      "Avanza al lead en el pipeline cuando la conversación lo amerita. Nunca lo da por ganado ni por perdido.",
   },
   {
     clave: "agendar",

@@ -8,6 +8,7 @@ import { isWindowOpen, windowRemainingMs } from "@/server/inbox/window";
 import { windowMsFor } from "@/server/channels/capabilities";
 import { citasParaContexto } from "@/server/agenda/context";
 import { anuncioDelContacto } from "@/server/attribution/store";
+import { siguientesDelLead } from "@/server/bot/stage";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,10 @@ export const dynamic = "force-dynamic";
  * despacho el webhook ya no le llega, y esto es lo que lo reemplaza. Misma
  * llave y misma forma que en Vocero Cloud. El `ctwa_clid` no sale: solo si
  * existe.
+ *
+ * 038 — `lead.nextStages`: a qué etapas puede mover el cerebro al lead con
+ * `POST /api/bot/stage` (las abiertas después de la actual, en orden). Va
+ * aquí y no en el perfil porque depende de la etapa de este momento.
  */
 export async function GET(req: Request) {
   const denied = requireBotKey(req);
@@ -115,6 +120,9 @@ export async function GET(req: Request) {
     citasParaContexto(organizationId, contact.id),
     anuncioDelContacto(organizationId, contact.id),
   ]);
+  const nextStages = leadRows[0]
+    ? await siguientesDelLead(organizationId, leadRows[0].lead.stageId)
+    : [];
 
   return Response.json({
     contact: {
@@ -147,7 +155,7 @@ export async function GET(req: Request) {
       ),
     },
     lead: leadRows[0]
-      ? { id: leadRows[0].lead.id, stageName: leadRows[0].stage.name }
+      ? { id: leadRows[0].lead.id, stageName: leadRows[0].stage.name, nextStages }
       : null,
     adOrigen: anuncio
       ? {

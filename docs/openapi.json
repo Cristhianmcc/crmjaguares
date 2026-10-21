@@ -3,7 +3,7 @@
   "info": {
     "title": "Vocero CRM — API de servicio del cerebro",
     "version": "2.0.0",
-    "description": "El contrato entre Vocero CRM y su cerebro (Nea u otro). Dos mitades: el CRM le DESPACHA a tu cerebro cada ráfaga del cliente (sección `webhooks`), y tu cerebro contesta por `/api/bot/*` (sección `paths`).\n\nRegla de versión: agregar una llave o una ruta cabe en cualquier versión; quitar o renombrar una es una versión mayor. Ignora las llaves que no conozcas.\n\nCambios de contrato de la 2.0: `POST /api/bot/llm/{ruta}` y `llm` en el perfil (036); `adOrigen` en el contexto (031); `fileName`, `location` y `contacts` en los mensajes del despacho (031); `conversation.test` en el despacho y `/api/bot/messages` guardando las respuestas de prueba (033); `role` y `tools` en el perfil (034).\n\nLa forma exacta del despacho y del aviso de olvido está fijada byte a byte en pruebas gemelas de los dos repositorios: `tests/unit/despacho-contrato.test.ts` y `tests/unit/olvido-contrato.test.ts` aquí, `tests/test_despacho_raiz.py` y `tests/test_olvido.py` en nea-agent. Guía de migración: `docs/migrar-a-2.0.md`.",
+    "description": "El contrato entre Vocero CRM y su cerebro (Nea u otro). Dos mitades: el CRM le DESPACHA a tu cerebro cada ráfaga del cliente (sección `webhooks`), y tu cerebro contesta por `/api/bot/*` (sección `paths`).\n\nRegla de versión: agregar una llave o una ruta cabe en cualquier versión; quitar o renombrar una es una versión mayor. Ignora las llaves que no conozcas.\n\nCambios de contrato de la 2.0: `POST /api/bot/llm/{ruta}` y `llm` en el perfil (036); `adOrigen` en el contexto (031); `fileName`, `location` y `contacts` en los mensajes del despacho (031); `conversation.test` en el despacho y `/api/bot/messages` guardando las respuestas de prueba (033); `role` y `tools` en el perfil (034); `POST /api/bot/stage`, `lead.nextStages` en el contexto y la herramienta `etapa` (038).\n\nLa forma exacta del despacho y del aviso de olvido está fijada byte a byte en pruebas gemelas de los dos repositorios: `tests/unit/despacho-contrato.test.ts` y `tests/unit/olvido-contrato.test.ts` aquí, `tests/test_despacho_raiz.py` y `tests/test_olvido.py` en nea-agent. Guía de migración: `docs/migrar-a-2.0.md`.",
     "license": { "name": "MIT" }
   },
   "servers": [{ "url": "https://tu-crm.example.com" }],
@@ -73,7 +73,7 @@
     "/api/bot/ficha": {
       "put": {
         "summary": "Guardar lo que el cerebro aprende del cliente",
-        "description": "Claves libres, mezcladas con las que ya hay; `null` borra una clave. El CRM puede mover la etapa del lead según la ficha.",
+        "description": "Claves libres, mezcladas con las que ya hay; `null` borra una clave. Guardar la ficha no mueve la etapa: para eso está `POST /api/bot/stage`.",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["conversationId", "ficha"], "properties": { "conversationId": { "type": "string" }, "ficha": { "type": "object", "additionalProperties": true } } } } } },
         "responses": {
           "200": { "description": "Ficha resultante", "content": { "application/json": { "schema": { "type": "object", "properties": { "ficha": { "type": "object", "additionalProperties": true } } } } } },
@@ -81,6 +81,20 @@
           "409": { "$ref": "#/components/responses/SinOrganizacion" },
           "422": { "$ref": "#/components/responses/Invalido" }
         }
+      }
+    },
+    "/api/bot/stage": {
+      "post": {
+        "summary": "Mover al lead a una etapa siguiente del pipeline",
+        "description": "038 — Solo hacia adelante y a etapas abiertas: las de `lead.nextStages` del contexto. Ganar o perder un trato lo decide una persona. Exige la herramienta `etapa` encendida en el perfil y la IA activa en la conversación. Pedir la etapa actual es 200 con `changed: false` y no anota nada: reintentar es inocuo. Cada movimiento queda en la bitácora de etapas como hecho por el bot.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["conversationId", "stage"], "properties": { "conversationId": { "type": "string" }, "stage": { "type": "string", "description": "Nombre de la etapa (sin distinguir mayúsculas) o su id", "examples": ["Calificado"] } } } } } },
+        "responses": {
+          "200": { "description": "Hecho, o ya estaba ahí (`changed: false`)", "content": { "application/json": { "schema": { "type": "object", "required": ["ok", "changed", "lead"], "properties": { "ok": { "const": true }, "changed": { "type": "boolean" }, "lead": { "type": "object", "properties": { "id": { "type": "string" }, "stageName": { "type": "string" } } } } } } } },
+          "404": { "description": "`not_found`: no existe la conversación. `sin_lead`: el contacto no tiene lead en el pipeline.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "`ai_paused` (una persona tomó la conversación), `herramienta_apagada` (`etapa` no está en `tools`), `etapa_no_permitida` (hacia atrás, ganada o perdida; el mensaje lista las válidas) o `no_org`.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "`etapa_desconocida` (el mensaje lista las válidas) o cuerpo inválido.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "x-codigos-409": ["ai_paused", "herramienta_apagada", "etapa_no_permitida", "no_org"]
       }
     },
     "/api/bot/handoff": {
@@ -234,7 +248,7 @@
         "properties": {
           "contact": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": ["string", "null"] }, "identity": { "type": "string" }, "waIdentity": { "type": "string" }, "channel": { "$ref": "#/components/schemas/Canal" }, "phone": { "type": ["string", "null"] }, "ficha": { "type": "object", "additionalProperties": true } } },
           "conversation": { "type": "object", "properties": { "id": { "type": "string" }, "aiEnabled": { "type": "boolean" }, "handoffAt": { "type": ["string", "null"] }, "windowOpen": { "type": "boolean" }, "windowRemainingMs": { "type": ["integer", "null"] } } },
-          "lead": { "type": ["object", "null"], "properties": { "id": { "type": "string" }, "stageName": { "type": "string" } } },
+          "lead": { "type": ["object", "null"], "properties": { "id": { "type": "string" }, "stageName": { "type": "string" }, "nextStages": { "type": "array", "description": "038 — A qué etapas puede moverlo el cerebro con `POST /api/bot/stage`: las abiertas después de la actual, en el orden del pipeline. Vacía en la última abierta o en una de cierre.", "items": { "type": "object", "required": ["id", "name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" } } } } } },
           "adOrigen": { "type": ["object", "null"], "description": "031 — De qué anuncio llegó la persona.", "properties": { "headline": { "type": ["string", "null"] }, "body": { "type": ["string", "null"] }, "sourceType": { "type": ["string", "null"] }, "sourceUrl": { "type": ["string", "null"] }, "hasCtwaClid": { "type": "boolean" }, "capturedAt": { "type": "string" } } },
           "booking": { "type": "object", "description": "Solo con la agenda encendida.", "additionalProperties": true }
         }
@@ -242,7 +256,7 @@
       "Perfil": {
         "type": "object",
         "properties": {
-          "profile": { "type": "object", "properties": { "name": { "type": "string" }, "tone": { "type": ["string", "null"] }, "instructions": { "type": ["string", "null"] }, "escalationRules": { "type": ["string", "null"] }, "greeting": { "type": ["string", "null"] }, "role": { "type": "string", "description": "034 — El rol del agente.", "examples": ["calificador"] }, "tools": { "type": "array", "description": "034 — Las herramientas encendidas. `escalar` siempre. Sin la llave, enciende todas.", "items": { "type": "string", "enum": ["ficha", "agendar", "reprogramar", "salida", "escalar"] } } } },
+          "profile": { "type": "object", "properties": { "name": { "type": "string" }, "tone": { "type": ["string", "null"] }, "instructions": { "type": ["string", "null"] }, "escalationRules": { "type": ["string", "null"] }, "greeting": { "type": ["string", "null"] }, "role": { "type": "string", "description": "034 — El rol del agente.", "examples": ["calificador"] }, "tools": { "type": "array", "description": "034 — Las herramientas encendidas. `escalar` siempre. Sin la llave, enciende todas.", "items": { "type": "string", "enum": ["ficha", "etapa", "agendar", "reprogramar", "salida", "escalar"] } } } },
           "kb": { "type": "string" },
           "resources": { "type": "array", "items": { "type": "object", "properties": { "label": { "type": "string" }, "url": { "type": "string" } } } },
           "llm": {

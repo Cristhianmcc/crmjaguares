@@ -164,6 +164,7 @@ La ráfaga del despacho es lo posterior al último saliente más lo que el despa
 | `GET /api/bot/profile` | Perfil del agente, knowledge base, `role`, `tools` y `llm` (`{path, model}`, o `null` sin IA) |
 | `POST /api/bot/llm/{ruta}` | 036 — Proxy compatible con OpenAI hacia el proveedor de Ajustes → IA; cuerpo y respuesta tal cual. 402 `sin_credencial` sin IA, 504 `proveedor_sin_respuesta` si no contesta |
 | `PUT /api/bot/ficha` | Guardar lo que el bot descubre del lead (claves libres) |
+| `POST /api/bot/stage` | 038 — Mover al lead a una etapa abierta siguiente (`lead.nextStages` del contexto), con la herramienta `etapa` encendida. 409 `etapa_no_permitida`, `herramienta_apagada`, `ai_paused` |
 | `POST /api/bot/handoff` | Devolver la conversación a un humano |
 | `POST /api/bot/typing` | Marcar leído y «escribiendo…» |
 | `GET /api/bot/media/{mediaId}` | Descargar un adjunto entrante sin tocar Meta |

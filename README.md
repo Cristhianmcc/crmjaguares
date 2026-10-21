@@ -143,6 +143,7 @@ Mientras se publica la imagen 2.0.0 de Nea, el servicio va detrás del perfil
 | `GET /api/bot/profile` | El perfil del agente y el knowledge base que editaste en la app; en `llm`, por dónde pensar y con qué modelo (`null` sin IA configurada) |
 | `POST /api/bot/llm/{ruta}` | Pensar con la llave de Ajustes → IA. Compatible con OpenAI: apunta el `base_url` de tu SDK aquí. Acepta `X-API-Key` o `Authorization: Bearer`. Sin IA configurada, 402 `sin_credencial` |
 | `PUT /api/bot/ficha` | Guardar lo que tu bot descubre del lead (claves libres: cada negocio califica distinto) |
+| `POST /api/bot/stage` | Avanzar al lead en el pipeline: solo hacia adelante y a etapas abiertas (las que el contexto trae en `lead.nextStages`). Ganar o perder un trato lo decide una persona. Se apaga desde la pantalla Agente («Mover de etapa») |
 | `POST /api/bot/handoff` | Devolver la conversación a un humano |
 | `POST /api/bot/typing` | Marcar leído y mostrar "escribiendo…" |
 | `GET /api/bot/media/{id}` | Descargar un adjunto entrante sin tocar Meta |

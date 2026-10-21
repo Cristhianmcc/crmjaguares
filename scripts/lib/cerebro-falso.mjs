@@ -21,6 +21,10 @@
  *         `/api/bot/messages`;
  *       · un caso del Laboratorio que termina en «sale» → calla (el candado de
  *         cierre de Nea).
+ *       · 038 — texto con «califica» → lee el contexto por `conversationId`
+ *         y mueve al lead a la primera de `lead.nextStages` con
+ *         `POST /api/bot/stage` (o a la etapa que diga «califica a <etapa>»),
+ *         y luego contesta como siempre.
  *     Los avisos `conversation.deleted` solo se acusan.
  *
  * Todo lo recibido queda en `estado.recibidos` (con `firmaOk`, cabeceras y la
@@ -146,6 +150,8 @@ export async function levantarCerebroFalso({
     respuestas: [],
     /** Las llamadas al proxy `/api/bot/llm`. */
     llm: [],
+    /** 038 — Lo que el contexto le dijo antes de mover la etapa. */
+    contextos: [],
     saludPedidos: 0,
   };
   /** Respuestas en vuelo: `esperar()` las deja terminar antes de cerrar. */
@@ -193,6 +199,22 @@ export async function levantarCerebroFalso({
     }
   }
 
+  /** 038 — Como la herramienta `move_stage` de Nea: el contexto dice a dónde. */
+  async function moverEtapa(convId, texto) {
+    let contexto = null;
+    try {
+      const r = await fetch(`${base}/api/bot/context?conversationId=${encodeURIComponent(convId)}`, {
+        headers: { "x-api-key": botKey },
+      });
+      contexto = await r.json().catch(() => null);
+    } catch {}
+    const pedida = /califica a (.+)$/i.exec(texto)?.[1]?.trim();
+    const etapa = pedida ?? contexto?.lead?.nextStages?.[0]?.name;
+    estado.contextos.push({ convId, nextStages: contexto?.lead?.nextStages ?? null });
+    if (!etapa) return;
+    await alCrm("/api/bot/stage", { conversationId: convId, stage: etapa }, convId, "etapa");
+  }
+
   async function contestar(evento) {
     const convId = evento.conversation.id;
     const ultimo = evento.messages.at(-1) ?? {};
@@ -204,6 +226,7 @@ export async function levantarCerebroFalso({
       await alCrm("/api/bot/handoff", { conversationId: convId, reason: "cliente" }, convId, "handoff");
       return;
     }
+    if (/califica/i.test(texto)) await moverEtapa(convId, texto);
     const respuesta = await pensar(texto);
     await alCrm("/api/bot/messages", { conversationId: convId, text: respuesta }, convId, "mensaje");
   }

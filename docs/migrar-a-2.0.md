@@ -127,3 +127,6 @@ Lo que la 2.0 agregó al contrato:
 | `role`, `tools` | `GET /api/bot/profile` |
 | `POST /api/bot/llm/{ruta}`: el CRM piensa por el cerebro con la llave de Ajustes → IA (también acepta `Authorization: Bearer`) | Ruta nueva |
 | `llm` (`path` y `model`) | `GET /api/bot/profile` |
+| `POST /api/bot/stage`: mover al lead a una etapa abierta siguiente (038) | Ruta nueva |
+| `lead.nextStages`: a qué etapas puede moverlo | `GET /api/bot/context` |
+| Herramienta `etapa` («Mover de etapa») en `tools`. Un perfil con la lista elegida a mano la recibe apagada | `GET /api/bot/profile` |

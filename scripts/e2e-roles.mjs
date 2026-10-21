@@ -46,7 +46,7 @@ async function api(path, opts = {}) {
 }
 
 const bot = (path) => api(path, { headers: { "x-api-key": BOT_KEY } });
-const TODAS = ["ficha", "agendar", "reprogramar", "salida", "escalar"];
+const TODAS = ["ficha", "etapa", "agendar", "reprogramar", "salida", "escalar"];
 
 async function main() {
   if (!BOT_KEY) {

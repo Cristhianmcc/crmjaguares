@@ -1190,3 +1190,105 @@ fuera de esta spec).
 Que Kevin revise y mergee #132. Pendientes del mismo cierre: #131 y
 nea-agent#48 (038, mover de etapa: falta su prueba en vivo), el tag 2.0.0
 (que quita el perfil `nea` del compose) y el starter 3.0.0.
+
+## 2026-10-20 — 038: el cerebro mueve la etapa
+
+Rama `feat/038-cerebro-mueve-etapa` y nea-agent `feat/038-mover-etapa`. Sale
+del «cambio de producto a revisar» de la 036: con el agente incluido se fue
+`move_stage` y ningún cerebro podía mover etapas. La 037 queda para la #93.
+
+### Qué quedó
+
+- `POST /api/bot/stage {conversationId, stage}` (nombre o id). Solo hacia
+  adelante y a etapas abiertas: ganar o perder lo decide una persona. Misma
+  etapa = 200 `changed: false`, sin evento. Pasa por `moveLeadToStage` con
+  `source = "bot"`.
+- Errores tipados: 409 `etapa_no_permitida`, `herramienta_apagada` y
+  `ai_paused`; 422 `etapa_desconocida`; 404 `sin_lead`. Los de etapa traen
+  las válidas en el mensaje.
+- `GET /api/bot/context` gana `lead.nextStages`: va en el contexto y no en el
+  perfil porque depende de la etapa de ese momento.
+- Herramienta nueva `etapa` («Mover de etapa») en el catálogo del rol. El CRM
+  la hace cumplir. Encendida donde «todas» es el valor (`tools = null`, preset
+  Calificador); un perfil con lista elegida a mano la recibe apagada.
+- Corrige la 034 D1: la ficha nunca movía la etapa. La descripción de
+  `/api/bot/ficha` en el OpenAPI decía que sí; ya no.
+- Nea: herramienta `move_stage`, que solo aparece con la clave encendida y
+  `nextStages` en el contexto. Contra cloud o un raíz anterior no existe.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| CRM: `typecheck`, `lint`, `test`, `build` | Verdes; 1,151 unitarias (nuevas: `bot-etapa` 14) |
+| E2E `scripts/e2e-etapa.mjs` (cerebro falso: lee el contexto y mueve) | 31/31 |
+| Regresión: `e2e-despacho` (cerebro falso tocado) y `e2e-roles` (catálogo nuevo) | despacho 134/134, roles 15/15 (en una base limpia: el registro se cierra tras la primera organización) |
+| Nea: `pytest` | 515 verdes (7 nuevas); la del PDF falla solo en Windows, igual que en `main` |
+
+### En vivo
+
+Pendiente de verificación humana: otra sesión usa el número Soporte y
+`vocero20`. Hay que coordinar la prueba (un DM que califique y ver la tarjeta
+moverse en el Pipeline).
+
+### En vivo (`vocero20`: CRM y Nea `2.0.0-rc.9`), 2026-10-21
+
+Antes de la prueba, la rama se puso al día con `main` (que ya traía la 037):
+el único choque fue la bitácora. Con `ops/vivo-038.mjs preparar` se encendió
+`etapa` en `vocero20`. Su lista de herramientas venía elegida a mano y por eso
+la recibió apagada, como dice D3. El lead de la línea cliente estaba en
+«Nuevo», con «En conversación» e «Interesado» como siguientes abiertas.
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto (1) | 00:36:25 / 00:38:00 | «Me interesa contratarlos, ¿cómo le hacemos para empezar?» → Nea contestó en 12.1 s con una sola llamada al modelo y ninguna herramienta. El lead siguió en «Nuevo» |
+| Override movido / devuelto (2) | 00:38:44 / 00:40:18 | «Lo quiero para mi consultorio dental y me gustaría empezar la próxima semana» → Nea guardó la ficha (`PUT /api/bot/ficha`) y contestó en 12.7 s, pero no llamó `move_stage`. El lead siguió en «Nuevo» |
+
+Dos mensajes de la línea cliente; Soporte quedó como estaba.
+
+**Resultado: no pasa.** La mecánica responde como debe: el contexto trae
+`nextStages`, Nea arma `move_stage` con la herramienta encendida, el prompt
+la menciona y el e2e con el cerebro falso lo cubre. Lo que falla es que el
+modelo (`openai/gpt-4o-mini`) no la usa con la instrucción actual («cuando la
+conversación lo amerite»). No se mergeó: la decisión de cómo instruirlo es de
+Kevin.
+
+**Repetición con `z-ai/glm-5.3-flash`** (2026-10-21). El modelo anterior era
+el `LLM_MODEL` de la bóveda, `openai/gpt-4o-mini`, copiado sin compararlo con
+el `.env.example`; Kevin pidió GLM. Se cambiaron Ajustes → IA de `vocero20`
+(llave `…09bd` activa; «Probar conexión» en 2.6 s), el `LLM_MODEL` de
+respaldo de Nea en el servicio y el `LLM_MODEL` de la bóveda. Nea se
+redesplegó para empezar sin perfil en caché.
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto | 00:49:02 / 00:52:09 | Los mismos dos mensajes. «pienso con z-ai/glm-5.3-flash». En el 1.º, respuesta en 20.1 s sin herramientas. En el 2.º, `GET /api/bot/availability` y `PUT /api/bot/ficha`, respuesta en 41.1 s. Ninguna llamada a `POST /api/bot/stage`. El lead siguió en «Nuevo» |
+
+**Sigue sin pasar, ahora con dos modelos.** GLM usa otras herramientas
+(horarios, ficha) y aun así nunca llama `move_stage`. Por eso no se descarta
+que la herramienta no le llegue al modelo, además de una instrucción floja.
+Siguiente paso: reproducir fuera de Soporte, con Nea local contra el CRM local
+y GLM real, registrando el catálogo que se le manda al modelo. No se mergeó.
+
+**Diagnóstico local y arreglo** (2026-10-21). Se reprodujo en local: el CRM y
+Nea de las dos ramas, GLM real y un proxy de registro entre el CRM y
+OpenRouter (sin la llave en los registros). `move_stage` sí iba en las
+herramientas, y la línea del prompt también; el contexto traía `nextStages`
+bien. Lo que fallaba era la instrucción: «cuando la conversación lo amerite»
+no le daba al modelo ningún criterio. Arreglo en Nea (`4161f1d`):
+- La línea del prompt y la descripción de la herramienta dicen cuándo mover:
+  en el mismo turno de la respuesta, en cuanto el lead dijo qué necesita o
+  pidió avanzar (precio, contratar, empezar, agendar).
+- También dicen cuándo no: un saludo, un «ok» o una duda suelta.
+- Prueba nueva: `test_dice_cuando_mover_no_solo_que_se_puede`.
+
+En local, con GLM: mueve con los dos mensajes de la prueba y no mueve con
+«Hola, ¿qué tal?». El CRM no cambió.
+
+**En vivo otra vez** (CRM `rc.9`, Nea `rc.10` = `4161f1d`):
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto | 03:09:26 / 03:09:44 | «Me interesa contratarlos, ¿cómo le hacemos para empezar?» → respuesta en 16.0 s y el lead pasó de «Nuevo» a «Interesado» |
+
+Un mensaje de la línea cliente. Soporte quedó como estaba. **Pasa.**
