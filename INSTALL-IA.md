@@ -105,7 +105,9 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
    Coolify monte el volumen como root no importa: el contenedor arranca como
    root solo para dárselo al usuario de la app y luego baja de privilegios.
    Sin este volumen la app funciona, pero esos archivos se pierden en cada
-   redeploy.
+   redeploy. Opcional (037): si el dueño prefiere un bucket S3-compatible
+   propio, `MEDIA_STORE=bucket` y las `MEDIA_BUCKET_*` de `.env.example`; no
+   lo actives si no lo pide. El volumen sigue haciendo falta como respaldo.
 4. **Variables**: configura las variables de la tabla en la app (runtime, no
    build). `DATABASE_URL` apunta al host interno del paso 1.
 5. **Sin Pre-Deployment Command**: las migraciones corren solas al arrancar el

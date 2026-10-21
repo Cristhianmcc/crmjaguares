@@ -54,6 +54,12 @@ El agente sale del CRM y se conecta por contrato. Guía de actualización:
   cuando el despacho está configurado y el agente contesta su `/health`. Sin
   agente, la guía dice que Vocero funciona como bandeja manual y no te deja
   atrapado en ella.
+- **Adjuntos en un bucket S3-compatible** (037), opcional y apagado por
+  defecto: `MEDIA_STORE=bucket` y las `MEDIA_BUCKET_*`. Lo nuevo va al bucket
+  y lo viejo se sigue leyendo del volumen (sin migrar); si el bucket falla al
+  escribir, el archivo queda en el volumen. `docker compose --profile bucket`
+  levanta un MinIO propio. `/api/health` gana `features.media`; el sondeo de
+  `mediaWritable` y `pnpm doctor` prueban el bucket. Sin SDK de AWS.
 
 ### Cambió
 

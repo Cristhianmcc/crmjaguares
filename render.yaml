@@ -26,6 +26,10 @@
 # - El disco se monta como root; el entrypoint de la imagen se lo da al
 #   usuario de la app en cada arranque. MEDIA_DIR no se define: la imagen ya
 #   trae /data/media, dentro del disco.
+# - 037: sin disco (o con varias instancias), los adjuntos pueden ir a un
+#   bucket S3-compatible: MEDIA_STORE=bucket y las MEDIA_BUCKET_* (ver
+#   .env.example). Entonces el disco deja de ser obligatorio para los
+#   adjuntos.
 # ============================================================
 # 035 — El agente (Nea) va como servicio privado al lado, sobre la misma
 # base (esquema `nea`). Se descomenta al publicarse nea-agent 2.0.0; luego,

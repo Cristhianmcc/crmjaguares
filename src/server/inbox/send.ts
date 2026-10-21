@@ -492,7 +492,8 @@ export async function sendMediaMessage(input: {
   const storagePath = await saveMediaFile(
     input.organizationId,
     assetId,
-    input.file.data
+    input.file.data,
+    input.file.mimeType
   );
   const assetRows = await db
     .insert(schema.mediaAsset)

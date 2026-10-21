@@ -22,6 +22,14 @@ export async function checkMediaDir(): Promise<void> {
   // Sin entorno válido no hay nada que sondear: lo reporta, con detalle, el
   // primer getEnv() de la app.
   if (!media || media.writable) return;
+  if (media.store === "bucket") {
+    // 037 — Sin decir el endpoint completo ni las llaves: solo el host.
+    console.error(
+      `[boot] MEDIA_STORE=bucket pero el bucket${media.dir ? ` (${media.dir})` : ""} no acepta escrituras (${media.code}): los adjuntos, el logo y el icono se guardan en disco mientras tanto. ` +
+        "Revisa MEDIA_BUCKET_ENDPOINT, MEDIA_BUCKET_NAME, MEDIA_BUCKET_KEY_ID y MEDIA_BUCKET_SECRET, y que el bucket exista."
+    );
+    return;
+  }
   console.error(
     `[boot] MEDIA_DIR=${media.dir} no es escribible (${media.code}): los adjuntos entrantes, el logo y el icono NO se van a poder guardar. ` +
       "En Docker: monta un volumen persistente en /data (la imagen ya usa /data/media) y arranca el contenedor como root —el default—, " +

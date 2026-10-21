@@ -391,8 +391,27 @@ healthcheck se fija en el panel. Railway declaró obsoleto este formato a
 favor de su Infrastructure as Code (`.railway/railway.ts`); lo sigue leyendo
 hasta el 2026-12-01.
 
-Vercel y similares siguen fuera hasta 2.0: adjuntos en disco, trabajo en
-segundo plano y SSE en memoria.
+### Adjuntos en un bucket (opcional)
+
+Por defecto, los adjuntos, el logo y el icono viven en el volumen de `/data`.
+Si tu plataforma no tiene disco persistente, o prefieres guardarlos aparte,
+mándalos a un bucket S3-compatible **tuyo** con `MEDIA_STORE=bucket` y las
+`MEDIA_BUCKET_*` (guía en [`.env.example`](.env.example)):
+
+- **MinIO en el mismo servidor**: `docker compose --profile bucket up -d`
+  levanta MinIO y crea el bucket; `MEDIA_BUCKET_ENDPOINT=http://minio:9000`.
+- **R2, S3, Backblaze, Tigris…**: su endpoint, su región y una llave con
+  permiso de escritura en el bucket.
+
+Lo nuevo va al bucket y lo que ya estaba en el volumen se sigue leyendo de
+ahí: no hay que migrar nada, y quitar la bandera tampoco deja nada ilegible.
+Si el bucket no acepta una escritura, ese archivo se guarda en el volumen
+(no se pierde) y `/api/health` (`mediaWritable: false`) y `pnpm doctor` lo
+dicen. Vocero firma las peticiones él mismo: no trae el SDK de AWS.
+
+Vercel y similares siguen fuera: con el bucket ya no dependen del disco, pero
+quedan el trabajo en segundo plano (el despacho, el Laboratorio), el SSE en
+memoria y las migraciones al arrancar.
 
 ### Actualizar
 

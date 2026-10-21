@@ -33,6 +33,8 @@
 # Opcionales después, con `railway variable set`: OPENROUTER_API_TOKEN y
 # OPENROUTER_MODEL, META_APP_SECRET, AGENDA=on, CHANNELS, ATRIBUCION=on,
 # BOT_API_KEY. MEDIA_DIR no se define: la imagen ya trae /data/media.
+# 037: sin volumen, los adjuntos pueden ir a un bucket S3-compatible con
+# MEDIA_STORE=bucket y las MEDIA_BUCKET_* (ver .env.example).
 #
 # - Sin build: `railway add --image ghcr.io/kevinrivm/vocero-crm:1.6.0` crea
 #   el servicio desde la imagen publicada. Entonces este archivo NO se lee: el

@@ -43,6 +43,9 @@
 # - El volumen se monta como root; el entrypoint de la imagen se lo da al
 #   usuario de la app en cada arranque. MEDIA_DIR no se define: la imagen ya
 #   trae /data/media.
+# - 037: si prefieres no atar los adjuntos al volumen de una Machine,
+#   MEDIA_STORE=bucket y las MEDIA_BUCKET_* (`fly secrets set`) los mandan a
+#   un bucket S3-compatible (Tigris, R2, S3). Ver .env.example.
 # - La imagen va fijada a la versión (una prueba lo exige): actualizar es
 #   cambiar la etiqueta y `fly deploy`. Las migraciones corren al arrancar.
 # ============================================================

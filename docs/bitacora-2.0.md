@@ -1134,3 +1134,59 @@ así que hoy ningún cerebro puede mover etapas.
 
 Que Kevin revise y mergee #130 y nea-agent#47. Después, #93 (almacenamiento),
 el tag 2.0.0 (que quita el perfil `nea` del compose) y el starter 3.0.0.
+
+## 2026-10-20 — 037: adjuntos en disco o en un bucket S3-compatible (#93)
+
+PR #132 (rama `feat/037-almacenamiento`). Kevin autorizó mergear la 036 y
+seguir con la #93.
+
+### Qué quedó
+
+- `src/lib/storage/` trae dos puertos de la edición cloud: el cliente S3
+  firmado con SigV4 a mano (sin SDK) y el adaptador.
+- Se escribe donde diga `MEDIA_STORE` y se lee en los dos sitios. Si el bucket
+  falla al escribir, o tarda más de 15 s, el archivo va al disco.
+- El icono, al cambiarse, borra la copia del otro lado.
+- `mediaWritable` y `pnpm doctor` prueban el bucket. `/api/health` gana
+  `features.media`.
+- Compose: el perfil `bucket` levanta un MinIO de `coollabsio/minio` (las
+  imágenes oficiales dejaron Docker Hub) y un contenedor que crea el bucket.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes; 1,161 unitarias (24 de almacenamiento, firma contra el vector de botocore) |
+| `e2e-almacenamiento` contra MinIO local | disco 12/12, bucket 29/29 (con el bucket caído a media fase), vuelta 11/11 |
+| `e2e-selftest` en modo bucket | 280/280; siete adjuntos en MinIO y ninguno en disco |
+| `pnpm doctor` | Bucket sano ✓; detenido `bucket_red`; secreto malo `bucket_403` |
+| Perfil `bucket` del compose | MinIO sano y bucket creado |
+
+### En vivo (`vocero20`: CRM `2.0.0-rc.8`, Nea `2.0.0-rc.7`)
+
+Al servicio `vocero20-par` (`dlh4zhtqg8avc2qlxfb8eodz`) se le agregaron un
+`minio` (volumen `minio-data`, sin puertos públicos) y un `minio-bucket` que
+crea el bucket `vocero` y lo lista. Las llaves son variables mágicas de
+Coolify (`SERVICE_USER_MINIO` y `SERVICE_PASSWORD_MINIO`): ningún secreto pasó
+por el chat ni por la línea de comandos. `/api/health` dio `media: bucket` y
+`mediaWritable: true`. Para la prueba se usó `ops/vivo-037.mjs`, y
+`ops/evolution.mjs` ganó `enviarImagen`.
+
+| | UTC | Resultado |
+|---|---|---|
+| Override movido / devuelto (relevo por túnel) | 23:56:00 / 23:56:10 | Una imagen PNG de la línea cliente. Llegó a la bandeja y `GET /api/media/ma_kk975qkxzqp37nz5xxf1` devolvió 200 `image/png` (293 bytes) |
+| Listado del bucket (`minio-bucket`) | 23:56:08 | `org_r4kx1p6x854mfchoju4n/ma_kk975qkxzqp37nz5xxf1`, 293 B: la imagen está en MinIO |
+
+Un mensaje de la línea cliente; por el relevo solo pasó esa línea. Soporte
+quedó como estaba. El `minio-bucket` quedó con un `sleep 600` al final para
+poder leer su listado en los logs; termina solo.
+
+**Límite conocido:** si el icono se cambia con el bucket caído, al volver el
+bucket se sirve el icono viejo hasta subirlo otra vez (llaves versionadas:
+fuera de esta spec).
+
+### Qué sigue
+
+Que Kevin revise y mergee #132. Pendientes del mismo cierre: #131 y
+nea-agent#48 (038, mover de etapa: falta su prueba en vivo), el tag 2.0.0
+(que quita el perfil `nea` del compose) y el starter 3.0.0.
