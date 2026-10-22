@@ -1446,3 +1446,39 @@ maestra y como zip, igual que la 2.2.0 y la 2.3.0.
 `oxscyojlwrwvhvookx8ikd8c`, CRM `dpmhlzuxtcwfnr6jkinra2o6` y Postgres
 `e5bjsmt2ahbzc7pkfkldnmud`). El borrado por el MCP pidió confirmación y quedó
 rechazado; queda pendiente de Kevin, que puede hacerlo desde el panel.
+
+## 2026-10-22 — 039: responder citando un mensaje
+
+**PR**: [#138](https://github.com/kevinrivm/vocero-crm/pull/138), rama
+`039-responder-citando`. Spec, plan y tareas antes del código (`a4d8ca4`).
+Puerto de una función que ya usa un CRM de cliente; aquí se montó otra vez
+sobre `main` (2.0), sin sus datos.
+
+### Qué quedó
+
+- Migración `0022_responder_citando`: `message.reply_to_wa_message_id`
+  (`text`, nula). Guarda el `wamid` citado; se resuelve al leer, por lote.
+- «Responder» en la bandeja, vista previa cancelable en el compositor y la
+  cita arriba de la burbuja, con salto al original. Lo citado que no está en
+  el CRM se ve como «Mensaje no disponible».
+- Envío con `context.message_id` en texto, adjuntos, ubicación y contactos;
+  422 `reply_unavailable` sin enviar si la cita no es posible.
+- Solo WhatsApp (capacidad `quoteReplies`). `/api/bot/*` y el despacho no
+  cambian; el DTO del mensaje gana `quotable` y `replyTo`.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes con banderas apagadas y con `CHANNELS` + `AGENDA`. 1 192 unitarias (17 nuevas) |
+| `scripts/e2e-responder-citando.mjs` (Playwright, wa-mock, base desechable) | 21/21 |
+| `scripts/e2e-selftest.mjs` con el cerebro falso y todo encendido | 280/280 |
+
+### Qué no se probó
+
+- **En vivo**, con un número real: no se tocó ningún WhatsApp ni ninguna
+  instancia. Queda pendiente de verificación humana: mandar una respuesta
+  citada desde la bandeja y ver la burbuja contextual en el teléfono, y citar
+  desde el teléfono y verla en la bandeja.
+- Que Meta dibuje la cita de un original de más de ~30 días (D10): no se
+  puede reproducir con el mock.

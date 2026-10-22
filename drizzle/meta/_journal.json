@@ -155,6 +155,13 @@
       "when": 1792517498460,
       "tag": "0021_roles_como_datos",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792608627646,
+      "tag": "0022_responder_citando",
+      "breakpoints": true
     }
   ]
 }
