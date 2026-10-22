@@ -1592,3 +1592,40 @@ la 2.0 y el almacenamiento de la 037.
 - **En vivo**, con un número real: no se tocó ningún WhatsApp ni ninguna
   instancia. Pendiente de verificación humana (pegar una captura y reenviar
   una foto de un cliente a otro, y verlas llegar al teléfono).
+
+## 2026-10-22 — 043: arrastrar una imagen al chat
+
+**PR**: [#142](https://github.com/kevinrivm/vocero-crm/pull/142), rama
+`043-arrastrar-imagen`, **encima de la 042** (#141): reutiliza su validación y
+el mismo compositor. Spec ligera antes del código (`b2d1d96`). Puerto de una
+función que ya usa un CRM de cliente, montada otra vez sobre `main`.
+
+### Qué quedó
+
+- La conversación entera acepta una imagen soltada; el indicador cuenta la
+  profundidad para no parpadear y solo reacciona a archivos.
+- Soltar adjunta (nunca envía), con la validación de la 042.
+- No se acepta mientras sube un adjunto, con la ventana cerrada, en canales
+  sin adjuntos ni con el diálogo de reenvío abierto.
+- **Diferencia con el CRM de origen, decidida aquí**: soltar un archivo fuera
+  del chat ya no abre el archivo en la pestaña (el origen solo lo evitaba
+  dentro del área, y el borrador se perdía).
+- El hilo pasa a renderizarse dentro del compositor.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes con banderas apagadas y con `CHANNELS` + `AGENDA`. 1 202 unitarias |
+| `scripts/e2e-arrastrar-imagen.mjs` (Playwright, wa-mock, base desechable) | 30/30 |
+| `scripts/e2e-imagenes.mjs` (la 042) sobre esta rama | 42/42 |
+| Captura del indicador, escritorio, tema claro | Revisada a ojo |
+
+### Qué no se probó
+
+- **Un arrastre real desde el explorador de archivos**: el arnés manda los
+  eventos con un `DataTransfer` que lleva archivos; el sistema operativo no
+  interviene. Tampoco Firefox ni Safari.
+- **Tema oscuro** del indicador, a ojo.
+- **En vivo**, con un número real: no se tocó ningún WhatsApp ni ninguna
+  instancia. Pendiente de verificación humana.
