@@ -1514,3 +1514,35 @@ ejemplos neutros (las del original traían datos de ese negocio).
   toma capturas. El contraste del color descansa en
   `contraste-temas.test.ts` (≥ 4,5:1 sobre la burbuja saliente y el fondo).
   Pendiente de un vistazo humano en los dos temas.
+
+## 2026-10-22 — 041: selector de emojis en el compositor
+
+**PR**: [#140](https://github.com/kevinrivm/vocero-crm/pull/140), rama
+`041-selector-emojis`. Spec ligera antes del código (`f9f3ad8`). Puerto de una
+función que ya usa un CRM de cliente, montada otra vez sobre `main`.
+
+### Qué quedó
+
+- `EmojiPicker` en la caja de texto del compositor; catálogo, búsqueda sin
+  acentos e inserción en el cursor en `src/lib/emojis.ts` (puro, sin
+  dependencias ni peticiones).
+- Elegir no envía; Escape, la X o un clic fuera cierran; deshabilitado
+  mientras sube un adjunto. Abrirlo cierra el panel de ubicación o contacto.
+- Sin migración ni cambios de contrato.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes con banderas apagadas y con `CHANNELS` + `AGENDA`. 1 190 unitarias (15 nuevas) |
+| `scripts/e2e-selector-emojis.mjs` (Playwright, wa-mock, base desechable) | 33/33 |
+| Capturas del panel en escritorio y en 390 px, tema claro | Revisadas a ojo: cabe, no tapa el campo |
+
+### Qué no se probó
+
+- **Tema oscuro**: el panel usa los tokens `popover`; no se vio a ojo.
+- **En vivo**, con un número real: no se tocó ningún WhatsApp ni ninguna
+  instancia. Pendiente de verificación humana (que los emojis compuestos
+  lleguen igual al teléfono).
+- Cómo se dibujan los emojis depende de la fuente del sistema del operador;
+  solo se vio en Chromium sobre Windows.
