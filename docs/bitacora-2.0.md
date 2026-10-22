@@ -1482,3 +1482,35 @@ sobre `main` (2.0), sin sus datos.
   desde el teléfono y verla en la bandeja.
 - Que Meta dibuje la cita de un original de más de ~30 días (D10): no se
   puede reproducir con el mock.
+
+## 2026-10-22 — 040: ligas clicables en los mensajes
+
+**PR**: [#139](https://github.com/kevinrivm/vocero-crm/pull/139), rama
+`040-ligas-clicables`. Spec ligera antes del código (`9efb1cd`). Puerto de una
+función que ya usa un CRM de cliente; las pruebas se reescribieron con
+ejemplos neutros (las del original traían datos de ese negocio).
+
+### Qué quedó
+
+- `splitLinks` (`src/lib/linkify.ts`) parte el texto en tramos de texto y de
+  liga; `LinkedText` los pinta. Se usa en el texto de la burbuja y en el pie
+  de un adjunto.
+- Solo `http(s)://` y `www.`; la pestaña nueva sin `opener` ni `referer`.
+- Sin migración ni cambios de contrato.
+
+### Cómo se probó
+
+| Qué | Resultado |
+|---|---|
+| `typecheck`, `lint`, `test`, `build` | Verdes con banderas apagadas y con `CHANNELS` + `AGENDA`. 1 188 unitarias (13 nuevas) |
+| `scripts/e2e-ligas-clicables.mjs` (Playwright, wa-mock, base desechable) | 18/18: texto, pie, `javascript:`/`mailto:` sin enlace, saliente con `www.`, pestaña nueva, recarga |
+
+### Qué no se probó
+
+- **En vivo**, con un número real: no se tocó ningún WhatsApp ni ninguna
+  instancia. Pendiente de verificación humana (una liga real en un mensaje
+  del teléfono).
+- El aspecto del enlace no se revisó a ojo: el arnés comprueba el DOM, no
+  toma capturas. El contraste del color descansa en
+  `contraste-temas.test.ts` (≥ 4,5:1 sobre la burbuja saliente y el fondo).
+  Pendiente de un vistazo humano en los dos temas.
