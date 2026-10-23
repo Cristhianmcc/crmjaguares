@@ -51,15 +51,6 @@ export async function listConversations(
     order by m.created_at desc
     limit 1
   )`;
-  // 052 — De quién es el último mensaje: «sin responder» es que es del
-  // cliente. Las notas internas (050) viven en otra tabla y no cuentan.
-  const ultimaDireccionSql = sql<string | null>`(
-    select m.direction
-    from message m
-    where m.conversation_id = ${schema.conversation.id}
-    order by m.created_at desc
-    limit 1
-  )`;
   const stageSql = sql<string | null>`(
     select s.name from lead l
     join pipeline_stage s on s.id = l.stage_id
@@ -72,7 +63,6 @@ export async function listConversations(
       conversation: schema.conversation,
       contact: schema.contact,
       preview: previewSql,
-      ultimaDireccion: ultimaDireccionSql,
       stageName: stageSql,
       anuncio: anuncioDeLista,
     })
@@ -98,8 +88,7 @@ export async function listConversations(
       r.contact,
       r.preview,
       r.stageName,
-      aAnuncioDeLista(r.anuncio),
-      r.ultimaDireccion
+      aAnuncioDeLista(r.anuncio)
     )
   );
 }
@@ -162,9 +151,7 @@ export function serializeConversation(
   contact: typeof schema.contact.$inferSelect,
   preview: string | null = null,
   stageName: string | null = null,
-  anuncio: ConversationDto["anuncio"] = null,
-  /** 052 — `in` si el último mensaje es del cliente. */
-  ultimaDireccion: string | null = null
+  anuncio: ConversationDto["anuncio"] = null
 ): ConversationDto {
   const caps = capabilitiesFor(c.channel);
   // 024: la extensión humana solo existe en los canales que la declaran.
@@ -200,7 +187,6 @@ export function serializeConversation(
       quoteReply: caps.quoteReplies,
     },
     preview,
-    esperandoRespuesta: ultimaDireccion === "in",
     anuncio,
   };
 }

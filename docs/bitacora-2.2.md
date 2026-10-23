@@ -581,3 +581,53 @@ aquí, del lado del cliente, como los de la 014 y la 018.
    nada). Ahora espera las filas.
 2. **La captura de escritorio mostraba resaltado el botón anterior**: la
    transición de color dura 150 ms. Se espera antes de capturar.
+
+## 2026-10-23 — 052, enmienda: un solo botón «Filtrar»
+
+**Qué pidió Kevin**: los botones ovalados de la bandeja no le parecían
+elegantes, y «Sin responder» no le servía. Eligió «Todas | No leídas» y un
+solo botón «Filtrar».
+
+**Tiempos reales**: la enmienda de la spec quedó en commit a las 13:06; los
+gates, los arneses y el self-test quedaron en verde a las 13:26.
+
+**Qué cambió**:
+
+- **La barra**: dos pestañas subrayadas («Todas» y «No leídas») y, a la
+  derecha, el botón «Filtrar».
+- **El menú**: trae la etapa, la casilla «Por vencer» y la casilla «De
+  anuncios», cada casilla con su número, más «Limpiar filtros». Se cierra con
+  Escape o con un clic fuera.
+- **Los filtros puestos**: el botón dice «Filtrar · N» y abajo queda una
+  etiqueta por filtro, con ✕ para quitarlo.
+- **Las pestañas** cuentan dentro de lo filtrado.
+- **Lo que se quitó**: «Sin responder» y, con él, `esperandoRespuesta` del
+  DTO y su subconsulta.
+- **Lo que se queda**: el aviso «Vence en…» de la fila.
+
+**Cómo se probó**:
+
+- `e2e-filtros-ventana.mjs`, reescrito: 22/22.
+- `e2e-search-filters.mjs`: verde. Ahora abre el menú para la etapa.
+- `e2e-anuncio-origen-ui.mjs`: verde en claro, oscuro y a 390 px. Marca «De
+  anuncios» desde el menú.
+- Los dos arneses viejos aceptan `E2E_EMAIL` / `E2E_PASSWORD` y el primero,
+  `APP_BASE_URL`.
+- Typecheck, lint, test (1 318, con las banderas apagadas y encendidas) y
+  build: verdes.
+- Self-test general en base limpia: **280/280**.
+
+**Capturas** (`docs/bitacora-2.2/`):
+
+- Antes, con el código de `main`: `052b-antes-{escritorio,390}-{light,dark}.png`.
+- Después, con el menú abierto y «Por vencer» marcado:
+  `052b-despues-{escritorio,390}-{light,dark}.png`.
+- Después, con el menú cerrado y la etiqueta puesta:
+  `052b-despues-cerrado-…`.
+
+**Lo que salió mal**:
+
+1. **El login de los arneses chocó con el tope de intentos.** El de búsqueda
+   intentaba crear su propia cuenta en una base que ya tenía dueña, y las
+   capturas iniciaban sesión una vez por toma. Ahora los arneses aceptan la
+   cuenta por variable y las capturas reusan una sola sesión.
