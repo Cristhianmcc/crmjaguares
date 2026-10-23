@@ -700,3 +700,20 @@ el self-test quedaron en verde a las 15:00.
    limita nada. Ahora el `max-w` vive en la envoltura.
 3. **El tope de inicios de sesión** volvió a cortar una pasada del arnés. Se
    reinició el servidor.
+
+## 2026-10-23 — 059, arreglo: la hora se salía de la burbuja
+
+**Qué reportó Kevin** al probar la 2.3.0-rc.1: bajo un audio, la hora de envío
+quedaba fuera de la burbuja.
+
+**Por qué**: la hora es un `float`. La burbuja era un elemento flex y eso la
+contenía; desde la 059 va dentro de la envoltura de los gestos, y un bloque
+normal no contiene sus floats. Pasaba con el audio, el documento y la
+ubicación.
+
+**Arreglo**: `flow-root` en la burbuja.
+
+**Cómo se probó**: `e2e-reenviar-y-deslizar.mjs` ganó un check que mide la
+hora contra el borde de cada burbuja. Sin el arreglo falló («3 fuera»); con
+él, 43/43. Notas de voz 41/41, imágenes 42/42, typecheck, lint, test (1 343)
+y build en verde.
