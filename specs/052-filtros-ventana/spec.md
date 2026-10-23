@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código. Implementada; gates, arnés E2E (16/16 en base limpia) y self-test general (280/280) en verde.
+**Status**: Especificada antes de escribir código. Implementada y enmendada el 2026-10-23 (un solo botón «Filtrar», ver abajo, también antes del código); gates, arnés E2E (16/16 en base limpia) y self-test general (280/280) en verde.
 
 **Input**: sexta y última spec del recorte de la 2.2, elegida por Kevin el
 2026-10-23 ([046 research.md](../046-referencias-2.2/research.md)). Viene de
@@ -63,6 +63,43 @@ decenas de temporizadores para ganar minutos.
 - **AC5.** Los filtros se combinan con la búsqueda, la etapa y el canal, como
   los de siempre.
 - **AC6.** A 390 px la fila de filtros envuelve sin desplazamiento horizontal.
+
+## Enmienda del 2026-10-23 — un solo botón «Filtrar» (Kevin, tras probar la rc.3)
+
+Kevin probó la rc.3 y los óvalos no le convencieron: «Todas · No leídas ·
+Sin responder · Por vencer · Anuncios» y luego el selector de etapa
+amontonaban la barra, y «Sin responder» no le parecía bien. Eligió entre
+dos maquetas la de **un solo botón «Filtrar»**:
+
+- **E1 — Solo dos pestañas: «Todas» y «No leídas»**, de texto subrayado, sin
+  óvalos, con su número.
+- **E2 — Un botón «Filtrar»** abre un menú con lo demás:
+  - la **etapa** (el mismo selector, «Toda etapa» y las presentes);
+  - **Por vencer**, con su número;
+  - **De anuncios**, con su número.
+
+  Las dos últimas son casillas y aparecen solo si hay alguna o están
+  marcadas, como antes. Al pie del menú, «Limpiar filtros». Con filtros
+  puestos, el botón dice «Filtrar · N».
+- **E3 — Lo elegido se ve debajo de la barra**, como etiquetas con ✕ para
+  quitarlas una por una («Etapa: Interesado ✕», «Por vencer ✕»). Las
+  pestañas, el menú y la búsqueda se combinan con «y».
+- **E4 — «Sin responder» se va**, y con él el campo `esperandoRespuesta` del
+  DTO interno y su subconsulta: no se usa en ningún otro lugar.
+- **E5 — El aviso «Vence en…» se queda en la fila de cada chat**, con o sin
+  filtro: era lo útil de D2.
+
+Reemplaza a D1 y a los AC1, AC2, AC4 y AC6 de arriba. Los nuevos:
+
+- **AC-E1.** La barra tiene solo «Todas», «No leídas» y «Filtrar». No hay
+  óvalos de filtro ni «Sin responder».
+- **AC-E2.** En «Filtrar», elegir una etapa deja solo esa etapa y aparece la
+  etiqueta «Etapa: X ✕». Con el ✕ vuelve todo.
+- **AC-E3.** «Por vencer» y «De anuncios» filtran, y se combinan entre sí, con
+  la etapa, con «No leídas» y con la búsqueda.
+- **AC-E4.** «Filtrar · N» cuenta los filtros puestos, y «Limpiar filtros» los
+  quita todos.
+- **AC-E5.** A 390 px la barra y el menú caben sin desplazamiento horizontal.
 
 ## Qué NO se hace y por qué
 
