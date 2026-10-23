@@ -5,6 +5,44 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.1.0 — 2026-10-22
+
+Una bandeja que se usa como WhatsApp. Actualizar es redesplegar con la
+etiqueta `2.1.0`: no hay migraciones ni variables nuevas. Va con
+[Nea 2.0.2](https://github.com/kevinrivm/nea-agent/blob/main/CHANGELOG.md),
+que transcribe las notas de voz pensando por el CRM sin configurar nada.
+
+### Nuevo
+
+- **Responder citando** un mensaje, como en WhatsApp (039).
+- **Ligas clicables** en los mensajes (040).
+- **Selector de emojis** en el compositor (041).
+- **Pegar y reenviar imágenes** (042) y **arrastrar una imagen** al chat (043).
+- **Notas de voz** (044): con la caja vacía el botón graba; se puede escuchar
+  antes de mandar. Salen a WhatsApp como nota de voz (Ogg/Opus); lo que graba
+  Chrome o Edge (WebM) se convierte en el servidor sin recodificar, con código
+  propio.
+- **Reproductor de audio** propio para todo audio del hilo (044): la onda del
+  audio, tocar o arrastrar para ir a un momento y velocidad 1× · 1.5× · 2×.
+- **Avisos de mensaje nuevo** (045): suena al llegar un mensaje del cliente, en
+  cualquier pantalla (campana en el menú para silenciar), y la pestaña cuenta
+  los chats sin leer: «(3) Vocero — CRM…».
+
+### Cambió
+
+- El compositor ya no ofrece enviar **ubicación ni contacto** (045). El
+  servidor los sigue aceptando por la API y la bandeja sigue mostrando los que
+  llegan.
+
+### Arreglado
+
+- Un adjunto que llegaba con la conversación abierta se quedaba en
+  «descargando…» hasta recargar (044).
+- Una conversación corta con una foto abría en el primer mensaje en vez del
+  último (045).
+- `audio/ogg; codecs=opus` (lo que graba Firefox) se rechazaba como tipo no
+  reconocido al adjuntarlo (044).
+
 ## 2.0.0 — 2026-10-20
 
 El agente sale del CRM y se conecta por contrato. Vocero se queda con lo suyo
