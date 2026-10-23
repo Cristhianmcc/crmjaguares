@@ -717,3 +717,68 @@ ubicación.
 hora contra el borde de cada burbuja. Sin el arreglo falló («3 fuera»); con
 él, 43/43. Notas de voz 41/41, imágenes 42/42, typecheck, lint, test (1 343)
 y build en verde.
+
+## 2026-10-23 — 056: avisos del sistema y «sin conexión»
+
+**Qué pidió Kevin**: tras publicar la 2.3.0, siguió con la 056, la candidata
+del estudio de la 2.2 que yo recomendé para el celular.
+
+**Tiempos reales**: la spec quedó en commit a las 17:04. El arnés, los gates
+y el self-test quedaron en verde a las 17:22.
+
+**Qué cambió**:
+
+- **«Activar avisos»** en el menú, encima de «Instalar app». Aparece solo
+  mientras el navegador no ha decidido el permiso.
+- **Aviso del sistema** cuando escribe un cliente y no estás mirando Vocero:
+  - lleva el nombre del contacto y el texto recortado a 120 caracteres, o
+    «Audio», «Imagen»…;
+  - un `tag` por conversación hace que una ráfaga no apile diez avisos;
+  - tocarlo trae Vocero al frente con esa conversación;
+  - sale por el service worker de la 048, que es lo que acepta Android;
+  - la campana de la 045 lo silencia igual que el sonido;
+  - el Laboratorio no avisa.
+
+  Sin push: con Vocero cerrado no llega nada (D4).
+- **La banda «sin conexión»**, en cualquier pantalla:
+  - «Sin internet» en cuanto el navegador pierde la red;
+  - «Sin conexión en tiempo real. Reintentando…» si el canal lleva más de
+    4 s caído;
+  - trae «Reintentar ahora».
+- **`useEvents` reconecta de verdad.** Si el servidor responde con error,
+  vuelve a abrir con espera creciente (1 s … 30 s). Al volver la red o la
+  página al frente, reabre en el momento. Cada reconexión pone la bandeja al
+  día.
+- **La Bandeja acepta `/inbox?conversation=<id>`.** Lo aplica una vez por
+  aviso, para no volver a saltar con cada refresco.
+
+**Cómo se probó**:
+
+- Unitarias nuevas: 8 (cuándo avisa, qué dice, rutas seguras, espera).
+- `e2e-avisos-y-conexion.mjs`: 24/24, en claro y en oscuro.
+  - Los avisos se simulan en la página.
+  - La red se corta de verdad con `setOffline`.
+  - El servidor se tumba con un 503 en `/api/events`.
+- Arneses vecinos: avisos (045) 24/24 y PWA (048) 36/36.
+- Typecheck, lint, test (1 351, con banderas apagadas y encendidas) y build:
+  verdes.
+- Self-test general en base limpia: **280/280**.
+
+**Capturas** (`docs/bitacora-2.2/`):
+
+- `056-antes-…` y `056-despues-…`, en claro y oscuro: `menu` (la fila
+  «Activar avisos») y `sin-red` (antes no se decía nada).
+- `056-sin-internet-…` y `056-sin-tiempo-real-390-…`.
+
+**Lo que salió mal**:
+
+1. **Lo que llegaba sin red no aparecía al volver.** La conexión SSE ya
+   abierta sobrevive al corte, así que los eventos llegaban, pero la relectura
+   de la lista fallaba sin red. Al volver, como la conexión seguía abierta,
+   nadie se ponía al día. Ahora volver la red siempre pone al día.
+2. **Por ese mismo motivo, el arnés ya no podía tumbar el SSE con un corte de
+   red.** Ahora cierra las conexiones con el `error` que daría el navegador
+   cuando el servidor corta el flujo.
+3. **El parámetro `?conversation=` volvía a saltar** a esa conversación con
+   cada refresco de la lista. Se aplica una vez por aviso, con un check que lo
+   cuida.
