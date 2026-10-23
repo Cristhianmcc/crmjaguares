@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; unitarias, arnés E2E (42/42, en claro y oscuro) y capturas en verde.
 
 **Input**: lo pidió Kevin al probar la 2.2.0-rc.1 en Android (2026-10-23):
 
