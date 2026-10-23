@@ -398,3 +398,18 @@ caben en un día. Con equipo, 053 y 054 son el siguiente paquete natural.
 - 052 — Filtros «por vencer» y «sin responder».
 
 Quedan fuera de la 2.2: 053 a 058 y Web Push.
+
+**2026-10-23 — Pendiente para después, pedido por Kevin** al probar la
+2.2.0-rc.1 en Android:
+
+- **059 — Reenviar cualquier mensaje y deslizar para responder.** Hoy solo se
+  reenvían imágenes (042). Hacen falta dos cosas:
+  - reenviar también texto, audio y documentos;
+  - en el celular, arrastrar el mensaje hacia un lado para responderlo, como
+    en WhatsApp.
+
+  En el teléfono la flecha de «Responder citando» (039) se lee como
+  «reenviar».
+
+  Carril probable: ligero. El reenvío de imagen ya tiene su ruta; habrá que
+  ver si los otros tipos necesitan contrato.
