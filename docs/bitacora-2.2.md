@@ -370,3 +370,73 @@ Kevin la instaló en Android y encontró tres cosas:
   health 503 y «login» en rojo. Se volvió a arrancar.
 - **Las 4 pruebas del reenvío mockeaban `readMediaFile`**, y la lectura
   ahora pasa por `leerAdjunto`. Se agregó su mock.
+
+## 2026-10-23 — 049: respuestas rápidas con «/»
+
+**Rama**: `feat/049-respuestas-rapidas`, desde `main` (`22ee7b7`).
+**Spec**: [`specs/049-respuestas-rapidas/`](../specs/049-respuestas-rapidas/spec.md),
+ciclo completo por la tabla nueva. Commiteada a las 11:56:17, antes del
+código. Trabajo de 11:55:12 a 12:16.
+
+### Qué la inspiró
+
+- **Chatwoot (MIT)**, observado en la Fase 1 (`cw-06`): `/` abre un menú con
+  el atajo y el texto.
+- **DeskcommCRM (MIT)**: atajos con `/`, personales o compartidos.
+- **wacrm (MIT)**: respuestas compartidas por la cuenta.
+- No se copió código. Las personales de DeskcommCRM se dejaron fuera a
+  propósito (spec, D1).
+
+### Qué quedó
+
+- **Tabla `quick_reply`** (migración aditiva `0024`) con atajo único por
+  organización.
+- **API**: `/api/quick-replies` para listar (todo el equipo) y crear, editar y
+  borrar (solo quien configura).
+- **El menú `/` en el compositor**:
+  - filtra sin acentos;
+  - se maneja con ↑, ↓, Enter, Tab, Escape o un toque;
+  - rellena `{nombre}` con el primer nombre del contacto;
+  - nunca envía solo;
+  - no se abre con `3/4` ni con una URL.
+- **Ajustes → Respuestas rápidas**.
+- **La demo** trae `hola`, `horario`, `envio` y `pago`.
+
+### Cómo se probó
+
+| Qué | Resultado | Hora |
+|---|---|---|
+| Unitarias nuevas (`respuestas-rapidas`) | 13/13 | ~12:00 |
+| Arnés `e2e-respuestas-rapidas.mjs` sobre la base de la 047 | 35/35 (la demo se salta: la base ya tiene datos) | ~12:05 |
+| El mismo arnés en una base limpia | **37/37**, con la demo | ~12:10 |
+| Self-test general en base limpia | 280/280 | ~12:07 |
+| Typecheck, lint, test, build | verdes; 1 303 unitarias con banderas apagadas y encendidas | 12:12:18–12:13:47 |
+
+### Antes y después
+
+En `docs/bitacora-2.2/`:
+
+- `049-{antes,despues}-compositor-barra-{light,dark}.png`: el compositor con
+  `/` escrito. Antes no pasaba nada (`main` corriendo en un worktree contra la
+  misma base); ahora se abre el menú. `comparar-capturas`: 64,7 % en claro y
+  61,0 % en oscuro, filas 51–337.
+- `049-despues-ajustes-respuestas-{light,dark}.png`: la pantalla nueva. No hay
+  antes porque no existía.
+
+### Lo que salió mal
+
+1. **`nav.test.ts` fija la lista exacta de Ajustes**: tres pruebas en rojo
+   hasta sumar «Respuestas rápidas».
+2. **El arnés contaba 4 «/horario»**: la descripción de la tarjeta también lo
+   menciona. Luego contaba 0, porque esperaba la descripción y no la lista.
+   Se acotó a las filas y se espera la primera.
+3. **La demo solo se carga sobre una base vacía**, y el arnés creaba
+   conversaciones antes de probarla: se movió al principio y se usó una base
+   nueva.
+4. **El tope de 10 inicios de sesión por IP**, en memoria, dejó sin sesión al
+   script de capturas tras varias corridas. Se reinició el servidor.
+5. **La primera captura del después salió sin menú**: la primera llamada a
+   `/api/quick-replies` todavía se compilaba en dev. El script ahora espera
+   al menú.
+6. **Los reemplazos con Python sobre el arnés fallaron dos veces** por los
+   escapes de `\/`. Se editó a mano.

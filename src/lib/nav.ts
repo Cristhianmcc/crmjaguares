@@ -134,6 +134,8 @@ export function settingsSections({
   const negocio: SettingsLink[] = [
     { href: "/settings/branding", label: "Marca" },
     { href: "/settings/templates", label: "Plantillas" },
+    // 049 — lo que el equipo inserta con «/atajo» en la Bandeja.
+    { href: "/settings/quick-replies", label: "Respuestas rápidas" },
     { href: "/settings/team", label: "Equipo" },
   ];
   if (atribucion) negocio.push({ href: "/settings/ads", label: "Anuncios" });
