@@ -242,3 +242,91 @@ hacia arriba para dejar sitio a la tarjeta nueva.
    trae en `test`: se quitó la línea.
 7. **REA no conectó** al retomar la sesión (timeout de 30 s). La comparación
    de antes y después se hizo en local con las mismas métricas.
+
+## 2026-10-23 — 048: Vocero en el celular (PWA)
+
+**Rama**: `feat/048-pwa`, sobre la 047.
+**Spec**: [`specs/048-pwa/spec.md`](../specs/048-pwa/spec.md), carril
+ligero. Commiteada a las 08:50:00, antes del código. Trabajo de 08:48:50 a
+09:07.
+
+### Qué la inspiró
+
+- **Chatwoot (MIT)**, visto con REA en la Fase 1: un `manifest.json` y un
+  service worker de 35 líneas que no guarda nada.
+- **DeskcommCRM (MIT)**: `app/manifest.ts` de Next.
+- No se copió código de ninguno de los dos. El patrón de Next es el estándar,
+  y aquí el manifest y los iconos salen de la marca de cada organización.
+
+### Qué quedó
+
+- **El manifest** (`src/app/manifest.ts`) se arma con la marca: nombre,
+  nombre corto de ≤ 12 caracteres y el azul de la barra lateral como color de
+  la app. Ningún «Vocero» cableado.
+- **Iconos PNG de 180, 192 y 512**, con versión `maskable`, en
+  `/api/branding/app-icon`. Los dibuja `ImageResponse` de `next/og`, que ya
+  viene con Next y trae su fuente: sin dependencias nuevas.
+  - Con logo subido (PNG, JPEG o SVG) va el logo.
+  - Sin logo va la V de Vocero o la inicial.
+- **Un service worker** (`public/sw.js`) que solo contesta «Sin conexión» a una
+  navegación sin red. No guarda nada: ni páginas ni datos de clientes.
+- **«Instalar app»** encima de Ajustes, solo cuando el navegador lo ofrece.
+- **iPhone**: `apple-touch-icon`, `apple-mobile-web-app-capable` y una barra
+  de estado negra.
+- **README**: la sección «📱 En el celular, como una app».
+
+### Cómo se probó
+
+| Qué | Resultado | Hora |
+|---|---|---|
+| Unitarias nuevas (`pwa`), con PNG reales dibujados | 12/12 | 08:52:57 |
+| Arnés `e2e-pwa.mjs` (perfil persistente de Chromium, CDP) | 35/35 a la primera; 36/36 tras arreglar la restauración de la marca | 08:54–08:56 |
+| Typecheck, lint, test, build | verdes; 1 290 unitarias con banderas apagadas y encendidas | 08:57:18–08:58:36 |
+| `next start` (producción) | icono, manifest y service worker en 200 | 08:58 |
+| Imagen Docker construida de la rama (`docker build`, 1 min 38 s) | icono 512 y 180, manifest y `sw.js` en 200 desde el contenedor | 08:58:56–09:00:40 |
+| Self-test general en base limpia | 280/280 | 09:01:11–09:04 |
+| `e2e-favicon` (comparte la marca y el `<head>`) | 21/21 | 09:04:24 |
+| `e2e-responsive` | 1 fallo **ajeno a la 048** (ver abajo) | 09:06:36 |
+
+**Chromium la da por instalable**: `Page.getInstallabilityErrors` sale vacío
+y `Page.getAppManifest` no da errores. Es lo más cerca de «instalar» que se
+puede llegar sin un teléfono: el diálogo nativo no se puede pulsar desde un
+script, así que el arnés simula `beforeinstallprompt`.
+
+### Antes y después
+
+En `docs/bitacora-2.2/`:
+
+- **Sin conexión, antes y después**
+  (`048-{antes,despues}-sin-conexion-{light,dark}.png`, 390×760).
+  - Antes no había service worker y la navegación caía en la página de error
+    del navegador. Chromium sin interfaz la pinta en blanco: la captura del
+    antes es una pantalla vacía (la misma huella en claro y en oscuro).
+  - Después aparece «Sin conexión» con **Reintentar**.
+  - `comparar-capturas`: cambia el 3,38 % en claro (el texto y el botón sobre
+    el mismo fondo blanco) y el 99,96 % en oscuro (todo el fondo).
+- **El menú** (`048-despues-boton-instalar-{light,dark}.png`): la fila
+  «Instalar app» encima de Ajustes.
+- **Los iconos** (`048-icono-*.png`): la V de Vocero en 512 normal y
+  maskable, y la inicial de «Taller Ruiz» sobre su verde.
+
+### Lo que salió mal
+
+1. **La inicial del icono salía delgada**: la fuente de `next/og` es solo la
+   regular. Se engruesa con sombras del mismo color en ocho direcciones.
+2. **El botón «Instalar» como icono apretaba el pie del menú**: el nombre
+   quedaba en «Du…» y el rol en «Pro…». Se movió a una fila propia encima de
+   Ajustes (la spec lo anota en D5).
+3. **El «Reintentar» de la página sin conexión no pasaba AA en oscuro**:
+   blanco sobre `#6f9eff`, alrededor de 2,6:1. Ahora es `#0d5bff` en los dos
+   temas (5,3:1).
+4. **El arnés no devolvía la marca a como estaba**: la API la envuelve en
+   `{ branding }` y el PUT salía inválido. Se arregló y se agregó un check.
+5. **En Windows no se genera el standalone** (`next.config.ts`), así que no
+   se podía ver si el wasm de `next/og` viaja en la imagen. Se construyó la
+   imagen Docker de la rama y se le pidió el icono al contenedor.
+6. **`e2e-responsive` tiene un fallo que no es de esta spec**: «Agente
+   encendido: un clic lo cambia». El servidor responde `409 sin_cerebro`
+   porque ese guion no levanta el cerebro de prueba. Desde la 036, encender el
+   agente exige un cerebro sano. El guion quedó atrás de la 2.0: anotado como
+   pendiente aparte.
