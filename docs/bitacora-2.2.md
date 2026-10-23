@@ -330,3 +330,43 @@ En `docs/bitacora-2.2/`:
    porque ese guion no levanta el cerebro de prueba. Desde la 036, encender el
    agente exige un cerebro sano. El guion quedó atrás de la 2.0: anotado como
    pendiente aparte.
+
+## 2026-10-23 — 2.2.0-rc.1 en dev y lo que Kevin encontró en Android
+
+**rc.1**: a pedido de Kevin se fusionaron #146, #147 y #148 con merge commit
+(estaban apilados) y se etiquetó `v2.2.0-rc.1` sobre `main` (`b8ae313`), sin
+tocar `package.json`, que según `version.test.ts` tiene que ser `X.Y.Z`. La
+imagen se publicó y se desplegó en `vocero-crm-rc` (crm-dev) en 112 s.
+Chromium dio por instalable la instancia real, sobre `https`.
+
+Kevin la instaló en Android y encontró tres cosas:
+
+1. **La app abría en la guía de inicio.** El `start_url` era `/`, y la raíz
+   manda a la guía según el estado. Ahora es `/inbox` y el `id` se queda en
+   `/`, para que Chrome la reconozca como la misma app ya instalada.
+2. **No se veían audios ni imágenes.** No era cosa del celular:
+   - `/api/media` respondía **410** «El archivo del adjunto no está en el
+     volumen» para todos los adjuntos, también en la computadora.
+   - La app de dev **no tenía volumen en `/data`**, así que el redespliegue de
+     la rc.1 se llevó los archivos.
+   - Se arregló en dos partes:
+     - **En Coolify**, un volumen persistente en `/data` para `vocero-crm-rc`;
+       la guía de instalación ya lo pide.
+     - **En el producto**: si la base dice «disponible» pero el archivo ya no
+       está, el CRM lo vuelve a bajar de Meta, que guarda los medios unos 30
+       días. Si Meta ya no lo tiene, responde un 410 explicado y lo marca como
+       no disponible.
+   - Arnés nuevo `e2e-adjunto-perdido.mjs`: 13/13. `e2e-imagenes` (incluye el
+     reenvío, que usa la misma lectura): 42/42.
+3. **Pendiente para después** (anotado en el `research.md` como 059):
+   - reenviar cualquier mensaje, no solo imágenes;
+   - en el celular, deslizar el mensaje para responder.
+
+   La flecha de «Responder citando» se lee como «reenviar» en el teléfono.
+
+**Lo que salió mal**:
+
+- **Docker Desktop se apagó** a media prueba y el Postgres local con él:
+  health 503 y «login» en rojo. Se volvió a arrancar.
+- **Las 4 pruebas del reenvío mockeaban `readMediaFile`**, y la lectura
+  ahora pasa por `leerAdjunto`. Se agregó su mock.
