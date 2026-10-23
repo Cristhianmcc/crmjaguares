@@ -132,3 +132,113 @@ la Fase 2, y esas sí son de Vocero.
 Kevin elige en el `research.md` qué specs entran a la 2.2. Hasta entonces no
 se escribe código del producto. Los contenedores de referencia quedan
 detenidos con sus volúmenes, para volver a observarlos en la Fase 2.
+
+## 2026-10-23 — Elección de Kevin
+
+A las 06:19 Kevin eligió el recorte sugerido: **047 a 052**. Quedó anotado en
+el `research.md` y se publicó en el PR #146.
+
+## 2026-10-23 — 047: webhook a prueba de fallos
+
+**Rama**: `feat/047-webhook-a-prueba-de-fallos`, sobre `feat/046-referencias-2.2`.
+**Spec**: [`specs/047-webhook-a-prueba-de-fallos/`](../specs/047-webhook-a-prueba-de-fallos/spec.md),
+en ciclo completo. La spec se commiteó a las 06:22:51, antes del código.
+
+### Qué la inspiró
+
+- **El problema** salió del análisis del 12-oct. La Fase 1 confirmó que
+  seguía igual en `main`.
+- **La idea de esperar más entre intentos y dejar lo agotado a la vista de
+  una persona** viene de `whatsapp-saas` (MIT), que reintenta lotes de IA con
+  espera de 1, 5 y 15 min y un «lote muerto».
+- **El mecanismo** es el del outbox del despacho (021), que ya era nuestro:
+  reclamo por `UPDATE` condicionado, reserva que vence y reanudación al
+  arrancar.
+- No se copió código: allá es Supabase con pg_cron y lotes del agente; aquí,
+  una tabla y un temporizador dentro del proceso.
+
+### Qué quedó
+
+- **Tabla nueva `webhook_event`** (migración aditiva `0023`). Cada entrega de
+  Meta o Zernio se guarda tal como llegó **antes** de responder 200.
+  - Si no se puede guardar, la ruta responde **503** y reintenta quien mandó.
+  - La misma entrega dos veces se guarda una vez (huella SHA-256).
+- **Las cuatro rutas** (WhatsApp, Instagram, Messenger y TikTok) pasan por
+  `recibirEvento`. Una prueba vigila que ninguna vuelva a usar `after()`
+  directo.
+- **Reintento** a los 30 s, 2 min, 10 min, 1 h y 6 h. Al sexto intento el
+  evento queda agotado.
+  - El barrido corre siempre: no depende del cerebro ni de una bandera.
+  - Al arrancar, retoma lo que un reinicio dejó a medias.
+- **Ajustes → WhatsApp** gana la tarjeta «Entregas»:
+  - «Entregas al día», o cuántas no entraron, con su error y **Reintentar**;
+  - solo la ve quien configura.
+- **`/api/health`** gana la llave `webhooks: { pendientes, agotados }`.
+- **Retención**: los procesados se borran a los 7 días y los agotados a los
+  30, porque el cuerpo trae datos del cliente.
+- **`scripts/screenshots.mjs`** ahora captura pantallas sueltas
+  (`SCREENSHOTS_ONLY`), en claro u oscuro (`SCREENSHOTS_THEME`) y hasta el
+  final del panel (`SCREENSHOTS_SCROLL`). Sirve para el antes y el después de
+  las specs 048 a 052.
+
+### Cómo se probó
+
+| Qué | Resultado | Hora |
+|---|---|---|
+| Unitarias nuevas (`webhook-eventos`) | 14/14 | 06:27 |
+| Arnés `e2e-webhook-fallos.mjs` (mocks, Playwright, claro y oscuro) | 32/32 a la primera | 06:30:36 |
+| Typecheck, lint, test, build | verdes; 1 278 unitarias con banderas apagadas y con `CHANNELS` + `AGENDA` | 06:36–06:38:44 |
+| Self-test general `e2e-selftest.mjs` en base limpia | 280/280 | 06:39:23–06:42:52 |
+| Regresión de canales: `e2e-ventana-social` y `e2e-messenger` | 58/58 y 42/42 | ~06:43 |
+
+En el log del servidor se ven los seis intentos reales del caso agotado, con
+unos 370 ms entre uno y otro gracias a `WEBHOOK_RETRY_FAST`, y el aviso de
+siempre para el número ajeno.
+
+Lo que el arnés no cubre, dicho en el guion:
+
+- la base caída que provoca el 503 (lo prueba la unitaria);
+- la limpieza a los 7 y 30 días.
+
+### Antes y después
+
+En `docs/bitacora-2.2/`:
+
+- `047-antes-ajustes-whatsapp-{light,dark}.png`: la rama 046 corriendo en un
+  worktree contra la misma base. La página termina en «Webhook de WhatsApp».
+- `047-despues-ajustes-whatsapp-{light,dark}.png`: aparece «Entregas al día».
+- `047-agotado-{light,dark}.png`: la tarjeta con una entrega agotada y el
+  botón Reintentar.
+
+Comparación de píxeles (umbral 8 por canal), hecha en local con `scripts/comparar-capturas.mjs` (nuevo, usa el `sharp` de Next)
+porque el MCP de REA no conectó en esta sesión:
+
+| Tema | Píxeles que cambian | Delta medio por canal (R, G, B) | Filas |
+|---|---|---|---|
+| Claro | 12,75 % | 6,46 · 5,87 · 5,75 | 59–855 |
+| Oscuro | 12,95 % | 7,74 · 7,24 · 8,58 | 59–855 |
+
+El encabezado (filas 0–58) y la barra lateral no cambian. El resto se movió
+hacia arriba para dejar sitio a la tarjeta nueva.
+
+### Lo que salió mal
+
+1. **El tema oscuro no se fuerza con `colorScheme`**: la preferencia es una
+   cookie (`vocero-theme`). La primera captura «oscura» salió clara; se
+   arregló poniendo la cookie, y así quedó en el arnés y en
+   `screenshots.mjs`.
+2. **Git Bash convierte `/settings/whatsapp`** de una variable de entorno en
+   `C:/Program Files/Git/settings/whatsapp`. Se resolvió con
+   `MSYS_NO_PATHCONV=1`.
+3. **La página de Ajustes desplaza dentro de su propio panel**, y la captura
+   «completa» no llegaba a la tarjeta de abajo. Se agregó
+   `SCREENSHOTS_SCROLL=bottom`.
+4. **El primer «antes» en claro salió en «Cargando…»** (la ruta se compilaba
+   en dev). El script ahora espera a que desaparezca, y la captura se repitió.
+5. **Borrar el worktree del «antes»** falló por la ruta demasiado larga del
+   scratchpad. Antes de borrar a mano se quitó el enlace a `node_modules`, para
+   no arrastrar el del repo. El worktree siguiente se hizo en `C:\tmp`.
+6. **Typecheck en rojo** por asignar `NODE_ENV` en una prueba. Vitest ya lo
+   trae en `test`: se quitó la línea.
+7. **REA no conectó** al retomar la sesión (timeout de 30 s). La comparación
+   de antes y después se hizo en local con las mismas métricas.
