@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; gates, arnés E2E (28/28) y capturas en claro y oscuro en verde. D7 se agregó al implementar.
 
 **Input**: cuarta spec de la 2.2, elegida por Kevin el 2026-10-23
 ([046 research.md](../046-referencias-2.2/research.md)). Referencias:
@@ -77,6 +77,13 @@ noteId }`). Quien tiene abierta la conversación ve la nota al instante.
 
 **D6 — Límites.** El texto lleva de 1 a 4 096 caracteres. Las notas se borran
 con la conversación (cascada) y con el contacto (026).
+
+**D7 — El campo del panel se llama «Notas del contacto»** (agregado al
+implementar). El panel ya tenía «NOTAS», con «Notas internas sobre este
+contacto…» y «Guardar notas», y la palabra chocaba con la función nueva.
+Ahora se titula «Notas del contacto», con el botón «Guardar notas del
+contacto», y su texto de ayuda dice para qué es: lo fijo del cliente; lo de la
+conversación va en Nota interna. No cambia nada de los datos.
 
 ## Criterios de aceptación
 

@@ -440,3 +440,65 @@ En `docs/bitacora-2.2/`:
    al menú.
 6. **Los reemplazos con Python sobre el arnés fallaron dos veces** por los
    escapes de `\/`. Se editó a mano.
+
+## 2026-10-23 — 050: notas internas en el hilo
+
+**Rama**: `feat/050-notas-internas`, **sobre la 049** (#151): las dos tienen
+migración y la `0025` debe ir después de la `0024`.
+**Spec**: [`specs/050-notas-internas/`](../specs/050-notas-internas/spec.md),
+ciclo completo (tabla nueva y dos eventos SSE). Commiteada a las 12:15:54,
+antes del código. Trabajo de 12:14:37 a ~12:35.
+
+### Qué la inspiró
+
+- **Chatwoot (MIT)**, observado en la Fase 1 (`cw-02`, `cw-05`): pestañas
+  «Reply / Private Note» y la nota en ámbar con candado.
+- **DeskcommCRM (MIT)**: tabla de notas por conversación, con tiempo real y
+  borrado solo para el autor o un gerente.
+- No se copió código.
+
+### Qué quedó
+
+- **Tabla `conversation_note`** (migración aditiva `0025`), **aparte de
+  `message`**: así ni el envío a Meta, ni el despacho al cerebro, ni «sin
+  responder», ni las métricas pueden tocar una nota. Una prueba lo vigila
+  escaneando esas carpetas.
+- **En el compositor**, pestañas «Responder | Nota interna», también con la
+  ventana cerrada.
+- **En el hilo**, la nota en ámbar con candado, autor y hora. Se borra si eres
+  el autor o quien configura.
+- **SSE**: `note.new` y `note.deleted`, aditivos y anotados en
+  `contracts/sse.md`.
+- **D7, al implementar**: el campo del panel pasa a llamarse «Notas del
+  contacto», porque la palabra chocaba con la función nueva.
+
+### Cómo se probó
+
+| Qué | Resultado | Hora |
+|---|---|---|
+| Unitarias nuevas (intercalar, permisos, validación, guardarraíl) | 6/6 | ~12:19 |
+| Arnés `e2e-notas-internas.mjs` (dos sesiones de Playwright a la vez) | 28/28 | ~12:21 |
+| Typecheck, lint, test, build | verdes; 1 309 unitarias con banderas apagadas y encendidas | 12:22:54–12:24:20 |
+| Self-test general en base limpia | 280/280 | 12:25–12:29 |
+| `e2e-despacho` (el cerebro no recibe notas en su ráfaga) | 134/134 | 12:29–12:36 |
+
+### Antes y después
+
+En `docs/bitacora-2.2/`:
+
+- `050-{antes,despues}-hilo-{light,dark}.png`: la misma conversación. Antes,
+  sin pestañas ni forma de anotar; después, la nota en el hilo y la pestaña
+  «Nota interna» activa.
+- `comparar-capturas`: 26,3 % en claro y 21,9 % en oscuro.
+
+### Lo que salió mal
+
+1. **La rama salió de `main`**, que no tiene la `0024` de la 049, y Drizzle
+   numeró también esta como `0024`. Se apiló sobre la 049 con un `rebase`.
+   - En el camino, un `stash pop` chocó en `schema.ts`. Se reconstruyó a
+     mano, y los cambios locales de Kevin (`.gitignore`, `.mcp.json`) se
+     guardaron y se devolvieron intactos.
+2. **El arnés buscaba «Guardar nota»** y el panel ya tenía «Guardar notas».
+   Ese mismo choque de nombres motivó D7.
+3. **Una captura a 390 px enseñó la pestaña equivocada**: se tomó a media
+   transición. Se comprobó con `aria-selected` que el estado era el correcto.
