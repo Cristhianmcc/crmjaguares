@@ -5,6 +5,48 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.2.0 — 2026-10-23
+
+Lo que aprendimos de las mejores bandejas abiertas, hecho a la manera de
+Vocero. Actualizar es redesplegar con la etiqueta `2.2.0`: las tres
+migraciones nuevas (0023 a 0025) se aplican solas al arrancar y no hay
+variables nuevas. Nea no cambia.
+
+### Nuevo
+
+- **Webhook a prueba de fallos** (047). Cada aviso de Meta o de Zernio se
+  guarda antes de procesarlo; si algo falla, se reintenta solo (30 s, 2 min,
+  10 min, 1 h y 6 h). Lo que agota los intentos se ve en Ajustes → WhatsApp,
+  con un botón **Reintentar**, y `/api/health` cuenta los pendientes y los
+  agotados.
+- **Vocero en el celular** (048). Se instala como app desde el navegador (fila
+  «Instalar app» del menú), con su icono y abriendo en la Bandeja. Necesita
+  HTTPS.
+- **Respuestas rápidas con «/»** (049). Al teclear `/` en el compositor sale
+  un menú con las respuestas guardadas; se administran en Ajustes → Respuestas
+  rápidas.
+- **Notas internas** (050). El equipo deja notas en el hilo, intercaladas con
+  los mensajes y en otro color. El cliente nunca las ve y llegan en tiempo
+  real a quien tenga el chat abierto.
+- **Borrador por conversación** (051). Lo que dejas a medio escribir sigue
+  ahí al volver a ese chat, guardado en el navegador.
+- **Filtros de la Bandeja** (052). Las pestañas «Todas | No leídas» y un solo
+  botón **Filtrar** con la etapa, «Por vencer» (a la ventana del canal le
+  quedan 2 h o menos) y «De anuncios». Cada filtro puesto se ve como etiqueta
+  con ✕, y cada conversación avisa «Vence en 1 h 20 min».
+
+### Cambió
+
+- La etapa y «De anuncios» salieron de la barra de la Bandeja y viven en el
+  menú «Filtrar» (052).
+
+### Arreglado
+
+- Si el archivo de un adjunto ya no está en el disco (un despliegue sin
+  volumen en `/data`), el CRM lo vuelve a bajar de Meta en vez de dar 410,
+  mientras Meta lo conserve. Igual, monta el volumen: es lo que guarda los
+  adjuntos.
+
 ## 2.1.0 — 2026-10-22
 
 Una bandeja que se usa como WhatsApp. Actualizar es redesplegar con la
