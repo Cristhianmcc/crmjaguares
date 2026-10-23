@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; gates, arnés E2E (36/36), self-test general (280/280), prueba en la imagen Docker y capturas en claro y oscuro en verde. D5 cambió al implementar: «Instalar app» es una fila del menú encima de Ajustes, no un icono en el pie (apretaba el nombre del usuario).
 
 **Input**: segunda spec de la 2.2, elegida por Kevin el 2026-10-23 en
 [046 research.md](../046-referencias-2.2/research.md), sección «PWA: qué
@@ -81,11 +81,12 @@ muestra conversaciones viejas como si fueran actuales es peor que uno que dice
 `/sw.js` al cargar. Si el navegador no tiene service worker (o falla el
 registro), no pasa nada: Vocero funciona igual en la pestaña.
 
-**D5 — «Instalar app» en el pie del menú.** Junto a la campana y el tema
-aparece un botón **Instalar**:
+**D5 — «Instalar app» en el menú.** Encima de Ajustes aparece una fila
+**Instalar app** (al implementar se descartó el icono junto a la campana: con
+cuatro iconos el nombre del usuario quedaba en «Du…»). La fila:
 
-- solo cuando el navegador lo permite (evento `beforeinstallprompt`, es
-  decir, Chrome, Edge y Android);
+- solo aparece cuando el navegador lo permite (evento `beforeinstallprompt`,
+  es decir, Chrome, Edge y Android);
 - abre el diálogo nativo;
 - no aparece si la app ya está instalada (`display-mode: standalone`).
 
