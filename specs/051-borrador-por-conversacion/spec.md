@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; gates y arnés E2E (19/19) en verde.
 
 **Input**: quinta spec de la 2.2, elegida por Kevin el 2026-10-23
 ([046 research.md](../046-referencias-2.2/research.md)). Salió de lo que REA

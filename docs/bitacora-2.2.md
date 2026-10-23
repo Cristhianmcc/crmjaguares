@@ -502,3 +502,39 @@ En `docs/bitacora-2.2/`:
    Ese mismo choque de nombres motivó D7.
 3. **Una captura a 390 px enseñó la pestaña equivocada**: se tomó a media
    transición. Se comprobó con `aria-selected` que el estado era el correcto.
+
+## 2026-10-23 — 051: borrador por conversación
+
+**Rama**: `feat/051-borrador-por-conversacion`, sobre la 050 (las dos tocan
+el compositor).
+**Spec**: [`specs/051-borrador-por-conversacion/spec.md`](../specs/051-borrador-por-conversacion/spec.md),
+carril ligero. Commiteada a las 12:35:46. Trabajo de 12:35:19 a ~12:41.
+
+**De dónde salió**: de lo que REA encontró en la Fase 1. Chatwoot (MIT) guarda
+el borrador de cada conversación en `localStorage` (`draftMessages`); eso no
+se ve a simple vista, solo inspeccionando el almacenamiento.
+
+**Qué quedó**:
+
+- **El texto de Responder y el de Nota interna** se guardan por conversación,
+  en el navegador.
+  - Vuelven al regresar a la conversación.
+  - Se borran al enviar, al vaciar la caja, a los 7 días y **al cerrar
+    sesión**.
+  - El adjunto no se guarda (028 D5 intacta).
+- **En la lista**, la fila dice «Borrador: …» en el color de acento, como en
+  WhatsApp.
+
+**Cómo se probó**:
+
+- Unitarias nuevas: 6/6.
+- `e2e-borradores.mjs`: **19/19**.
+- Typecheck, lint, test (1 315, con banderas apagadas y encendidas) y build:
+  verdes, a las 12:39:42.
+
+**Captura**: `051-despues-lista-light.png`, la fila con «Borrador:». No hay
+captura del antes porque no hay nada que pintar: la caja aparecía vacía al
+volver. El arnés lo prueba en AC1.
+
+**Lo que salió mal**: un `eslint-disable` sobrante (la regla no aplicaba);
+se quitó.
