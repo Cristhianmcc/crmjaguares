@@ -538,3 +538,46 @@ volver. El arnés lo prueba en AC1.
 
 **Lo que salió mal**: un `eslint-disable` sobrante (la regla no aplicaba);
 se quitó.
+
+## 2026-10-23 — 052: filtros «Sin responder» y «Por vencer»
+
+**Rama**: `feat/052-filtros-ventana`, sobre la 051.
+**Spec**: [`specs/052-filtros-ventana/spec.md`](../specs/052-filtros-ventana/spec.md),
+carril ligero. Commiteada a las 12:40:47. Trabajo de 12:40:07 a ~12:50.
+
+**De dónde salió**: de wacrm (MIT, código leído). Su filtro «expiring» marca
+la ventana que cierra en menos de 2 h, y tiene otro de «esperando
+respuesta». No se copió código: allá son filtros de servidor sobre Supabase;
+aquí, del lado del cliente, como los de la 014 y la 018.
+
+**Qué quedó**:
+
+- **«Sin responder»**: el último mensaje es del cliente. Las notas internas
+  no cuentan. Para eso el DTO interno de la bandeja ganó `esperandoRespuesta`,
+  con una subconsulta como la de la vista previa.
+- **«Por vencer»**: ventana del canal abierta con 2 h o menos. El botón solo
+  aparece si hay alguna.
+- **El chip «Vence en 1 h 29 min»** va en la fila, aunque el filtro no esté
+  puesto.
+
+**Cómo se probó**:
+
+- Unitarias nuevas: 4/4.
+- `e2e-filtros-ventana.mjs`: 16/16 la primera vez; 15/15 en la segunda,
+  porque AC4 se salta si ya hay conversaciones por vencer.
+- Typecheck, lint, test (1 319) y build: verdes, a las 12:45:29.
+- Self-test general en base limpia, con la 049 a la 052 juntas: **280/280**.
+
+**Capturas**:
+
+- `052-despues-por-vencer-light.png`: el filtro con las dos conversaciones y
+  sus chips.
+- `052-despues-filtros-390-light.png`: la fila de filtros envuelta a 390 px.
+
+**Lo que salió mal**:
+
+1. **El arnés miraba la lista antes de que se pintara** tras el clic, y la
+   captura a 390 px salió en «Cargando…» (el check de desbordamiento no medía
+   nada). Ahora espera las filas.
+2. **La captura de escritorio mostraba resaltado el botón anterior**: la
+   transición de color dura 150 ms. Se espera antes de capturar.

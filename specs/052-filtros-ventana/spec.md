@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; gates, arnés E2E (16/16 en base limpia) y self-test general (280/280) en verde.
 
 **Input**: sexta y última spec del recorte de la 2.2, elegida por Kevin el
 2026-10-23 ([046 research.md](../046-referencias-2.2/research.md)). Viene de
