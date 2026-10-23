@@ -631,3 +631,72 @@ gates, los arneses y el self-test quedaron en verde a las 13:26.
    intentaba crear su propia cuenta en una base que ya tenía dueña, y las
    capturas iniciaban sesión una vez por toma. Ahora los arneses aceptan la
    cuenta por variable y las capturas reusan una sola sesión.
+
+## 2026-10-23 — 059: reenviar cualquier mensaje y deslizar para responder
+
+**Qué pidió Kevin** (al probar la rc.1 en Android): reenviar cualquier mensaje,
+no solo imágenes, y en el celular deslizar para responder, porque la flecha de
+responder se leía como «reenviar».
+
+**Tiempos reales**: la spec quedó en commit a las 14:27. El arnés, los gates y
+el self-test quedaron en verde a las 15:00.
+
+**Qué cambió**:
+
+- **Reenviar cualquier mensaje.** El endpoint nuevo
+  `POST /api/conversations/:id/messages/forward` es el de la 042
+  generalizado:
+  - el texto sale como texto;
+  - imagen, video, documento y audio salen como archivo nuevo;
+  - la nota de voz sigue siendo nota de voz;
+  - el sticker sale como imagen.
+
+  La regla de qué se reenvía vive en `src/lib/reenvio.ts`, compartida por el
+  hilo y el servidor. Ubicación, contacto, reacciones y notas internas no se
+  reenvían. `forward-image` sigue igual.
+- **En la computadora**: al pasar el ratón por una burbuja aparecen dos
+  iconos, «Responder» y «Reenviar». El botón «Reenviar imagen» dentro de la
+  burbuja se fue.
+- **En el celular** (pantalla táctil):
+  - no hay iconos;
+  - deslizar la burbuja hacia cualquier lado la cita: la burbuja sigue al
+    dedo, se asoma el icono, y soltar a 56 px o más cita;
+  - mantener presionado medio segundo abre un menú abajo con «Responder»,
+    «Reenviar» y «Copiar texto».
+- **El diálogo** se llama por lo que reenvía. Avisa que le llega al cliente
+  sin la marca «Reenviado», porque la Cloud API no la permite.
+
+**Cómo se probó**:
+
+- Unitarias nuevas: 25.
+  - `reenvio.test.ts`: la regla y el gesto.
+  - `forward-message.test.ts`: el envío y la ruta.
+- `e2e-reenviar-y-deslizar.mjs`: 42/42, en claro y en oscuro. Desliza y
+  mantiene presionado con eventos táctiles reales (CDP `Input.dispatchTouchEvent`)
+  en un celular emulado sin «pasar el ratón».
+- Arneses del hilo, adaptados al icono: imágenes 42/42, responder citando
+  21/21, ligas 18/18, notas internas 28/28, notas de voz 41/41.
+- Typecheck, lint, test (1 343, con banderas apagadas y encendidas) y build:
+  verdes.
+- Self-test general en base limpia: **280/280**.
+
+**Capturas** (`docs/bitacora-2.2/`):
+
+- `059-antes-hilo-{escritorio,390}-{light,dark}.png`: la flecha junto a cada
+  burbuja en el celular.
+- `059-despues-hilo-…`: lo mismo después.
+- `059-deslizando-…`: la burbuja a medio deslizar.
+- `059-menu-…`: el menú de mantener presionado.
+- `059-dialogo-texto-…` y `059-dialogo-documento-…`.
+
+**Lo que salió mal**:
+
+1. **Al soltar tras mantener presionado, el menú se cerraba solo o
+   ejecutaba una opción.** El navegador manda un clic al punto del dedo, y
+   ese clic caía sobre el menú recién abierto. Ahora el `touchend` lo anula
+   (`preventDefault`) cuando abrió el menú o citó.
+2. **El ancho máximo de la burbuja dejó de limitar** al envolverla para los
+   gestos: un porcentaje dentro de una caja que se ajusta a su contenido no
+   limita nada. Ahora el `max-w` vive en la envoltura.
+3. **El tope de inicios de sesión** volvió a cortar una pasada del arnés. Se
+   reinició el servidor.
