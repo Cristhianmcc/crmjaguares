@@ -5,6 +5,39 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.3.0 — 2026-10-23
+
+Reenviar cualquier mensaje y, en el celular, responder deslizando. Actualizar
+es redesplegar con la etiqueta `2.3.0`: no hay migraciones ni variables
+nuevas. Nea no cambia.
+
+### Nuevo
+
+- **Reenviar cualquier mensaje** (059), no solo imágenes:
+  - el texto sale como texto;
+  - imagen, video, documento y audio salen como archivo nuevo, y una nota de
+    voz sigue siendo nota de voz.
+
+  El cliente lo recibe como un mensaje nuevo: la Cloud API no permite la
+  marca «Reenviado». Endpoint: `POST /api/conversations/:id/messages/forward`.
+- **En el celular** (059):
+  - deslizar un mensaje hacia cualquier lado lo cita;
+  - mantenerlo presionado abre un menú con Responder, Reenviar y Copiar
+    texto.
+
+### Cambió
+
+- **En la computadora**, los iconos «Responder» y «Reenviar» aparecen al pasar
+  el ratón por el mensaje. Ya no está el botón «Reenviar imagen» dentro de la
+  burbuja.
+- **En el celular**, se quitó la flecha junto a cada burbuja, que se leía como
+  «reenviar».
+
+### Arreglado
+
+- En la 2.3.0-rc.1, la hora de envío se salía de la burbuja en audios,
+  documentos y ubicaciones.
+
 ## 2.2.0 — 2026-10-23
 
 Lo que aprendimos de las mejores bandejas abiertas, hecho a la manera de
