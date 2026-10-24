@@ -1000,3 +1000,23 @@ tamaños», en Ajustes, con un tema del negocio que cada quien pueda cambiar.
 
 **Capturas** (`docs/062/`): la Bandeja con cada uno de los 8 temas
 (`tema-…`), Papel, el tema propio, Inter grande compacta y 390 px.
+
+## 2026-10-24 — 062, enmienda: la apariencia se guarda sola
+
+**Qué pidió Kevin**, al probar la rc.3 desde el celular («se ve muy bien»):
+
+- que los cambios de tema se guarden sin pulsar «Guardar»;
+- que afecten solo a quien los hace;
+- que haya un botón para todo el equipo, solo para administradores.
+
+**Qué cambió**:
+
+- Cada cambio se pinta y se guarda al momento en la cookie de esa persona.
+  Un tema propio ilegible no se guarda.
+- «Guardar para mí» desaparece.
+- Para el equipo queda «Aplicar a todo el equipo», solo para el dueño y los
+  administradores; la API sigue en 403 para los demás.
+- «Usar la del equipo» vuelve a la apariencia del equipo.
+
+**Cómo se probó**: `e2e-apariencia.mjs` 25/25, sin pulsar «guardar»: recarga
+y comprueba la cookie. Typecheck, lint, test y build en verde.
