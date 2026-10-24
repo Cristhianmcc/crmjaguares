@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-24
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; unitarias, arnés E2E (40/40, en claro y oscuro, a 1440 y 390 px), los arneses de la Bandeja y responsive en verde.
 
 **Input**: Kevin vio las dos versiones del rediseño hechas sobre crm.s4luia.com
 (#166 con REA y #167 sin REA). Le gustaron, pero «se puede hacer algo más
