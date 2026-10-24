@@ -782,3 +782,51 @@ y el self-test quedaron en verde a las 17:22.
 3. **El parámetro `?conversation=` volvía a saltar** a esa conversación con
    cada refresco de la lista. Se aplica una vez por aviso, con un check que lo
    cuida.
+
+## 2026-10-23 — 054: eventos en el hilo
+
+**Qué pidió Kevin**: cerrar la 2.4.0 con la 054 y la 055, hasta terminarlas
+sin esperarlo, y después publicar.
+
+**Tiempos reales**: la spec quedó en commit a las 18:16. El arnés y las
+capturas quedaron en verde a las 18:22, y los gates a las 18:26.
+
+**Qué cambió**:
+
+- **El hilo pinta, en su lugar por hora, una línea discreta** (no una
+  burbuja):
+  - «Entró al embudo en Nuevo»;
+  - «Pasó a Interesado · por Ana»;
+  - «Pasó a Perdido · Le pareció caro»;
+  - «La IA se pausó: el cliente pidió un humano».
+- **Sale de lo que ya se guarda**: la historia de `lead_stage_event` (sin las
+  fechas sembradas) y el traspaso vigente. Sin tabla ni migración.
+- **Lo que no se guarda no se inventa**: pausar y reanudar la IA a mano no
+  deja historia (D2).
+- **Endpoint nuevo**: `GET /api/conversations/:id/eventos`, con `scoped()`.
+  De quien movió el lead solo da el nombre.
+- **En vivo**: con `conversation.updated` y al reconectar.
+- **Las etiquetas del traspaso** pasaron a `src/lib/eventos-hilo.ts`. El panel
+  del contacto las usa de ahí y ganó la que le faltaba, «hostilidad».
+
+**Cómo se probó**:
+
+- Unitarias nuevas: 6.
+- `e2e-eventos-hilo.mjs`: 15/15, en claro y en oscuro. Mueve el lead por la
+  API del pipeline, hace el traspaso por `/api/bot/handoff` y reactiva.
+- Arneses vecinos: notas internas 28/28, reenviar y deslizar 43/43.
+- Typecheck, lint, test (1 357, con banderas apagadas y encendidas) y build:
+  verdes.
+- Self-test general en base limpia: **280/280**.
+
+**Capturas** (`docs/bitacora-2.2/`):
+
+- `054-antes-hilo-…` y `054-despues-hilo-…`, en claro y oscuro.
+- `054-eventos-…` y `054-eventos-390-…`.
+
+**Lo que salió mal**:
+
+1. **El env de pruebas de esta base no tenía `BOT_API_KEY`**, y el traspaso
+   salió en rojo («hay BOT_API_KEY»). Se agregó al env del scratchpad.
+2. **Un evento de dos líneas en una píldora redonda se veía raro.** Ahora
+   lleva esquinas más suaves.

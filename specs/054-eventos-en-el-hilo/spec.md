@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Especificada antes de escribir código.
+**Status**: Especificada antes de escribir código. Implementada; unitarias, arnés E2E (15/15, en claro y oscuro) y capturas en verde.
 
 **Input**: candidata 8 del estudio de la 2.2
 ([046 research.md](../046-referencias-2.2/research.md)). Kevin la eligió el
