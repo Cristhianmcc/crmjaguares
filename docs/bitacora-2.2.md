@@ -1020,3 +1020,29 @@ tamaños», en Ajustes, con un tema del negocio que cada quien pueda cambiar.
 
 **Cómo se probó**: `e2e-apariencia.mjs` 25/25, sin pulsar «guardar»: recarga
 y comprueba la cookie. Typecheck, lint, test y build en verde.
+
+## 2026-10-24 — 062, arreglo: el contorno de Alto contraste se cortaba
+
+**Qué vio Kevin** probando los temas en casa («me dejaste sin palabras»): en
+Alto contraste, su favorito, las líneas de las tarjetas se interrumpían
+arriba.
+
+**Por qué**:
+
+- El contorno era una sombra por fuera (`box-shadow 0 0 0 1.5px`). Donde la
+  tarjeta toca el borde de la app (`overflow: hidden`), se recortaba.
+- Un `outline` hacia adentro tampoco bastó: la cabecera sticky del panel de
+  Detalles se pintaba encima.
+
+**Arreglo**: el contorno es un `::after` de la tarjeta (`inset: 0`,
+`z-index: 25`, `pointer-events: none`), encima de todo su contenido. Lo pinta
+el token `--contorno-tarjeta`, que solo usa Alto contraste. La tarjeta pasa a
+`position: relative`, y el buscador en cápsula también es una tarjeta.
+
+**Cómo se probó**:
+
+- `e2e-apariencia.mjs` ganó el check «cada tarjeta lleva su contorno encima
+  del contenido»: 26/26.
+- Diseño 40/40, filtros, atajos, reenviar, avisos y conexión, y responsive en
+  verde.
+- Typecheck, lint, test y build en verde.
