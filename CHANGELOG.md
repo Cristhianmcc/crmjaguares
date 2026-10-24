@@ -5,6 +5,45 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.5.0 — 2026-10-24
+
+Un Vocero nuevo por fuera, y a gusto de cada quien. Actualizar es
+redesplegar con la etiqueta `2.5.0`: no hay migraciones ni variables nuevas.
+Nea no cambia.
+
+### Nuevo
+
+- **Diseño de tarjetas** (061): la app son tarjetas separadas, muy redondas,
+  sobre un fondo suave.
+  - En la computadora, un **riel de iconos** reemplaza al menú lateral. La
+    sección activa va rellena y la Bandeja muestra su número; abajo están la
+    campana, Ajustes y tu cuenta (tema, avisos, instalar app, cerrar sesión y
+    versión).
+  - El buscador va en su propia cápsula.
+  - El cliente escribe en **burbujas oscuras** y tus respuestas van en
+    pastillas claras.
+  - Escribes en una cápsula, con el **botón de enviar redondo** aparte.
+  - Letra nueva: Urbanist.
+- **Ajustes → Apariencia** (062):
+  - **8 temas**: Menta (por defecto), Noche, Vocero, Vocero oscuro, Papel,
+    Carbón, Medianoche y Alto contraste.
+  - Un **tema propio** de tres colores, que avisa si algo no se lee.
+  - **Letra**: Urbanist, Archivo, Inter o IBM Plex Sans.
+  - **Tamaño**: chico, normal o grande.
+  - **Densidad**: compacta, normal o espaciosa.
+  - Todo **se guarda solo para cada persona**, y el dueño o un administrador
+    puede **aplicarlo a todo el equipo**.
+  - El sol y la luna saltan a la pareja del tema (Menta ⇄ Noche).
+  - El acento de tu marca se queda en todos los temas.
+
+### Cambió
+
+- El tema claro de siempre ahora es **Menta** y el oscuro, **Noche**. El azul
+  de la 2.x sigue disponible como «Vocero» y «Vocero oscuro». Quien ya usaba
+  el oscuro con el botón de antes ve Noche.
+- En el celular, el menú se abre igual que antes, pero ya sin la barra azul
+  marino.
+
 ## 2.4.0 — 2026-10-23
 
 Avisos aunque no estés mirando, una bandeja que no se queda callada cuando se
