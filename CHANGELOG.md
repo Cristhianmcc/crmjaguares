@@ -5,6 +5,26 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.5.1 — 2026-10-25
+
+Un retoque de interfaz. Actualizar es redesplegar con la etiqueta `2.5.1`: no
+hay migraciones ni variables nuevas. Nea no cambia.
+
+### Nuevo
+
+- **Fondo del chat con dibujos** (063), al estilo de WhatsApp pero propios:
+  40 dibujos en línea, en un mosaico que se repite sin costuras.
+  - Van en todos los temas, también en el propio, con un tono suave para el
+    modo claro y otro para el oscuro. Alto contraste va sin dibujos.
+  - Los dibujos son el fondo de la tarjeta del chat: se quedan quietos al
+    desplazar los mensajes y el compositor no los tapa. La pantalla de
+    «Elige una conversación» también los lleva.
+
+### Arreglado
+
+- El brillo de fondo de la pantalla vacía de la Bandeja ya se ve en la
+  computadora.
+
 ## 2.5.0 — 2026-10-24
 
 Un Vocero nuevo por fuera, y a gusto de cada quien. Actualizar es
