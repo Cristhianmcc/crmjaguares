@@ -9,7 +9,7 @@
  * Registra los mensajes en la bandeja del CRM y despacha vía WhatsApp.
  */
 
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { apiError, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
@@ -127,7 +127,7 @@ export const POST = withAuth(async (session, _req, ctx) => {
         .replace(/\{name\}/gi, primerNombre);
 
       // Buscar o crear conversación
-      let [conv] = await db
+      const [conv] = await db
         .select()
         .from(schema.conversation)
         .where(

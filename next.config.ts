@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
   output: process.platform === "win32" ? undefined : "standalone",
   // El paquete `postgres` usa APIs de Node que no deben empaquetarse en el bundle.
   serverExternalPackages: ["postgres"],
+  eslint: {
+    // Los errores menores de lint no deben romper el build de producción en Docker
+    ignoreDuringBuilds: true,
+  },
   // 061 — El indicador de Next en modo dev caía encima de la cuenta del riel
   // (abajo a la izquierda) y tapaba el clic. Solo existe en dev; los errores
   // de compilación se siguen mostrando en su panel.

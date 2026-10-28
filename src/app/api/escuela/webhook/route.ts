@@ -18,7 +18,7 @@
  * }
  */
 
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { eq, inArray, like, or } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";

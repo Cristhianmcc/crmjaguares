@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import {
-  AlertCircle,
   Bell,
   Calendar,
   CheckCircle2,
-  Clock,
   CreditCard,
   Loader2,
   Megaphone,
@@ -58,7 +56,6 @@ const PLANTILLAS = [
 
 export function CampanasClient({ inicial = [] }: { inicial?: CampaignItem[] }) {
   const [campanas, setCampanas] = useState<CampaignItem[]>(inicial);
-  const [cargando, setCargando] = useState(inicial.length === 0);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [tipo, setTipo] = useState<"renovacion" | "aviso">("renovacion");
   const [nombre, setNombre] = useState("");
@@ -77,8 +74,6 @@ export function CampanasClient({ inicial = [] }: { inicial?: CampaignItem[] }) {
       }
     } catch (e) {
       console.error("Error al cargar campañas:", e);
-    } finally {
-      setCargando(false);
     }
   };
 
