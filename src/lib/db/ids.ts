@@ -41,6 +41,8 @@ const prefixes = {
   quickReply: "qr",
   // 050 — notas internas del hilo
   conversationNote: "nota",
+  // Jaguares — campañas masivas de WhatsApp
+  campaign: "camp",
 } as const;
 
 export type IdKind = keyof typeof prefixes;

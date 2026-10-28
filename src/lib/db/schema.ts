@@ -511,8 +511,13 @@ export const metaCredentials = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    wabaId: text("waba_id").notNull(),
-    phoneNumberId: text("phone_number_id").notNull(),
+    source: text("source", { enum: ["meta", "zernio"] })
+      .notNull()
+      .default("meta"),
+    accountRef: text("account_ref"),
+    webhookSecret: text("webhook_secret"),
+    wabaId: text("waba_id"),
+    phoneNumberId: text("phone_number_id"),
     displayPhoneNumber: text("display_phone_number"),
     verifiedName: text("verified_name"),
     tokenCipher: text("token_cipher").notNull(),
@@ -526,8 +531,8 @@ export const metaCredentials = pgTable(
   },
   (t) => [
     uniqueIndex("meta_credentials_org_uq").on(t.organizationId),
-    // El webhook enruta por phone_number_id: debe ser único en la instancia.
     uniqueIndex("meta_credentials_phone_uq").on(t.phoneNumberId),
+    index("meta_credentials_account_ref_idx").on(t.accountRef),
   ]
 );
 
@@ -1168,9 +1173,9 @@ export const aiCredentials = pgTable(
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
     /** Preset de la UI; `base_url` es lo que de verdad identifica al proveedor. */
-    provider: text("provider", { enum: ["openrouter", "openai_compatible"] })
+    provider: text("provider", { enum: ["deepseek", "openrouter", "openai_compatible"] })
       .notNull()
-      .default("openrouter"),
+      .default("deepseek"),
     baseUrl: text("base_url").notNull(),
     model: text("model").notNull(),
     tokenCipher: text("token_cipher").notNull(),
@@ -1393,5 +1398,64 @@ export const conversationNote = pgTable(
   },
   (t) => [
     index("conversation_note_conv_idx").on(t.organizationId, t.conversationId, t.createdAt),
+  ]
+);
+
+/* ============================================================
+ * Jaguares — Campañas masivas de WhatsApp
+ * (renovación mensual + avisos operativos)
+ * ============================================================ */
+
+/**
+ * Una campaña es un mensaje que se manda a un grupo de contactos de la org.
+ *
+ * Tipos:
+ *  - renovacion: aviso de pago de mensualidad (día 28 del mes)
+ *  - aviso: comunicado operativo (lluvia, cancha, torneo…)
+ *
+ * Estados:
+ *  - borrador: editándose, aún no enviada
+ *  - enviando: el worker la está despachando
+ *  - enviada: todos los mensajes salieron (con posibles errores parciales)
+ *  - cancelada: el dueño la canceló antes de completarse
+ *
+ * La campaña NO conoce el estado de entrega por contacto: eso lo saben
+ * los mensajes individuales en `message`. El resumen numérico se
+ * desnormaliza en `sent_count` y `error_count` para no agregar en vivo.
+ */
+export const campaign = pgTable(
+  "campaign",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** Tipo de campaña: renovación de mensualidad o aviso operativo. */
+    tipo: text("tipo", { enum: ["renovacion", "aviso"] }).notNull(),
+    /** Nombre interno que ve el equipo (ej. "Renovación noviembre 2026"). */
+    nombre: text("nombre").notNull(),
+    /** Texto del mensaje. Admite {nombre} como variable. */
+    mensaje: text("mensaje").notNull(),
+    status: text("status", {
+      enum: ["borrador", "enviando", "enviada", "cancelada"],
+    })
+      .notNull()
+      .default("borrador"),
+    /** Cuántos mensajes salieron (ok o con error). */
+    sentCount: integer("sent_count").notNull().default(0),
+    /** Cuántos fallaron al enviar. */
+    errorCount: integer("error_count").notNull().default(0),
+    /** Quién la creó. */
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    scheduledAt: timestamp("scheduled_at"),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("campaign_org_status_idx").on(t.organizationId, t.status, t.createdAt),
   ]
 );

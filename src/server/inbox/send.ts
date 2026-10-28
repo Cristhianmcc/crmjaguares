@@ -6,9 +6,11 @@ import { destinatarioMeta, type Destinatario } from "@/lib/meta/destinatario";
 import { publish } from "@/server/events/bus";
 import {
   getCredentialsByOrg,
+  marcarConectado,
   markReconnectRequired,
   type Credentials,
 } from "@/server/whatsapp/credentials";
+import { sendZernioWhatsappText } from "@/server/whatsapp/zernio";
 import { isWindowOpen, replyWindow } from "@/server/inbox/window";
 import { plainSocialText } from "@/lib/social-text";
 import { IG_PREFIX } from "@/server/inbox/identity";
@@ -336,15 +338,19 @@ async function prepareSend(
     ? "to" in destinatario
       ? destinatario.to
       : destinatario.recipient
-    : null;
-  if (!destinatario || !recipient) {
+    : credentials.source === "zernio"
+      ? (row.contact.phone ?? row.contact.waIdentity)
+      : null;
+  if (!recipient) {
     throw new SendError(
       "meta_error",
       "El contacto no tiene teléfono ni identidad de WhatsApp utilizable"
     );
   }
 
-  return { conversation: row.conversation, credentials, destinatario, recipient };
+  const finalDestinatario: Destinatario = destinatario ?? { to: recipient };
+
+  return { conversation: row.conversation, credentials, destinatario: finalDestinatario, recipient };
 }
 
 /**
@@ -496,18 +502,20 @@ export async function sendText(input: {
       ? await callMessengerSend(target, text)
       : target.tiktok
         ? await callTiktokSend(target, text)
-        : await callGraphSend(
-          credentials!,
-          conCita(
-            {
-              messaging_product: "whatsapp",
-              ...target.destinatario,
-              type: "text",
-              text: { body: text },
-            },
-            cita?.message.waMessageId
-          )
-        );
+        : target.credentials?.source === "zernio"
+          ? await callZernioWhatsappSend(target, text)
+          : await callGraphSend(
+              credentials!,
+              conCita(
+                {
+                  messaging_product: "whatsapp",
+                  ...target.destinatario,
+                  type: "text",
+                  text: { body: text },
+                },
+                cita?.message.waMessageId
+              )
+            );
 
   const messageId = await persistOutbound({
     organizationId: input.organizationId,
@@ -517,10 +525,13 @@ export async function sendText(input: {
     text,
     // Un canal sin acuses de entrega confirma al aceptar; uno con acuses
     // avanza despues por webhook. Sin esta distincion el mensaje se queda
-    // con el reloj puesto para siempre.
-    status: capabilitiesFor(target.conversation.channel).deliveryReceipts
-      ? "pending"
-      : "sent",
+    // con el reloj puesto para siempre. Zernio no reenvía los `statuses` de
+    // Meta: la aceptación es la confirmación, como en Instagram y Messenger.
+    status:
+      capabilitiesFor(target.conversation.channel).deliveryReceipts &&
+      target.credentials?.source !== "zernio"
+        ? "pending"
+        : "sent",
     aiGenerated: input.aiGenerated,
     origin: input.aiGenerated ? "ai" : "operator",
     cita,
@@ -918,6 +929,74 @@ async function callTiktokSend(target: SendTarget, text: string): Promise<string>
         throw new SendError(
           "meta_unavailable",
           "TikTok no está disponible en este momento; intenta de nuevo"
+        );
+      }
+      throw new SendError("meta_error", err.message);
+    }
+    throw err;
+  }
+}
+
+function pareceLlaveInvalida(err: MetaApiError): boolean {
+  const texto = `${err.message} ${JSON.stringify(err.details ?? "")}`.toLowerCase();
+  return /invalid.?(api.?)?(token|key|credential)|unauthorized|not authorized|api.?key|revoked|expired|llave/.test(
+    texto
+  );
+}
+
+/**
+ * WhatsApp a través de Zernio. Mismo vocabulario de SendError que los demás
+ * transportes: la bandeja no aprende un idioma por plataforma.
+ *
+ * Sin `channelThreadRef` no hay a dónde mandar: Zernio responde dentro de SU
+ * conversación, no a un número suelto.
+ */
+async function callZernioWhatsappSend(
+  target: SendTarget,
+  text: string
+): Promise<string> {
+  const creds = target.credentials!;
+  const caps = capabilitiesFor("whatsapp");
+  if (!textFits("whatsapp", text)) {
+    throw new SendError(
+      "meta_error",
+      `${caps.label} no acepta mensajes de más de ${caps.maxTextBytes} bytes: acorta el texto`
+    );
+  }
+  if (!target.conversation.channelThreadRef) {
+    throw new SendError(
+      "not_connected",
+      "Esta conversación no tiene hilo en Zernio: el contacto debe escribir de nuevo para abrirlo"
+    );
+  }
+
+  try {
+    const id = await sendZernioWhatsappText({
+      token: creds.token,
+      accountRef: creds.accountRef,
+      threadRef: target.conversation.channelThreadRef,
+      text,
+    });
+    if (creds.status === "reconnect_required") {
+      await marcarConectado(creds.organizationId).catch(() => {});
+    }
+    return id;
+  } catch (err) {
+    if (err instanceof MetaApiError) {
+      console.warn(
+        `[wa-zernio] el envío falló (${err.status}): ${err.message}`
+      );
+      if (err.isAuthError && pareceLlaveInvalida(err)) {
+        await markReconnectRequired(creds.organizationId);
+        throw new SendError(
+          "reconnect_required",
+          "Zernio rechazó la llave de WhatsApp: revísala en Ajustes → WhatsApp"
+        );
+      }
+      if (err.status === 0 || err.status >= 500) {
+        throw new SendError(
+          "meta_unavailable",
+          "Zernio no está disponible en este momento; intenta de nuevo"
         );
       }
       throw new SendError("meta_error", err.message);

@@ -16,13 +16,14 @@ import { zernioFetch } from "@/server/zernio";
  */
 
 /** Los canales que llegan por Zernio. */
-export type ZernioChannel = Exclude<Channel, "whatsapp">;
+export type ZernioChannel = Channel;
 
 /** Cómo llama Zernio a la plataforma de cada canal. */
 export const ZERNIO_PLATFORMS: Record<ZernioChannel, readonly string[]> = {
   instagram: ["instagram"],
   messenger: ["facebook", "messenger"],
   tiktok: ["tiktok"],
+  whatsapp: ["whatsapp", "wa"],
 };
 
 /** Una cuenta de `GET /accounts`, en lo que a Vocero le importa. */

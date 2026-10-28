@@ -107,7 +107,10 @@ export function AiClient() {
     })();
   }, [cargar]);
 
-  const preset = AI_PROVIDER_PRESETS[provider];
+  const preset =
+    AI_PROVIDER_PRESETS[provider] ??
+    AI_PROVIDER_PRESETS.deepseek ??
+    AI_PROVIDER_PRESETS.openrouter;
   const cred = vista?.credencial ?? null;
 
   /** Lo que viaja en cada llamada: el token solo si se escribió. */
@@ -291,8 +294,12 @@ export function AiClient() {
                 id="ai-provider"
                 value={provider}
                 onChange={(e) => {
-                  setProvider(e.target.value as AiProviderId);
+                  const nuevo = e.target.value as AiProviderId;
+                  setProvider(nuevo);
                   setModelos(null);
+                  if (nuevo === "deepseek" && (!model || model.includes("claude") || model.includes("gpt"))) {
+                    setModel("deepseek-flash");
+                  }
                 }}
                 className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm"
               >

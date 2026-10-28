@@ -1,10 +1,12 @@
 import {
+  CalendarClock,
   CalendarDays,
   ChartColumn,
   FlaskConical,
   Inbox,
   Kanban,
   ListChecks,
+  Megaphone,
   Settings,
   Sparkles,
   Users,
@@ -60,6 +62,10 @@ export function appNavGroups({
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
     { href: "/pipeline", label: "Pipeline", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
+    // La malla de horarios de la escuela: se consulta al contestar, no es una
+    // pantalla de administración, por eso va con el trabajo del día.
+    { href: "/cupos", label: "Cupos", icon: CalendarClock },
+    { href: "/campanas", label: "Campañas", icon: Megaphone },
   ];
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.

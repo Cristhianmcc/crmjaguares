@@ -4,6 +4,7 @@ import {
   desconectarCanal,
   getCredentialsByOrg,
   saveCredentials,
+  saveZernioCredentials,
   tokenLast4,
 } from "@/server/whatsapp/credentials";
 import {
@@ -24,6 +25,8 @@ export const GET = withAuth(async (session) => {
   if (!creds) return Response.json({ connection: null });
   return Response.json({
     connection: {
+      source: creds.source,
+      accountRef: creds.accountRef,
       wabaId: creds.wabaId,
       phoneNumberId: creds.phoneNumberId,
       displayPhoneNumber: creds.displayPhoneNumber,
@@ -34,24 +37,41 @@ export const GET = withAuth(async (session) => {
   });
 });
 
-const putSchema = z.object({
+const zernioPutSchema = z.object({
+  source: z.literal("zernio"),
+  accountRef: z.string().trim().min(1),
+  token: z.string().trim().min(1),
+  webhookSecret: z.string().trim().optional(),
+  displayPhoneNumber: z.string().trim().optional(),
+});
+
+const metaPutSchema = z.object({
+  source: z.literal("meta").optional(),
   wabaId: z.string().trim().min(1),
   phoneNumberId: z.string().trim().min(1),
   token: z.string().trim().min(1),
 });
 
-/**
- * Guarda la conexión: re-valida contra Meta, cifra (FR-040) y registra el
- * webhook de esta instancia en el número.
- *
- * Antes el CRM solo suscribía la app a la WABA y la URL había que pegarla a
- * mano en el panel de Meta. Si Meta rechaza el registro, la conexión YA está
- * guardada y es válida: se avisa en `webhook` y la tarjeta del webhook ofrece
- * reintentar (o pegar la URL a mano, que sigue a la vista).
- */
+const putSchema = z.union([zernioPutSchema, metaPutSchema]);
+
 export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
+
+  if (body.data.source === "zernio") {
+    await saveZernioCredentials({
+      organizationId: session.organizationId,
+      accountRef: body.data.accountRef,
+      token: body.data.token,
+      webhookSecret: body.data.webhookSecret,
+      displayPhoneNumber: body.data.displayPhoneNumber,
+    });
+    return Response.json({
+      ok: true,
+      source: "zernio",
+      displayPhoneNumber: body.data.displayPhoneNumber,
+    });
+  }
 
   const check = await testConnection(body.data.phoneNumberId, body.data.token);
   if (!check.ok) {
@@ -95,7 +115,7 @@ export const PUT = withAuth(async (session, req: Request) => {
  */
 export const DELETE = withAuth(async (session) => {
   const creds = await getCredentialsByOrg(session.organizationId);
-  if (creds) {
+  if (creds && creds.phoneNumberId) {
     await unregisterWebhookForNumber({
       phoneNumberId: creds.phoneNumberId,
       token: creds.token,

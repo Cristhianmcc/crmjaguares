@@ -342,7 +342,7 @@ export async function checkMediaDir(dir: string): Promise<CheckResult> {
 
 export type StoredWhatsApp = {
   organization: string;
-  phoneNumberId: string;
+  phoneNumberId: string | null;
   displayPhoneNumber: string | null;
   /** null = la fila existe pero no se pudo descifrar con la ENCRYPTION_KEY actual. */
   credentials: Credentials | null;
@@ -455,6 +455,14 @@ export async function checkWhatsApp(deps: WhatsAppDeps = {}): Promise<CheckResul
         label,
         detail: "el token guardado no se pudo descifrar: la ENCRYPTION_KEY no es la misma con la que se guardó",
         fix: "restaura la ENCRYPTION_KEY original o vuelve a pegar el token en Configuración → WhatsApp",
+      });
+      continue;
+    }
+    if (item.credentials.source === "zernio" || !item.credentials.phoneNumberId) {
+      results.push({
+        status: "ok",
+        label,
+        detail: "conexión WhatsApp por Zernio",
       });
       continue;
     }

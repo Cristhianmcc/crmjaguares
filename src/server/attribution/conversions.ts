@@ -77,7 +77,7 @@ export async function emitConversion(
     const settings = await getCapiSettings(organizationId);
     const credentials = await getCredentialsByOrg(organizationId);
 
-    if (!attribution?.ctwaClid || !settings || !credentials) {
+    if (!attribution?.ctwaClid || !settings || !credentials || !credentials.wabaId) {
       await db
         .update(schema.conversionEvent)
         .set({

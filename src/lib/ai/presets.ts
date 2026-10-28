@@ -8,9 +8,10 @@
  * propio…), que es la única frontera con el LLM que admite la constitución.
  */
 
+export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 
-export const AI_PROVIDERS = ["openrouter", "openai_compatible"] as const;
+export const AI_PROVIDERS = ["deepseek", "openrouter", "openai_compatible"] as const;
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export const AI_STATUSES = [
@@ -30,6 +31,13 @@ export type AiProviderPreset = {
 };
 
 export const AI_PROVIDER_PRESETS: Record<AiProviderId, AiProviderPreset> = {
+  deepseek: {
+    id: "deepseek",
+    label: "DeepSeek",
+    baseUrl: DEEPSEEK_BASE_URL,
+    modelPlaceholder: "deepseek-flash",
+    tokenPlaceholder: "sk-…",
+  },
   openrouter: {
     id: "openrouter",
     label: "OpenRouter",
@@ -54,9 +62,10 @@ export const AI_STATUS_LABEL: Record<AiStatus, string> = {
 
 /** A qué preset corresponde una base URL (la del entorno o una guardada). */
 export function presetDeBaseUrl(baseUrl: string): AiProviderId {
-  return apiRoot(baseUrl) === apiRoot(OPENROUTER_BASE_URL)
-    ? "openrouter"
-    : "openai_compatible";
+  const root = apiRoot(baseUrl).toLowerCase();
+  if (root.includes("deepseek.com")) return "deepseek";
+  if (root.includes("openrouter.ai")) return "openrouter";
+  return "openai_compatible";
 }
 
 /**

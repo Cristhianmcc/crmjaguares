@@ -57,11 +57,11 @@ export const POST = withAuth(async (session, req: Request) => {
     return apiError(403, "forbidden", "Solo quien administra puede recuperar el webhook");
   }
   const creds = await getCredentialsByOrg(session.organizationId);
-  if (!creds) {
+  if (!creds || !creds.wabaId || !creds.phoneNumberId) {
     return apiError(
       409,
       "sin_conexion",
-      "Primero guarda la conexión de WhatsApp."
+      "Primero guarda la conexión de WhatsApp con Meta Cloud API."
     );
   }
 

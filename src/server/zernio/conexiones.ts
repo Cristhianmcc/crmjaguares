@@ -18,6 +18,10 @@ import {
   getTiktokCredentialsByOrg,
 } from "@/server/tiktok/credentials";
 import {
+  getCredentialsByAccountRef,
+  getCredentialsByOrg,
+} from "@/server/whatsapp/credentials";
+import {
   webhookUrl,
   webhookVerifyToken,
   type WebhookChannel,
@@ -39,15 +43,14 @@ import {
  * en lugar de tres veces casi iguales.
  */
 
-export const ZERNIO_CHANNELS = CHANNEL_ORDER.filter(
-  (c): c is ZernioChannel => c !== "whatsapp"
-);
+export const ZERNIO_CHANNELS = CHANNEL_ORDER;
 
 /** Segmento de la ruta del webhook de cada canal. */
 const WEBHOOK_PATH: Record<ZernioChannel, WebhookChannel> = {
   instagram: "ig",
   messenger: "messenger",
   tiktok: "tiktok",
+  whatsapp: "wa",
 };
 
 export type ZernioConnection = {
@@ -79,6 +82,11 @@ async function byOrg(
     if (!c || c.source !== "zernio" || !c.accountRef) return null;
     return { channel, ...comun(c), accountRef: c.accountRef, name: c.pageName };
   }
+  if (channel === "whatsapp") {
+    const c = await getCredentialsByOrg(organizationId);
+    if (!c || c.source !== "zernio" || !c.accountRef) return null;
+    return { channel, ...comun(c), accountRef: c.accountRef, name: c.displayPhoneNumber ?? "WhatsApp" };
+  }
   const c = await getTiktokCredentialsByOrg(organizationId);
   if (!c) return null;
   return { channel, ...comun(c), accountRef: c.accountRef, name: arroba(c.username) };
@@ -97,6 +105,11 @@ async function byAccountRef(
     const c = await getMessengerCredentialsByAccountRef(accountRef);
     if (!c || c.source !== "zernio" || !c.accountRef) return null;
     return { channel, ...comun(c), accountRef: c.accountRef, name: c.pageName };
+  }
+  if (channel === "whatsapp") {
+    const c = await getCredentialsByAccountRef(accountRef);
+    if (!c || c.source !== "zernio" || !c.accountRef) return null;
+    return { channel, ...comun(c), accountRef: c.accountRef, name: c.displayPhoneNumber ?? "WhatsApp" };
   }
   const c = await getTiktokCredentialsByAccountRef(accountRef);
   if (!c) return null;
