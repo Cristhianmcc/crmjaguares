@@ -11,7 +11,7 @@ import {
 } from "@/lib/agent-roles";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { leerConfigDespacho, urlSaludCerebro } from "@/server/brains/config";
-import { getBrainHealth } from "@/server/bot/status";
+import { isAiConfiguredFor } from "@/lib/ai/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +64,10 @@ export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
 
-  // 036 — El interruptor decide si el CRM le despacha al cerebro. Encenderlo
-  // sin un cerebro que conteste dejaría a los clientes sin respuesta creyendo
-  // que la tienen; apagarlo siempre se puede.
+  // 036 — El interruptor decide si el agente responde. Encenderlo
+  // sin IA o sin cerebro que conteste dejaría a los clientes sin respuesta.
   if (body.data.enabled === true) {
-    const problema = await problemaDelCerebro();
+    const problema = await problemaDelCerebro(session.organizationId);
     if (problema) return apiError(409, "sin_cerebro", problema);
   }
 
@@ -88,18 +87,20 @@ export const PUT = withAuth(async (session, req: Request) => {
 });
 
 /** Por qué no se puede encender el agente, o `null` si hay cerebro sano. */
-async function problemaDelCerebro(): Promise<string | null> {
+async function problemaDelCerebro(organizationId: string): Promise<string | null> {
   const despacho = leerConfigDespacho();
-  if (!despacho.active) {
-    return despacho.problem === "sin_llave"
-      ? "Falta BOT_API_KEY: sin ella el CRM no puede despacharle a tu agente."
-      : despacho.problem === "url"
-        ? "BRAIN_DISPATCH_URL no es una dirección válida."
-        : "No hay un agente conectado. Conéctalo (BRAIN_DISPATCH_URL) y vuelve a encenderlo.";
+  if (despacho.active) {
+    const { getBrainHealth } = await import("@/server/bot/status");
+    const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
+    if (salud && !salud.reachable) {
+      return `Tu agente (${despacho.host}) no contesta. Revisa que esté corriendo y vuelve a intentar.`;
+    }
+    return null;
   }
-  const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
-  if (salud && !salud.reachable) {
-    return `Tu agente (${despacho.host}) no contesta. Revisa que esté corriendo y vuelve a intentar.`;
+  // Si no hay despacho externo, el CRM usa el agente integrado: requiere IA configurada
+  const aiOk = await isAiConfiguredFor(organizationId);
+  if (!aiOk) {
+    return "No hay proveedor de IA configurado. Conéctalo en Ajustes → IA antes de encender el agente.";
   }
   return null;
 }

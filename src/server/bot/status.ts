@@ -79,15 +79,19 @@ export type BrainStatusInput = {
 
 export function computeBrainStatus(input: BrainStatusInput): BrainStatusDto {
   const dispatch = input.dispatch ?? SIN_DESPACHO;
+  const hasExternal = dispatch.active;
+  const hasIntegrated = input.aiConfigured;
+  const hasAgent = hasExternal || hasIntegrated;
+
   const seenRecently =
     input.botKeyConfigured &&
     input.lastSeenAt !== null &&
     input.now.getTime() - input.lastSeenAt.getTime() <= EXTERNAL_SEEN_WINDOW_MS;
   const active =
-    seenRecently || input.health?.reachable === true || dispatch.active;
+    seenRecently || input.health?.reachable === true || hasAgent;
 
   let warning: BrainWarning | null = null;
-  if (!dispatch.active) warning = "sin_cerebro";
+  if (!hasAgent) warning = "sin_cerebro";
   else if (!input.agentEnabled) warning = "apagado";
 
   return {
@@ -99,7 +103,10 @@ export function computeBrainStatus(input: BrainStatusInput): BrainStatusDto {
       active,
       health: input.health,
     },
-    dispatch,
+    dispatch: {
+      ...dispatch,
+      active: hasAgent,
+    },
     warning,
   };
 }

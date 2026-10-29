@@ -48,34 +48,20 @@ export function BrainStatusCard({
       <CardHeader className="pb-4">
         <CardTitle>Quién responde a tus clientes</CardTitle>
         <CardDescription>
-          Vocero no trae agente: contesta el que conectas al lado (Nea, o el
-          tuyo), y solo con el interruptor de arriba encendido. Sin agente,
-          contestas tú desde la bandeja.
+          El agente de IA atiende las conversaciones en WhatsApp de forma automática
+          según tus instrucciones y catálogo. Solo responde con el interruptor de arriba encendido.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {status.warning === "sin_cerebro" && (
-          <Callout tone="info" icon={Info} title="Sin agente conectado">
-            Vocero funciona como bandeja manual: tus clientes reciben lo que
-            contestes tú. Para que un agente conteste, levántalo al lado del CRM
-            y pon <Env>BRAIN_DISPATCH_URL</Env> y <Env>BOT_API_KEY</Env> en el
-            entorno.{" "}
-            <a
-              href={GUIA_DEL_PAR_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-0.5 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
-            >
-              Cómo conectarlo
-              <ArrowUpRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.8} />
-            </a>
+          <Callout tone="info" icon={Info} title="Sin proveedor de IA conectado">
+            Para que tu agente responda automáticamente, conecta tu proveedor en Ajustes ➔ IA (DeepSeek u OpenAI).
           </Callout>
         )}
         {status.warning === "apagado" && (
           <Callout tone="warning" icon={AlertTriangle} title="Tu agente está conectado pero apagado">
-            Enciéndelo con el interruptor de arriba para que conteste. Mientras
-            tanto nadie contesta en automático: los mensajes esperan en la
-            bandeja.
+            Enciéndelo con el interruptor de arriba a la derecha para que conteste en automático a los mensajes de WhatsApp. Mientras
+            tanto, los mensajes esperan en la bandeja manual.
           </Callout>
         )}
 
@@ -122,16 +108,16 @@ function switchView(s: BrainStatusDto): RowView {
     return {
       tone: "off",
       headline,
-      detail: "Sin agente conectado no hay a quién despacharle: se enciende cuando lo conectes.",
+      detail: "Sin proveedor de IA configurado: conéctalo en Ajustes → IA para encenderlo.",
     };
   }
   if (!s.enabled) {
-    return { tone: "warn", headline, detail: "El CRM no le pasa nada a tu agente: nadie contesta en automático." };
+    return { tone: "warn", headline, detail: "El agente está apagado: enciéndelo arriba a la derecha para que responda." };
   }
   if (externalDown(s)) {
     return { tone: "warn", headline, detail: "Pero tu agente no está en línea: no contesta hasta que vuelva." };
   }
-  return { tone: "ok", headline, detail: "El CRM le pasa cada mensaje a tu agente." };
+  return { tone: "ok", headline, detail: "El agente contesta automáticamente cada mensaje entrante." };
 }
 
 function externalView(s: BrainStatusDto, now: number): RowView {
@@ -176,10 +162,17 @@ function externalView(s: BrainStatusDto, now: number): RowView {
       }`,
     };
   }
+  if (s.dispatch.active) {
+    return {
+      tone: "ok",
+      headline: "Agente IA Jaguares (Conectado)",
+      detail: "Listo para responder turnos entrantes con DeepSeek y catálogo en vivo.",
+    };
+  }
   if (keyConfigured) {
     return { tone: active ? "ok" : "off", headline: `Llave configurada · ${llamada}`, detail: null };
   }
-  return { tone: "off", headline: "Sin agente conectado", detail: null };
+  return { tone: "off", headline: "Sin agente conectado", detail: "Configura tu proveedor en Ajustes → IA." };
 }
 
 function dispatchView(d: BrainDispatchDto, now: number): RowView {

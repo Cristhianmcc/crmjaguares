@@ -115,7 +115,9 @@ export type BrainStatusDto = {
  * inventa ninguno.
  */
 export function externalBrainName(status: BrainStatusDto): string | null {
-  return status.external.health?.mode ? "Nea" : null;
+  if (status.external.health?.mode) return "Nea";
+  if (status.dispatch.active) return "Agente Jaguares (IA)";
+  return null;
 }
 
 /**
@@ -141,12 +143,10 @@ function healthKnown(h: BrainHealthDto | null): h is BrainHealthDto {
   return h !== null && h.problem !== "config";
 }
 
-/** «Responde tu cerebro externo (Nea)», o sin paréntesis si no se sabe quién es. */
+/** «Responde tu cerebro externo (Nea)», o «Responde el Agente Jaguares (IA)». */
 export function externalAnswerLabel(status: BrainStatusDto): string {
   const name = externalBrainName(status);
-  return name
-    ? `Responde tu cerebro externo (${name})`
-    : "Responde tu cerebro externo";
+  return name ? `Responde: ${name}` : "Responde el agente de IA";
 }
 
 /** «hace 3 min». Tolera relojes desfasados: el futuro es «hace unos segundos». */

@@ -138,8 +138,8 @@ export function AgentClient() {
   // 036 — El interruptor solo se enciende con un agente conectado (el
   // servidor lo exige igual: 409 `sin_cerebro`). Apagarlo se puede siempre:
   // un perfil que quedó encendido sin cerebro no debe quedarse atrapado.
-  const brainConnected = brain?.dispatch.active === true;
-  const switchDisabled = !profile.enabled && brain !== null && !brainConnected;
+  const brainConnected = brain?.dispatch.active === true || aiConfigured;
+  const switchDisabled = !profile.enabled && !aiConfigured && !brainConnected;
 
   // 036 — Sin llave de IA el agente conectado no tiene con qué pensar (piensa
   // por el CRM, `/api/bot/llm`). Sin agente conectado no hace falta pedirla:
@@ -178,7 +178,7 @@ export function AgentClient() {
                 : "w-full text-right text-xs text-muted-foreground"
             }
           >
-            {switchError ?? "Se enciende cuando conectes tu agente."}
+            {switchError ?? (switchDisabled ? "Se enciende cuando conectes tu agente o configures la IA." : "")}
           </p>
         )}
       </header>
