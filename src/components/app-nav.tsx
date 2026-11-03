@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Bell, BellOff, LogOut, X } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { BrandTile } from "@/components/brand-mark";
 import { BotonInstalar } from "@/components/pwa";
 import { BotonActivarAvisos } from "@/components/activar-avisos";
@@ -257,42 +257,143 @@ export function AppNav({
     </>
   );
 
+  const [colapsado, setColapsado] = useState(false);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("crm_sidebar_colapsada");
+      if (v !== null) setColapsado(v === "true");
+    } catch {}
+  }, []);
+
+  const toggleColapsar = () => {
+    setColapsado((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("crm_sidebar_colapsada", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   return (
     <>
-    <Riel
-      branding={branding}
-      groups={groups}
-      pathname={pathname}
-      unread={unread}
-      userName={userName}
-      role={role}
-      apariencia={apariencia}
-      campana={campana}
-      version={versionTexto}
-      versionTitulo={versionTitulo}
-      onSalir={() => void salir()}
-    />
+    {colapsado ? (
+      <Riel
+        branding={branding}
+        groups={groups}
+        pathname={pathname}
+        unread={unread}
+        userName={userName}
+        role={role}
+        apariencia={apariencia}
+        campana={campana}
+        version={versionTexto}
+        versionTitulo={versionTitulo}
+        onSalir={() => void salir()}
+        onExpandir={toggleColapsar}
+      />
+    ) : (
+      <aside
+        aria-label="Barra de navegación"
+        className="tarjeta hidden w-[240px] shrink-0 flex-col p-3.5 lg:flex select-none transition-all duration-200"
+      >
+        {/* Cabecera con marca y botón para colapsar */}
+        <div className="mb-4 flex items-center justify-between px-1.5 pt-0.5">
+          <Link
+            href="/inbox"
+            aria-label={branding.name}
+            className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <BrandTile branding={branding} className="h-9 w-9 rounded-xl text-[16px] shadow-xs" />
+            <div className="min-w-0 flex flex-col">
+              <span className="truncate text-[14.5px] font-bold leading-tight text-foreground">
+                {branding.name}
+              </span>
+              <span className="kicker block truncate text-[10px] text-text-3 font-semibold">
+                {kicker}
+              </span>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={toggleColapsar}
+            aria-label="Colapsar barra lateral"
+            title="Colapsar barra lateral"
+            className="rounded-lg p-1.5 text-text-3 hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <PanelLeftClose className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {/* Grupos de navegación con espaciado generoso y scroll oculto */}
+        <nav
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          aria-label="Secciones"
+        >
+          {groups.map((group, i) => (
+            <div key={group.title ?? i} className="flex flex-col gap-1">
+              {group.title && (
+                <span className="kicker px-2.5 py-0.5 block text-[10.5px] font-bold tracking-wider text-text-3" aria-hidden>
+                  {group.title}
+                </span>
+              )}
+              <div className="flex flex-col gap-0.5">
+                {group.items.map(renderItem)}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Pie con opciones y tarjeta de usuario */}
+        <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-1.5">
+          <BotonActivarAvisos className={navItemClass(false)} />
+          <BotonInstalar className={navItemClass(false)} />
+
+          {renderItem(SETTINGS_ITEM)}
+
+          <div className="mt-1 flex items-center gap-2.5 rounded-xl bg-accent/30 p-2 border border-border/40">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
+              {initials(userName)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12.5px] font-semibold text-foreground">{userName}</span>
+              <span className="block truncate text-[11px] text-text-3">
+                {role === "owner" ? "Propietario" : "Equipo"}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-0.5">
+              {campana}
+              <ThemeToggle initial={apariencia} />
+              <button
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                className="rounded-lg p-1 text-text-3 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                onClick={() => void salir()}
+              >
+                <LogOut className="h-4 w-4" strokeWidth={1.7} />
+              </button>
+            </span>
+          </div>
+
+          <p
+            className="px-2 pt-1 font-mono text-[10px] tracking-[0.06em] text-text-3 text-center"
+            title={versionTitulo}
+          >
+            {versionTexto}
+          </p>
+        </div>
+      </aside>
+    )}
+
+    {/* Móvil: cajón lateral */}
     <aside
-      // Móvil: cajón que se desliza desde la izquierda (siempre montado, así
-      // la transición corre en ambos sentidos). Escritorio: columna fija.
-      // `visibility` va en la transición a propósito: al cerrar mantiene el
-      // cajón visible mientras se desliza y recién entonces lo oculta, que es
-      // lo que lo saca del orden de tabulación en móvil.
       className={cn(
-        // `text-foreground` explícito: sin él, el texto sin color propio (el
-        // nombre del usuario, el nombre white-label en BrandLogo) hereda el
-        // color YA CALCULADO en <body> con el tema de la página, no el de
-        // `.nav-dark` — y un texto oscuro sobre este fondo oscuro se pierde.
-        // 061 — Solo el teléfono: en escritorio el menú es el riel de iconos
-        // (abajo). Ya no lleva la barra azul marino: los neutros del tema.
-        "fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto rounded-r-[var(--radio-tarjeta)] bg-background px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200 lg:hidden",
+        "fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto rounded-r-[var(--radio-tarjeta)] bg-background px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200 lg:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
         open ? "visible translate-x-0 shadow-pop" : "invisible -translate-x-full"
       )}
     >
-      {/* Marca: el logo de Vocero o, white-label, la inicial y el nombre */}
       <div className="mb-5 flex items-start gap-1.5 px-2 pt-0.5">
-        {/* En móvil el cajón necesita su propio cierre: el velo no siempre es
-            alcanzable con el pulgar. */}
         <button
           onClick={onClose}
           aria-label="Cerrar el menú"
@@ -306,9 +407,6 @@ export function AppNav({
         </div>
       </div>
 
-      {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
-          de arriba abajo como una lista de lo que hay. Un grupo sin título
-          (Resultados) es una entrada suelta separada por el espacio. */}
       <nav className="flex flex-col gap-4" aria-label="Secciones">
         {groups.map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
@@ -324,12 +422,9 @@ export function AppNav({
 
       <div className="flex-1" />
 
-      {/* 048 — Solo cuando el navegador ofrece instalar la app: una fila
-          propia y no un icono más en el pie, que ya va lleno. */}
       <BotonActivarAvisos className={navItemClass(false)} />
       <BotonInstalar className={navItemClass(false)} />
 
-      {/* Ajustes va abajo, solo: no es trabajo del día. */}
       {renderItem(SETTINGS_ITEM)}
 
       <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
@@ -356,19 +451,6 @@ export function AppNav({
         </span>
       </div>
 
-      {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
-          "¿ya se desplegó?" aparece justo cuando algo no funciona, y mandar a
-          alguien a comparar commits en el servidor significa que no lo hará. */}
-      {/* `text-2` y no `text-3`: a 10.5px, el gris más claro no pasa AA contra
-          el fondo de la barra. Discreta sí, ilegible no. */}
-      {/* El nombre sale de la marca, no de una constante: esto es white-label,
-          y una instancia rebautizada que dice "Vocero" en el tooltip delata el
-          producto de debajo justo donde el operador la mira todos los días. */}
-      {/* Un commit que no salió del build lo dice (#50): presentarlo igual
-          que uno verificado es la insignia mintiendo justo cuando alguien la
-          consulta para saber qué código corre. El aviso es el ícono (color de
-          advertencia: basta 3:1 para un gráfico) y el texto va en `text-2`,
-          que pasa AA sobre la barra en cualquier tema. */}
       <p
         className="mt-2 px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
         title={versionTitle(branding.name, version)}
@@ -397,6 +479,7 @@ function Riel({
   version,
   versionTitulo,
   onSalir,
+  onExpandir,
 }: {
   branding: Branding;
   groups: ReturnType<typeof appNavGroups>;
@@ -409,6 +492,7 @@ function Riel({
   version: React.ReactNode;
   versionTitulo: string;
   onSalir: () => void;
+  onExpandir?: () => void;
 }) {
   const [cuenta, setCuenta] = useState(false);
   const cuentaRef = useRef<HTMLDivElement>(null);
@@ -431,48 +515,68 @@ function Riel({
   const boton = (item: NavItem) => {
     const active = isNavActive(pathname, item.href);
     return (
-      <Link
-        key={item.href}
-        href={item.href}
-        aria-label={item.label}
-        title={item.label}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "relative flex h-11 w-11 items-center justify-center rounded-full border transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          active
-            ? "border-transparent bg-riel-activo text-riel-activo-texto"
-            : "border-border-strong text-text-2 hover:bg-accent hover:text-foreground"
-        )}
-      >
-        <item.icon className="h-[19px] w-[19px]" strokeWidth={1.8} aria-hidden />
-        {item.badge && unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-fg">
-            {unread > 99 ? "99+" : unread}
-          </span>
-        )}
-      </Link>
+      <div key={item.href} className="group relative flex items-center justify-center">
+        <Link
+          href={item.href}
+          aria-label={item.label}
+          title={item.label}
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-150",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active
+              ? "border-transparent bg-brand text-brand-fg shadow-xs scale-105"
+              : "border-border-strong/50 text-text-2 hover:bg-accent hover:text-foreground hover:scale-105"
+          )}
+        >
+          <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
+          {item.badge && unread > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-fg shadow-xs">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </Link>
+        {/* Tooltip flotante instantáneo en hover */}
+        <div className="pointer-events-none absolute left-full ml-3 hidden items-center rounded-md bg-popover px-2.5 py-1 text-xs font-semibold text-popover-foreground shadow-md group-hover:flex z-50 whitespace-nowrap border border-border">
+          {item.label}
+        </div>
+      </div>
     );
   };
 
   return (
     <nav
       aria-label="Secciones"
-      className="tarjeta hidden w-[76px] shrink-0 flex-col items-center py-4 lg:flex"
+      className="tarjeta hidden w-[72px] shrink-0 flex-col items-center py-4 lg:flex select-none"
     >
-      <Link href="/inbox" aria-label={branding.name} title={branding.name} className="rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <BrandTile branding={branding} className="h-11 w-11 rounded-[14px] text-[18px]" />
-      </Link>
-      <div className="mt-7 flex min-h-0 flex-1 flex-col items-center gap-2.5 overflow-y-auto">
+      <div className="flex flex-col items-center gap-2">
+        <Link href="/inbox" aria-label={branding.name} title={branding.name} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <BrandTile branding={branding} className="h-10 w-10 rounded-xl text-[17px] shadow-xs" />
+        </Link>
+        {onExpandir && (
+          <button
+            type="button"
+            onClick={onExpandir}
+            aria-label="Expandir barra lateral"
+            title="Expandir barra lateral"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-text-3 hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <PanelLeftOpen className="h-3.5 w-3.5" strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
+
+      <div className="mt-4 flex min-h-0 flex-1 flex-col items-center gap-2.5 overflow-y-auto px-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {groups.map((g, i) => (
           <div key={g.title ?? i} className="flex flex-col items-center gap-2.5">
-            {i > 0 && <span className="my-0.5 h-px w-6 bg-border" aria-hidden />}
+            {i > 0 && <span className="my-0.5 h-px w-5 bg-border/60" aria-hidden />}
             {g.items.map(boton)}
           </div>
         ))}
       </div>
-      <div className="mt-3 flex flex-col items-center gap-2.5">
-        <span className="flex h-11 w-11 items-center justify-center">{campana}</span>
+
+      <div className="mt-3 flex flex-col items-center gap-2.5 pt-2 border-t border-border/40 w-full">
+        <span className="flex h-9 w-9 items-center justify-center">{campana}</span>
         {boton(SETTINGS_ITEM)}
         <div ref={cuentaRef} className="relative">
           <button
@@ -482,7 +586,7 @@ function Riel({
             aria-expanded={cuenta}
             aria-haspopup="dialog"
             title={userName}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-riel-activo text-[13px] font-bold text-riel-activo-texto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-riel-activo text-[13px] font-bold text-riel-activo-texto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-xs hover:opacity-90 transition-opacity"
           >
             {initials(userName)}
           </button>
