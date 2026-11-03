@@ -1,4 +1,4 @@
--- 0029 — Menús interactivos, formato de tarjetas y guía PDF de inscripción
+-- 0029 — Menús interactivos y formato de tarjetas
 
 UPDATE "agent_profile"
 SET 
@@ -9,7 +9,7 @@ SET
 2️⃣ *Vóley Formativo y Competitivo* (6 a 16 años)
 3️⃣ *Baby Fútbol* (3 a 5 años)
 4️⃣ *Mamas Fit* (Acondicionamiento para mamás)
-5️⃣ *Guía paso a paso de Inscripción en PDF* 📄
+5️⃣ *¿Cómo inscribirme? (Paso a paso)* 📝
 6️⃣ *Hablar con un asesor humano* 👤
 
 _Escribe el número de la opción que deseas consultar._',
@@ -20,25 +20,27 @@ Si el usuario escribe un número (1, 2, 3, 4, 5, 6), responde inmediatamente a l
 - 2 (Vóley): pregunta la edad o año de nacimiento del alumno.
 - 3 (Baby Fútbol): brinda los horarios de Martes y Jueves 15:30 a 16:30 (S/ 100 mensual).
 - 4 (Mamas Fit): brinda los horarios de Lunes, Miércoles y Viernes 08:30 a 09:30 (S/ 60 mensual).
-- 5 (Guía PDF): comparte los 3 pasos de inscripción y el enlace de descarga directa en PDF: https://crm.jaguarescar.com/guia-inscripcion-jaguares.pdf.
+- 5 (Cómo inscribirme): explica los 3 pasos de inscripción rápida y comparte el enlace directo: https://jaguarescar.com.
 - 6 (Asesor humano): transfiere amablemente a un asesor.
 
 Usa SIEMPRE los horarios, cupos y precios vigentes del catálogo en vivo como tu única verdad. REGLA ESTRICTA: En Escuela Jaguares NO existen clases de prueba bajo ninguna circunstancia. PRIVACIDAD: Nunca des listas ni nombres de alumnos inscritos. El objetivo es canalizar al cliente a realizar su inscripción oficial 100% online en https://jaguarescar.com.',
 
   "updated_at" = NOW();
 
--- Actualizar o insertar respuesta sobre cómo inscribirse con la guía en PDF
+-- Actualizar o insertar respuesta sobre cómo inscribirse
 INSERT INTO "kb_entry" ("id", "organization_id", "kind", "question", "answer", "created_at", "updated_at")
 SELECT 
-  'kb_jaguares_guia_pdf_' || id,
+  'kb_jaguares_paso_paso_' || id,
   id,
   'qa',
-  '¿Tienen guía o instructivo de cómo inscribirse?',
-  '¡Sí! Puedes descargar nuestra Guía Oficial de Matrícula en PDF con capturas paso a paso desde el siguiente enlace:
-📥 https://crm.jaguarescar.com/guia-inscripcion-jaguares.pdf
+  '¿Cómo me inscribo paso a paso?',
+  'La inscripción se realiza 100% online en 3 sencillos pasos:
 
-Y completar la inscripción directamente en nuestra web oficial:
-🔗 https://jaguarescar.com',
+1️⃣ Ingresa a nuestra web oficial: https://jaguarescar.com y haz clic en «Inscríbete ahora».
+2️⃣ Selecciona la disciplina y el horario con vacantes disponibles.
+3️⃣ Completa los datos personales del alumno y apoderado para reservar tu vacante al instante.
+
+🔗 Enlace de inscripción: https://jaguarescar.com',
   NOW(),
   NOW()
 FROM "organization"
