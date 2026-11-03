@@ -95,7 +95,18 @@ export async function getCredentialsByOrg(
     .from(schema.metaCredentials)
     .where(scoped(schema.metaCredentials.organizationId, organizationId))
     .limit(1);
-  return rows[0] ? toCredentials(rows[0]) : null;
+  if (!rows[0]) return null;
+  const creds = toCredentials(rows[0]);
+  // Zernio no usa tokens de Meta Graph API: si quedó marcado reconnect_required por error, auto-reparar
+  if (creds.source === "zernio" && creds.status === "reconnect_required") {
+    creds.status = "connected";
+    await db
+      .update(schema.metaCredentials)
+      .set({ status: "connected", updatedAt: new Date() })
+      .where(scoped(schema.metaCredentials.organizationId, organizationId))
+      .catch(() => {});
+  }
+  return creds;
 }
 
 export async function saveCredentials(input: {

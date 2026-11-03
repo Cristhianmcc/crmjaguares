@@ -571,15 +571,15 @@ function CreateForm({
             disabled={saving || !name.trim() || !body.trim() || bodyError !== null}
             onClick={() => void create()}
           >
-            {saving ? "Enviando a Meta…" : "Crear y enviar a revisión"}
+            {saving ? "Guardando plantilla…" : "Guardar plantilla"}
           </Button>
           <Button variant="outline" disabled={saving} onClick={onCancel}>
             Cancelar
           </Button>
         </div>
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Cuando Meta la apruebe aparecerá en la Bandeja, lista para enviar.
+          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+          La plantilla queda guardada y lista para enviar desde la Bandeja o Campañas.
         </p>
       </CardContent>
     </Card>

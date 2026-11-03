@@ -13,9 +13,10 @@ import { publish } from "@/server/events/bus";
 import {
   getCredentialsByOrg,
   getCredentialsByWabaId,
+  marcarConectado,
   markReconnectRequired,
 } from "@/server/whatsapp/credentials";
-import { callGraphSend, SendError } from "@/server/inbox/send";
+import { callGraphSend, sendText, SendError } from "@/server/inbox/send";
 import { serializeMessage } from "@/server/inbox/ingest";
 import type { WebhookValue } from "@/server/inbox/webhook";
 
@@ -84,7 +85,13 @@ export async function createTemplate(
   if (!creds) {
     throw new TemplateError("not_connected", "Conecta tu número de WhatsApp primero");
   }
-  if (creds.status === "reconnect_required") {
+
+  // Si la conexión es por Zernio, auto-reparar estado si un intento previo de Meta lo descalibró
+  if (creds.source === "zernio") {
+    if (creds.status === "reconnect_required") {
+      await marcarConectado(organizationId).catch(() => {});
+    }
+  } else if (creds.status === "reconnect_required") {
     throw new TemplateError("reconnect_required", "Reconecta tu número antes de crear plantillas");
   }
 
@@ -94,50 +101,57 @@ export async function createTemplate(
     .replace(/[^a-z0-9_]/g, "");
   if (!name) throw new TemplateError("invalid", "Nombre de plantilla inválido");
 
-  // Meta pide un ejemplo por variable: si faltan, rechaza la plantilla. Uno
-  // realista («Ana», «martes 14») ayuda a que la aprueben; si el dueño no
-  // escribió alguno, va el genérico.
-  const variableCount = countVariables(input.body);
-  const examples = Array.from(
-    { length: variableCount },
-    (_, i) => input.examples?.[i]?.trim() || `ejemplo ${i + 1}`
-  );
   let waTemplateId: string | null = null;
-  try {
-    const res = await graphRequest<{ id?: string; status?: string }>(
-      `${creds.wabaId}/message_templates`,
-      {
-        method: "POST",
-        token: creds.token,
-        body: {
-          name,
-          language: input.language,
-          category: input.category,
-          components: [
-            {
-              type: "BODY",
-              text: input.body,
-              ...(variableCount > 0
-                ? { example: { body_text: [examples] } }
-                : {}),
-            },
-          ],
-        },
-      }
+  let status: "pending" | "approved" = "pending";
+
+  if (creds.source === "zernio") {
+    // En Zernio WhatsApp no existe revisión de Meta: la plantilla queda aprobada
+    // inmediatamente y lista para usar en la bandeja y campañas.
+    status = "approved";
+  } else {
+    // Meta Cloud API oficial: mandar a revisión de Meta
+    const variableCount = countVariables(input.body);
+    const examples = Array.from(
+      { length: variableCount },
+      (_, i) => input.examples?.[i]?.trim() || `ejemplo ${i + 1}`
     );
-    waTemplateId = res.id ?? null;
-  } catch (err) {
-    if (err instanceof MetaApiError) {
-      if (err.isAuthError) {
-        await markReconnectRequired(organizationId);
-        throw new TemplateError("reconnect_required", "El token expiró: reconecta el número");
+    try {
+      const res = await graphRequest<{ id?: string; status?: string }>(
+        `${creds.wabaId}/message_templates`,
+        {
+          method: "POST",
+          token: creds.token,
+          body: {
+            name,
+            language: input.language,
+            category: input.category,
+            components: [
+              {
+                type: "BODY",
+                text: input.body,
+                ...(variableCount > 0
+                  ? { example: { body_text: [examples] } }
+                  : {}),
+              },
+            ],
+          },
+        }
+      );
+      waTemplateId = res.id ?? null;
+      status = "pending";
+    } catch (err) {
+      if (err instanceof MetaApiError) {
+        if (err.isAuthError) {
+          await markReconnectRequired(organizationId);
+          throw new TemplateError("reconnect_required", "El token expiró: reconecta el número");
+        }
+        if (err.status === 0 || err.status >= 500) {
+          throw new TemplateError("meta_unavailable", "Meta no está disponible ahora");
+        }
+        throw new TemplateError("meta_error", err.message);
       }
-      if (err.status === 0 || err.status >= 500) {
-        throw new TemplateError("meta_unavailable", "Meta no está disponible ahora");
-      }
-      throw new TemplateError("meta_error", err.message);
+      throw err;
     }
-    throw err;
   }
 
   const db = getDb();
@@ -150,7 +164,7 @@ export async function createTemplate(
       language: input.language,
       category: input.category,
       body: input.body,
-      status: "pending",
+      status,
       waTemplateId,
     })
     .onConflictDoUpdate({
@@ -162,7 +176,7 @@ export async function createTemplate(
       set: {
         category: input.category,
         body: input.body,
-        status: "pending",
+        status,
         rejectionReason: null,
         waTemplateId,
         updatedAt: new Date(),
@@ -193,6 +207,11 @@ export async function syncTemplates(organizationId: string): Promise<number> {
   const creds = await getCredentialsByOrg(organizationId);
   if (!creds) {
     throw new TemplateError("not_connected", "Conecta tu número de WhatsApp primero");
+  }
+
+  // Zernio no sincroniza con WABA de Meta
+  if (creds.source === "zernio") {
+    return 0;
   }
 
   let data: {
@@ -348,8 +367,20 @@ export async function sendTemplate(input: {
 
   const creds = await getCredentialsByOrg(input.organizationId);
   if (!creds) throw new TemplateError("not_connected", "Sin número conectado");
-  if (creds.status === "reconnect_required") {
+  if (creds.status === "reconnect_required" && creds.source !== "zernio") {
     throw new TemplateError("reconnect_required", "Reconecta el número");
+  }
+
+  // Si la conexión es por Zernio, renderizar el texto y enviar con sendText()
+  if (creds.source === "zernio") {
+    const renderedText = renderBody(template.body, values);
+    const { messageId } = await sendText({
+      conversationId: input.conversationId,
+      organizationId: input.organizationId,
+      text: renderedText,
+      origin: "template",
+    });
+    return { messageId };
   }
 
   // 003: destinatario = teléfono normalizado o BSUID.
