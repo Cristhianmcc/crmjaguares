@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { atajoBandeja } from "@/lib/atajos";
 import { hayDialogoAbierto } from "@/components/atajos-globales";
@@ -18,6 +18,7 @@ import {
   Paperclip,
   Send,
   X,
+  Zap,
 } from "lucide-react";
 import type { ConversationDto, MessageDto, TemplateDto } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -234,6 +235,19 @@ export function Composer({
     setText(next.texto);
     setToken(null);
     setCerradoEn(null);
+  }
+
+  /** Acceso rápido a una respuesta (ej. chip estilo MiCierro) sin teclear `/`. */
+  function aplicarRespuestaDirecta(r: RespuestaRapida) {
+    const insercion = rellenarVariables(r.texto, conversation.contact.name);
+    setText((prev) => {
+      if (!prev.trim()) return insercion;
+      return prev.endsWith(" ") ? prev + insercion : prev + " " + insercion;
+    });
+    setTimeout(() => {
+      autogrow();
+      taRef.current?.focus();
+    }, 10);
   }
 
   /** 041 — El emoji entra en el cursor (o en lugar de la selección); no envía. */
@@ -664,6 +678,26 @@ export function Composer({
         </div>
       )}
 
+      {/* Accesos rápidos de respuestas estilo MiCierro */}
+      {respuestas && respuestas.length > 0 && !file && (
+        <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-[11px] font-semibold text-text-3">
+            <Zap className="h-3 w-3 text-amber-500" /> Respuestas:
+          </span>
+          {respuestas.slice(0, 5).map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className="shrink-0 rounded-full border border-border-strong bg-background px-2.5 py-0.5 text-xs font-medium text-text-2 transition-colors hover:border-brand hover:bg-brand-tint hover:text-brand-text active:scale-95"
+              onClick={() => aplicarRespuestaDirecta(r)}
+              title={r.texto}
+            >
+              /{r.atajo}
+            </button>
+          ))}
+        </div>
+      )}
+
       {replyTo && (
         <div
           data-replying-to={replyTo.id}
@@ -750,6 +784,26 @@ export function Composer({
           />
         )}
         <EmojiPicker disabled={sending} onSelect={insertEmoji} />
+        <button
+          type="button"
+          disabled={sending}
+          aria-label="Respuestas rápidas"
+          title="Respuestas rápidas (o escribe /)"
+          onClick={() => {
+            const el = taRef.current;
+            if (!el || sending) return;
+            const base = text.trim() === "" ? "/" : text.endsWith(" ") ? text + "/" : text + " /";
+            setText(base);
+            emojiCaret.current = base.length;
+            setTimeout(() => {
+              releerToken();
+              taRef.current?.focus();
+            }, 20);
+          }}
+          className="shrink-0 rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-amber-500"
+        >
+          <Zap className="h-[18px] w-[18px]" strokeWidth={1.7} />
+        </button>
         {/* 028: solo lo que el canal puede mandar; en las redes, la caja sola.
             045: ubicación y contacto ya no se ofrecen (el servidor los sigue
             sabiendo enviar, para un cerebro conectado). */}

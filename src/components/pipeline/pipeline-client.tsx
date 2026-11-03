@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -13,10 +13,19 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { MessageSquareText, Settings2, Trophy, XCircle } from "lucide-react";
+import {
+  MessageSquareText,
+  Search,
+  Settings2,
+  TrendingUp,
+  Trophy,
+  Users,
+  X,
+  XCircle,
+} from "lucide-react";
 import type { LossReason, PriorityValue, StageDto } from "@/lib/types";
 import { formatMoneyCents, sumable } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { cn, formatPhone } from "@/lib/utils";
 import { ContactAvatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { formatTime } from "@/components/inbox/helpers";
@@ -44,6 +53,32 @@ export function PipelineClient() {
   const [leads, setLeads] = useState<BoardLead[]>([]);
   const [activeLead, setActiveLead] = useState<BoardLead | null>(null);
   const [managing, setManaging] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const leadsFiltrados = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return leads;
+    const qDigits = q.replace(/\D/g, "");
+    return leads.filter((l) => {
+      const nameMatch = l.contact.name.toLowerCase().includes(q);
+      const phoneDigits = l.contact.phone ? l.contact.phone.replace(/\D/g, "") : "";
+      const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
+      return nameMatch || phoneMatch;
+    });
+  }, [leads, searchQuery]);
+
+  const pipelineMetrics = useMemo(() => {
+    let totalCents = 0;
+    for (const l of leads) {
+      if (
+        l.amountCents !== null &&
+        sumable({ amountCents: l.amountCents, currency: l.currency }, currency)
+      ) {
+        totalCents += l.amountCents;
+      }
+    }
+    return { totalCents };
+  }, [leads, currency]);
   /** Arrastre hacia una etapa perdida, esperando el motivo. */
   const [pendingLoss, setPendingLoss] = useState<{
     leadId: string;
@@ -172,11 +207,50 @@ export function PipelineClient() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3 sm:px-6 sm:py-4">
-        <h2 className="text-[17px] font-bold tracking-tight">Pipeline</h2>
-        <Button variant="outline" size="sm" onClick={() => setManaging(true)}>
-          <Settings2 className="h-4 w-4" /> Gestionar etapas
-        </Button>
+      <header className="flex flex-col gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-[17px] font-bold tracking-tight">Pipeline de Ventas</h2>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1 rounded-md border border-border-strong bg-subtle px-2 py-0.5 font-medium text-text-2">
+                <Users className="h-3.5 w-3.5 text-text-3" />
+                {searchQuery.trim()
+                  ? `${leadsFiltrados.length} de ${leads.length} prospectos`
+                  : `${leads.length} prospectos`}
+              </span>
+              <span className="flex items-center gap-1 rounded-md border border-brand/20 bg-brand-tint/60 px-2 py-0.5 font-semibold text-brand-text">
+                <TrendingUp className="h-3.5 w-3.5" />
+                {formatMoneyCents(pipelineMetrics.totalCents, currency)}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setManaging(true)}>
+              <Settings2 className="h-4 w-4" /> Gestionar etapas
+            </Button>
+          </div>
+        </div>
+
+        {/* Buscador rápido de prospectos estilo MiCierro */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre o teléfono (WhatsApp)..."
+            className="h-8 w-full rounded-md border border-border bg-background pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus:border-brand focus:ring-1 focus:ring-brand"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* El tablero se arrastra en horizontal; en el teléfono cada columna
@@ -195,7 +269,7 @@ export function PipelineClient() {
                 currency={currency}
                 onEditAmount={setEditandoMonto}
                 onOpen={(l) => setAbiertoId(l.id)}
-                leads={leads
+                leads={leadsFiltrados
                   .filter((l) => l.stageId === stage.id)
                   .sort((a, b) => a.position - b.position)}
               />
@@ -411,6 +485,20 @@ function DraggableLead({
   );
 }
 
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.477-.15-.678.15-.2.301-.778.98-.954 1.18-.176.2-.352.226-.653.075s-1.272-.469-2.423-1.496c-.896-.799-1.501-1.787-1.677-2.088-.176-.301-.019-.464.132-.614.135-.135.301-.352.452-.527.15-.176.2-.301.301-.502.101-.2.05-.377-.025-.527s-.678-1.634-.929-2.239c-.244-.589-.493-.509-.678-.519l-.578-.01c-.2 0-.527.075-.803.377s-1.054 1.03-1.054 2.511 1.079 2.912 1.23 3.113c.15.2 2.124 3.243 5.145 4.549.718.311 1.279.497 1.716.636.721.23 1.377.198 1.896.12.578-.088 1.78-.728 2.031-1.431.251-.703.251-1.305.176-1.431-.076-.126-.277-.201-.578-.352z" />
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.17L2 22l4.982-1.408A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2c-1.616 0-3.123-.483-4.385-1.313l-.314-.199-3.254.92.934-3.17-.207-.329A8.163 8.163 0 013.8 12c0-4.521 3.679-8.2 8.2-8.2 4.521 0 8.2 3.679 8.2 8.2 0 4.521-3.679 8.2-8.2 8.2z" />
+    </svg>
+  );
+}
+
 function LeadCard({
   lead,
   currency,
@@ -422,63 +510,101 @@ function LeadCard({
   overlay?: boolean;
   onEditAmount?: (lead: BoardLead) => void;
 }) {
+  const cleanPhone = lead.contact.phone ? lead.contact.phone.replace(/\D/g, "") : null;
+  const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
+
   return (
     <div
       className={cn(
-        "cursor-grab rounded-md border border-border-strong bg-card p-3 shadow-sm transition-shadow hover:shadow-md",
-        overlay && "rotate-2 shadow-pop"
+        "group cursor-grab rounded-lg border border-border-strong bg-card p-3 shadow-sm transition-all hover:border-brand/40 hover:shadow-md",
+        overlay && "rotate-2 shadow-pop ring-2 ring-brand"
       )}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-start gap-2.5">
         <ContactAvatar name={lead.contact.name} seed={lead.contact.id} size="sm" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-semibold">{lead.contact.name}</p>
+          <div className="flex items-center justify-between gap-1">
+            <p className="truncate text-sm font-semibold text-foreground group-hover:text-brand-text">
+              {lead.contact.name}
+            </p>
             {lead.priority && <PriorityBadge value={lead.priority} />}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+
+          {/* Teléfono formateado con WhatsApp estilo MiCierro */}
+          {lead.contact.phone && (
+            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+              <span
+                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.8)]"
+                title="Contacto con WhatsApp"
+              />
+              <span className="truncate">{formatPhone(lead.contact.phone)}</span>
+            </div>
+          )}
+
+          <p className="mt-0.5 text-[10.5px] text-muted-foreground">
             {lead.lastActivityAt
               ? `Actividad: ${formatTime(lead.lastActivityAt)}`
-              : "Sin actividad"}
+              : "Sin actividad reciente"}
           </p>
         </div>
-        {lead.conversationId && (
-          <Link
-            href={`/inbox?contact=${lead.contact.id}`}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Abrir conversación"
-            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <MessageSquareText className="h-4 w-4" />
-          </Link>
-        )}
       </div>
-      {!overlay && onEditAmount && (
-        <button
-          // `stopPropagation` en pointerdown: sin esto, tocar el monto empieza
-          // un arrastre y el diálogo nunca abre.
-          onPointerDown={(e) => e.stopPropagation()}
-          // También en `click`: sin esto, tocar el monto abriría además el
-          // cajón, porque el evento sigue subiendo hasta la tarjeta.
-          onClick={(e) => {
-            e.stopPropagation();
-            onEditAmount(lead);
-          }}
-          className={cn(
-            "mt-1.5 w-full rounded px-1 py-0.5 text-right text-xs tabular-nums hover:bg-accent",
-            lead.amountCents === null
-              ? "text-text-3"
-              : "font-semibold text-foreground"
+
+      {/* Acciones directas al pie de la tarjeta */}
+      {!overlay && (
+        <div className="mt-2.5 flex items-center justify-between gap-1.5 border-t border-border/60 pt-2">
+          <div className="flex items-center gap-1">
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                title={`Abrir WhatsApp Web directo con ${lead.contact.name}`}
+                className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10.5px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
+              >
+                <WhatsAppIcon className="h-3 w-3 fill-current" />
+                <span>WA</span>
+              </a>
+            )}
+            {lead.conversationId && (
+              <Link
+                href={`/inbox?contact=${lead.contact.id}`}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                title="Abrir conversación en CRM"
+                className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <MessageSquareText className="h-3 w-3" />
+                <span>Chat</span>
+              </Link>
+            )}
+          </div>
+
+          {onEditAmount && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditAmount(lead);
+              }}
+              className={cn(
+                "rounded px-1.5 py-0.5 text-right text-xs tabular-nums transition-colors hover:bg-accent",
+                lead.amountCents === null
+                  ? "text-text-3 font-normal"
+                  : "font-semibold text-foreground"
+              )}
+            >
+              {lead.amountCents === null
+                ? "+ monto"
+                : formatMoneyCents(lead.amountCents, lead.currency ?? currency)}
+            </button>
           )}
-        >
-          {lead.amountCents === null
-            ? "+ monto"
-            : formatMoneyCents(lead.amountCents, lead.currency ?? currency)}
-        </button>
+        </div>
       )}
+
       {overlay && lead.amountCents !== null && (
-        <p className="mt-1.5 text-right text-xs font-semibold tabular-nums">
+        <p className="mt-2 border-t pt-1.5 text-right text-xs font-semibold tabular-nums">
           {formatMoneyCents(lead.amountCents, lead.currency ?? currency)}
         </p>
       )}

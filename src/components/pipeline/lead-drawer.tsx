@@ -55,6 +55,8 @@ export function LeadDrawer({
 
   const contactId = lead.contact.id;
   const moneda = lead.currency ?? currency;
+  const cleanPhone = lead.contact.phone ? lead.contact.phone.replace(/\D/g, "") : null;
+  const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
   const cargarFicha = useCallback(async () => {
     const detail = await fetch(`/api/contacts/${contactId}`)
@@ -149,18 +151,31 @@ export function LeadDrawer({
               </div>
             </div>
 
-            {lead.conversationId ? (
-              <Link
-                href={`/inbox?contact=${lead.contact.id}`}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent"
-              >
-                <MessageSquareText className="h-4 w-4" /> Abrir conversación
-              </Link>
-            ) : (
-              <p className="mt-3 text-xs text-text-3">
-                Todavía no hay conversación con este contacto.
-              </p>
-            )}
+            <div className="mt-3 flex flex-col gap-2">
+              {lead.conversationId ? (
+                <Link
+                  href={`/inbox?contact=${lead.contact.id}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent"
+                >
+                  <MessageSquareText className="h-4 w-4" /> Abrir conversación en CRM
+                </Link>
+              ) : (
+                <p className="text-xs text-text-3">
+                  Todavía no hay conversación registrada en CRM.
+                </p>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                >
+                  <WhatsAppIcon className="h-4 w-4 fill-current" /> Abrir en WhatsApp Web / App
+                </a>
+              )}
+            </div>
 
             {anuncio && (
               <div className="mt-3">
@@ -277,5 +292,19 @@ export function LeadDrawer({
         </div>
       </aside>
     </>
+  );
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.477-.15-.678.15-.2.301-.778.98-.954 1.18-.176.2-.352.226-.653.075s-1.272-.469-2.423-1.496c-.896-.799-1.501-1.787-1.677-2.088-.176-.301-.019-.464.132-.614.135-.135.301-.352.452-.527.15-.176.2-.301.301-.502.101-.2.05-.377-.025-.527s-.678-1.634-.929-2.239c-.244-.589-.493-.509-.678-.519l-.578-.01c-.2 0-.527.075-.803.377s-1.054 1.03-1.054 2.511 1.079 2.912 1.23 3.113c.15.2 2.124 3.243 5.145 4.549.718.311 1.279.497 1.716.636.721.23 1.377.198 1.896.12.578-.088 1.78-.728 2.031-1.431.251-.703.251-1.305.176-1.431-.076-.126-.277-.201-.578-.352z" />
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.17L2 22l4.982-1.408A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2c-1.616 0-3.123-.483-4.385-1.313l-.314-.199-3.254.92.934-3.17-.207-.329A8.163 8.163 0 013.8 12c0-4.521 3.679-8.2 8.2-8.2 4.521 0 8.2 3.679 8.2 8.2 0 4.521-3.679 8.2-8.2 8.2z" />
+    </svg>
   );
 }
