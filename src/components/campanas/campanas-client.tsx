@@ -277,7 +277,7 @@ export function CampanasClient({ inicial = [] }: { inicial?: CampaignItem[] }) {
                         <CreditCard className="h-4 w-4" />
                         Renovación
                       </div>
-                      <span className="text-[11px] opacity-80">Alumnos inscritos en pipeline</span>
+                      <span className="text-[11px] opacity-80">Alumnos inscritos en el embudo</span>
                     </button>
                     <button
                       type="button"
@@ -376,7 +376,7 @@ export function CampanasClient({ inicial = [] }: { inicial?: CampaignItem[] }) {
             {/* Pie fijo con botones */}
             <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/20 shrink-0">
               <span className="text-xs text-muted-foreground hidden sm:inline">
-                {tipo === "renovacion" ? "🎯 Audiencia: Alumnos en pipeline" : "🎯 Audiencia: Toda la escuela"}
+                {tipo === "renovacion" ? "🎯 Audiencia: Alumnos en el embudo" : "🎯 Audiencia: Toda la escuela"}
               </span>
               <div className="flex items-center gap-3 ml-auto">
                 <Button

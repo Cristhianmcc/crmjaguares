@@ -210,7 +210,7 @@ export function PipelineClient() {
       <header className="flex flex-col gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-[17px] font-bold tracking-tight">Pipeline de Ventas</h2>
+            <h2 className="text-[17px] font-bold tracking-tight">Embudo de Ventas</h2>
             <div className="flex items-center gap-2 text-xs">
               <span className="flex items-center gap-1 rounded-md border border-border-strong bg-subtle px-2 py-0.5 font-medium text-text-2">
                 <Users className="h-3.5 w-3.5 text-text-3" />

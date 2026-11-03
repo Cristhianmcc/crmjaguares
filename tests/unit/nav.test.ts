@@ -20,7 +20,7 @@ describe("barra lateral agrupada", () => {
     const groups = appNavGroups({ role: "member" });
     expect(groups.map((g) => g.title)).toEqual(["Trabajo", "Agente", undefined]);
     expect(labels(groups)).toEqual([
-      ["Bandeja", "Pipeline", "Contactos", "Cupos", "Campañas"],
+      ["Bandeja", "Embudo", "Contactos", "Cupos", "Campañas"],
       ["Agente", "Laboratorio"],
       ["Resultados"],
     ]);
@@ -30,7 +30,7 @@ describe("barra lateral agrupada", () => {
     const [trabajo] = appNavGroups({ agenda: true, role: "member" });
     expect(trabajo!.items.map((i) => i.label)).toEqual([
       "Bandeja",
-      "Pipeline",
+      "Embudo",
       "Contactos",
       "Cupos",
       "Campañas",

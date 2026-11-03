@@ -60,7 +60,7 @@ export function appNavGroups({
 }): NavGroup[] {
   const trabajo: NavItem[] = [
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
-    { href: "/pipeline", label: "Pipeline", icon: Kanban },
+    { href: "/pipeline", label: "Embudo", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
     // La malla de horarios de la escuela: se consulta al contestar, no es una
     // pantalla de administración, por eso va con el trabajo del día.
