@@ -155,7 +155,8 @@ export async function sendZernioMessage(input: {
   token: string;
   accountId: string | null;
   conversationId: string | null;
-  text: string;
+  text?: string;
+  interactive?: Record<string, unknown>;
   /** Fuera de la ventana de 24 h, la única etiqueta admitida. */
   humanAgentTag?: boolean;
   idempotencyKey?: string;
@@ -169,8 +170,18 @@ export async function sendZernioMessage(input: {
 
   const body: Record<string, unknown> = {
     accountId: input.accountId,
-    message: input.text,
   };
+  if (input.text) {
+    body.message = input.text;
+  }
+  if (input.interactive) {
+    body.interactive = input.interactive;
+    if (!body.message) {
+      body.message =
+        (input.interactive.body as { text?: string })?.text ??
+        "Menú interactivo";
+    }
+  }
   if (input.humanAgentTag) {
     body.messagingType = "MESSAGE_TAG";
     body.messageTag = "HUMAN_AGENT";

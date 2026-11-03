@@ -191,6 +191,28 @@ export async function sendZernioWhatsappText(input: {
   return res.platformMessageId;
 }
 
+/** Responde con un mensaje interactivo (lista o botones) en WhatsApp vía Zernio. */
+export async function sendZernioWhatsappInteractive(input: {
+  token: string;
+  accountRef: string | null;
+  threadRef: string | null;
+  interactive: Record<string, unknown>;
+  idempotencyKey?: string;
+}): Promise<string> {
+  const bodyText =
+    (input.interactive.body as { text?: string })?.text ??
+    "Menú de disciplinas Jaguares";
+  const res = await sendZernioMessage({
+    token: input.token,
+    accountId: input.accountRef,
+    conversationId: input.threadRef,
+    text: bodyText,
+    interactive: input.interactive,
+    idempotencyKey: input.idempotencyKey,
+  });
+  return res.platformMessageId;
+}
+
 /** Secreto de firma de la cuenta que manda el evento, para validarla antes. */
 export async function resolveZernioWhatsappSecret(rawBody: string): Promise<{
   secret: string | null;

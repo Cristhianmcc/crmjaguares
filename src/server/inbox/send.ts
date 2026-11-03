@@ -10,7 +10,10 @@ import {
   markReconnectRequired,
   type Credentials,
 } from "@/server/whatsapp/credentials";
-import { sendZernioWhatsappText } from "@/server/whatsapp/zernio";
+import {
+  sendZernioWhatsappText,
+  sendZernioWhatsappInteractive,
+} from "@/server/whatsapp/zernio";
 import { isWindowOpen, replyWindow } from "@/server/inbox/window";
 import { plainSocialText } from "@/lib/social-text";
 import { IG_PREFIX } from "@/server/inbox/identity";
@@ -757,6 +760,59 @@ export async function sendStructured(
     media: asset,
     cita,
   });
+  return { messageId };
+}
+
+/** Envía un mensaje interactivo (ej. Lista desplegable) por WhatsApp. */
+export async function sendInteractiveList(input: {
+  conversationId: string;
+  organizationId: string;
+  interactive: Record<string, unknown>;
+  replyToMessageId?: string;
+}): Promise<SendResult> {
+  const target = await prepareSend(
+    input.conversationId,
+    input.organizationId,
+    true
+  );
+  const cita = await resolverMensajeCitado(target, input.replyToMessageId);
+
+  let waMessageId: string;
+  if (target.credentials?.source === "zernio") {
+    waMessageId = await sendZernioWhatsappInteractive({
+      token: target.credentials.token,
+      accountRef: target.credentials.accountRef,
+      threadRef: target.conversation.channelThreadRef,
+      interactive: input.interactive,
+    });
+  } else if (target.credentials) {
+    waMessageId = await callGraphSend(
+      target.credentials,
+      conCita(
+        {
+          messaging_product: "whatsapp",
+          ...target.destinatario,
+          type: "interactive",
+          interactive: input.interactive,
+        },
+        cita?.message.waMessageId
+      )
+    );
+  } else {
+    throw new SendError("not_connected", "No hay canal conectado");
+  }
+
+  const messageId = await persistOutbound({
+    organizationId: input.organizationId,
+    conversationId: input.conversationId,
+    waMessageId,
+    type: "interactive",
+    text: "📋 Menú de disciplinas y opciones",
+    status: target.credentials?.source === "zernio" ? "sent" : "pending",
+    aiGenerated: true,
+    origin: "ai",
+  });
+
   return { messageId };
 }
 

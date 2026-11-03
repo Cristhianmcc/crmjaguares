@@ -8,7 +8,11 @@ import { chatJson, type ChatMessage } from "@/lib/ai";
 import { isAiConfiguredFor } from "@/lib/ai/provider";
 import { publish } from "@/server/events/bus";
 import { isWindowOpen } from "@/server/inbox/window";
-import { SendError, sendText } from "@/server/inbox/send";
+import { SendError, sendInteractiveList, sendText } from "@/server/inbox/send";
+import {
+  MENU_INTERACTIVO_JAGUARES,
+  TEXTO_MENU_JAGUARES,
+} from "@/server/ai/menu";
 import {
   agentActionSchema,
   degradeAction,
@@ -283,6 +287,10 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
   switch (action.action) {
     case "none":
       return;
+    case "show_menu": {
+      await deliverInteractiveMenu(conversation, action.intro);
+      return;
+    }
     case "reply":
       await deliverReply(conversation, action.text);
       return;
@@ -302,6 +310,46 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
 }
 
 type Conversation = typeof schema.conversation.$inferSelect;
+
+/** Entrega el menú desplegable interactivo de WhatsApp con fallback a texto. */
+async function deliverInteractiveMenu(
+  conversation: Conversation,
+  intro?: string
+): Promise<void> {
+  if (conversation.isTest) {
+    if (intro) await persistTestOutbound(conversation, intro);
+    await persistTestOutbound(conversation, TEXTO_MENU_JAGUARES);
+    return;
+  }
+
+  if (intro) {
+    await deliverReply(conversation, intro);
+    await new Promise((r) => setTimeout(r, 600));
+  }
+
+  try {
+    await sendInteractiveList({
+      conversationId: conversation.id,
+      organizationId: conversation.organizationId,
+      interactive: {
+        type: "list",
+        header: { type: "text", text: MENU_INTERACTIVO_JAGUARES.header },
+        body: { text: MENU_INTERACTIVO_JAGUARES.body },
+        footer: { text: MENU_INTERACTIVO_JAGUARES.footer },
+        action: {
+          button: MENU_INTERACTIVO_JAGUARES.button,
+          sections: MENU_INTERACTIVO_JAGUARES.sections,
+        },
+      },
+    });
+  } catch (err) {
+    console.warn(
+      "[agente] envío de lista interactiva falló, usando texto:",
+      err
+    );
+    await deliverReply(conversation, TEXTO_MENU_JAGUARES);
+  }
+}
 
 /** Entrega la respuesta: envío real o persistencia sandbox (is_test). */
 async function deliverReply(

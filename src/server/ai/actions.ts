@@ -9,6 +9,10 @@ const baseActions = [
   z.object({ action: z.literal("none") }),
   z.object({ action: z.literal("reply"), text: z.string().min(1) }),
   z.object({
+    action: z.literal("show_menu"),
+    intro: z.string().optional(),
+  }),
+  z.object({
     action: z.literal("update_lead"),
     note: z.string().min(1),
     reply: z.string().optional(),
