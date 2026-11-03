@@ -446,11 +446,12 @@ export function CampanasClient({ inicial = [] }: { inicial?: CampaignItem[] }) {
                       Enviar ahora
                     </Button>
                   )}
-                  {c.status === "borrador" && (
+                  {c.status !== "enviando" && (
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => handleEliminar(c.id)}
+                      title="Eliminar campaña"
                       className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />

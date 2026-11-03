@@ -296,21 +296,6 @@ async function prepareSend(
     };
   }
 
-  // El nucleo no decide la politica: la consulta. WhatsApp exige plantilla
-  // fuera de ventana; Instagram etiqueta y sigue; otro canal podria no tener
-  // ventana en absoluto.
-  const caps = capabilitiesFor(row.conversation.channel);
-  if (
-    caps.windowMs !== null &&
-    caps.outsideWindow === "template" &&
-    !isWindowOpen(row.conversation.lastInboundAt)
-  ) {
-    throw new SendError(
-      "window_closed",
-      windowClosedMessage(row.conversation.channel)
-    );
-  }
-
   const credentials = await getCredentialsByOrg(organizationId);
   if (!credentials) {
     throw new SendError("not_connected", "No hay número de WhatsApp conectado");
@@ -319,6 +304,21 @@ async function prepareSend(
     throw new SendError(
       "reconnect_required",
       "El token de WhatsApp expiró: reconecta el número en Configuración"
+    );
+  }
+
+  // El nucleo no decide la politica: la consulta. WhatsApp exige plantilla
+  // fuera de ventana; Instagram etiqueta y sigue; Zernio sesion no tiene ventana.
+  const caps = capabilitiesFor(row.conversation.channel);
+  if (
+    caps.windowMs !== null &&
+    caps.outsideWindow === "template" &&
+    credentials.source !== "zernio" &&
+    !isWindowOpen(row.conversation.lastInboundAt)
+  ) {
+    throw new SendError(
+      "window_closed",
+      windowClosedMessage(row.conversation.channel)
     );
   }
 
@@ -418,7 +418,7 @@ async function persistOutbound(input: {
   status: "pending" | "sent" | "failed";
   error?: string | null;
   aiGenerated?: boolean;
-  origin: "ai" | "operator";
+  origin: "ai" | "operator" | "manual" | "template";
   mediaAssetId?: string | null;
   media?: typeof schema.mediaAsset.$inferSelect | null;
   /** 039: el mensaje citado, ya validado por `resolverMensajeCitado`. */
@@ -469,6 +469,7 @@ export async function sendText(input: {
   aiGenerated?: boolean;
   /** 039: id local del mensaje al que se responde citando. */
   replyToMessageId?: string;
+  origin?: "ai" | "operator" | "manual" | "template";
 }): Promise<SendResult> {
   const target = await prepareSend(
     input.conversationId,
@@ -533,7 +534,7 @@ export async function sendText(input: {
         ? "pending"
         : "sent",
     aiGenerated: input.aiGenerated,
-    origin: input.aiGenerated ? "ai" : "operator",
+    origin: input.origin ?? (input.aiGenerated ? "ai" : "operator"),
     cita,
   });
 

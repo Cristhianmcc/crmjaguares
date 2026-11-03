@@ -14,6 +14,7 @@ import { apiError, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { scoped } from "@/lib/db/tenant";
+import { sendText } from "@/server/inbox/send";
 
 export const dynamic = "force-dynamic";
 
@@ -164,21 +165,18 @@ export const POST = withAuth(async (session, _req, ctx) => {
           .where(eq(schema.conversation.id, conv.id));
       }
 
-      // Registrar mensaje en la bandeja
-      const msgId = newId("message");
-      await db.insert(schema.message).values({
-        id: msgId,
-        organizationId: session.organizationId,
+      // Despachar el mensaje real a través de WhatsApp (Zernio / Meta) y registrar en la bandeja
+      await sendText({
         conversationId,
-        direction: "out",
-        type: "text",
+        organizationId: session.organizationId,
         text: textoPersonalizado,
-        status: "sent",
         origin: "template",
-        createdAt: now,
       });
 
       sentCount++;
+
+      // Pausa ligera entre envíos (300ms) para respetar límites de tasa de la API
+      await new Promise((resolve) => setTimeout(resolve, 300));
     } catch (err) {
       console.error(`[campaign ${id}] error enviando a ${c.id}:`, err);
       errorCount++;
