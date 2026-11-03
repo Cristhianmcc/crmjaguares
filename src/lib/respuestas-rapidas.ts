@@ -4,7 +4,15 @@
  * filtrar la lista, reemplazarlo por el texto y rellenar `{nombre}`.
  */
 
-export type RespuestaRapida = { id: string; atajo: string; texto: string };
+export type RespuestaRapida = {
+  id: string;
+  atajo: string;
+  texto: string;
+  mediaUrl?: string | null;
+  mediaName?: string | null;
+  mediaType?: string | null;
+  mediaSize?: number | null;
+};
 
 export const ATAJO_MAX = 32;
 export const TEXTO_MAX = 4096;

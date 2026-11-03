@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,14 @@ export function QuickRepliesClient() {
   const [editando, setEditando] = useState<string | null>(null);
   const [atajo, setAtajo] = useState("");
   const [texto, setTexto] = useState("");
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaName, setMediaName] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<string | null>(null);
+  const [mediaSize, setMediaSize] = useState<number | null>(null);
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cargar = useCallback(async () => {
     const res = await fetch("/api/quick-replies").catch(() => null);
@@ -43,7 +49,38 @@ export function QuickRepliesClient() {
     setEditando(r?.id ?? "");
     setAtajo(r?.atajo ?? "");
     setTexto(r?.texto ?? "");
+    setMediaUrl(r?.mediaUrl ?? null);
+    setMediaName(r?.mediaName ?? null);
+    setMediaType(r?.mediaType ?? null);
+    setMediaSize(r?.mediaSize ?? null);
     setError(null);
+  }
+
+  async function subirAdjunto(file: File) {
+    setSubiendoArchivo(true);
+    setError(null);
+    const form = new FormData();
+    form.set("file", file);
+    const res = await fetch("/api/quick-replies/upload", {
+      method: "POST",
+      body: form,
+    }).catch(() => null);
+    setSubiendoArchivo(false);
+    if (!res?.ok) {
+      const d = (await res?.json().catch(() => null)) as { error?: { message?: string } } | null;
+      setError(d?.error?.message ?? "No se pudo subir el archivo adjunto.");
+      return;
+    }
+    const data = (await res.json()) as {
+      url: string;
+      name: string;
+      type: string;
+      size: number;
+    };
+    setMediaUrl(data.url);
+    setMediaName(data.name);
+    setMediaType(data.type);
+    setMediaSize(data.size);
   }
 
   async function guardar() {
@@ -53,7 +90,14 @@ export function QuickRepliesClient() {
     const res = await fetch(nueva ? "/api/quick-replies" : `/api/quick-replies/${editando}`, {
       method: nueva ? "POST" : "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ atajo, texto }),
+      body: JSON.stringify({
+        atajo,
+        texto,
+        mediaUrl,
+        mediaName,
+        mediaType,
+        mediaSize,
+      }),
     }).catch(() => null);
     setGuardando(false);
     if (!res?.ok) {
@@ -98,7 +142,15 @@ export function QuickRepliesClient() {
               {lista.map((r) => (
                 <li key={r.id} className="flex items-start gap-3 px-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="font-mono text-[13px] font-semibold">/{r.atajo}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-[13px] font-semibold">/{r.atajo}</p>
+                      {r.mediaUrl && (
+                        <span className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-[11px] font-medium text-foreground">
+                          <Paperclip className="h-3 w-3 text-brand" />
+                          <span className="truncate max-w-[160px]">{r.mediaName || "Archivo adjunto"}</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="whitespace-pre-wrap break-words text-sm text-text-2">{r.texto}</p>
                   </div>
                   {puedeEditar && (
@@ -149,6 +201,56 @@ export function QuickRepliesClient() {
                   maxLength={TEXTO_MAX}
                   placeholder="Abrimos de lunes a sábado de 8:00 a 19:00."
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Archivo adjunto (opcional)</Label>
+                {mediaUrl ? (
+                  <div className="flex items-center gap-2 rounded-md border bg-background p-2 text-xs">
+                    <Paperclip className="h-4 w-4 shrink-0 text-brand" />
+                    <span className="truncate font-medium flex-1">{mediaName || "Archivo adjunto"}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setMediaUrl(null);
+                        setMediaName(null);
+                        setMediaType(null);
+                        setMediaSize(null);
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" /> Quitar
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void subirAdjunto(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={subiendoArchivo}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {subiendoArchivo ? "Subiendo archivo..." : "Adjuntar foto o documento (PDF, imagen, video)"}
+                    </Button>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Al usar este atajo en la bandeja, el archivo se adjuntará automáticamente al chat.
+                    </p>
+                  </div>
+                )}
               </div>
               {error && (
                 <p role="alert" className="text-xs text-destructive">

@@ -235,6 +235,22 @@ export function Composer({
     setText(next.texto);
     setToken(null);
     setCerradoEn(null);
+    if (r.mediaUrl) void cargarAdjuntoDeRespuesta(r);
+  }
+
+  /** Descarga el adjunto asociado a una respuesta rápida y lo prepara en el compositor. */
+  async function cargarAdjuntoDeRespuesta(r: RespuestaRapida) {
+    if (!r.mediaUrl) return;
+    try {
+      const res = await fetch(r.mediaUrl);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const filename = r.mediaName || "adjunto";
+      const file = new File([blob], filename, { type: r.mediaType || blob.type });
+      pickFile(file);
+    } catch {
+      // Si falla cargar el adjunto, el texto de la respuesta se mantiene
+    }
   }
 
   /** Acceso rápido a una respuesta (ej. chip estilo MiCierro) sin teclear `/`. */
@@ -244,6 +260,7 @@ export function Composer({
       if (!prev.trim()) return insercion;
       return prev.endsWith(" ") ? prev + insercion : prev + " " + insercion;
     });
+    if (r.mediaUrl) void cargarAdjuntoDeRespuesta(r);
     setTimeout(() => {
       autogrow();
       taRef.current?.focus();
@@ -688,11 +705,12 @@ export function Composer({
             <button
               key={r.id}
               type="button"
-              className="shrink-0 rounded-full border border-border-strong bg-background px-2.5 py-0.5 text-xs font-medium text-text-2 transition-colors hover:border-brand hover:bg-brand-tint hover:text-brand-text active:scale-95"
+              className="inline-flex items-center gap-1 shrink-0 rounded-full border border-border-strong bg-background px-2.5 py-0.5 text-xs font-medium text-text-2 transition-colors hover:border-brand hover:bg-brand-tint hover:text-brand-text active:scale-95"
               onClick={() => aplicarRespuestaDirecta(r)}
               title={r.texto}
             >
-              /{r.atajo}
+              <span>/{r.atajo}</span>
+              {r.mediaUrl && <Paperclip className="h-2.5 w-2.5 text-brand shrink-0" />}
             </button>
           ))}
         </div>

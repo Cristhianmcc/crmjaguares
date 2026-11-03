@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { Paperclip } from "lucide-react";
 import type { RespuestaRapida } from "@/lib/respuestas-rapidas";
 import { cn } from "@/lib/utils";
 
@@ -86,11 +87,17 @@ export function QuickReplyMenu({
             >
               <span
                 className={cn(
-                  "font-mono text-[12.5px] font-semibold",
+                  "font-mono text-[12.5px] font-semibold flex items-center justify-between gap-1",
                   i === activa ? "text-brand-text" : "text-foreground"
                 )}
               >
-                /{r.atajo}
+                <span>/{r.atajo}</span>
+                {r.mediaUrl && (
+                  <span className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[10.5px] font-sans font-normal text-muted-foreground">
+                    <Paperclip className="h-3 w-3 text-brand" />
+                    <span className="max-w-[120px] truncate">{r.mediaName || "Adjunto"}</span>
+                  </span>
+                )}
               </span>
               <span className="line-clamp-2 text-[13px] text-text-2">{r.texto}</span>
             </li>

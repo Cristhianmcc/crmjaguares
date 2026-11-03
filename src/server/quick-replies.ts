@@ -35,10 +35,22 @@ export const respuestaSchema = z.object({
       message: "el atajo lleva de 1 a 32 letras, números, - o _",
     }),
   texto: z.string().trim().min(1, "el texto no puede ir vacío").max(TEXTO_MAX),
+  mediaUrl: z.string().nullable().optional(),
+  mediaName: z.string().nullable().optional(),
+  mediaType: z.string().nullable().optional(),
+  mediaSize: z.number().nullable().optional(),
 });
 
 function aDto(fila: typeof schema.quickReply.$inferSelect): RespuestaRapida {
-  return { id: fila.id, atajo: fila.atajo, texto: fila.texto };
+  return {
+    id: fila.id,
+    atajo: fila.atajo,
+    texto: fila.texto,
+    mediaUrl: fila.mediaUrl,
+    mediaName: fila.mediaName,
+    mediaType: fila.mediaType,
+    mediaSize: fila.mediaSize,
+  };
 }
 
 function esDuplicado(err: unknown): boolean {

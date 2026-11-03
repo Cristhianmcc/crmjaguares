@@ -1361,6 +1361,11 @@ export const quickReply = pgTable(
     atajo: text("atajo").notNull(),
     /** Hasta 4 096 caracteres (el tope de WhatsApp). Admite `{nombre}`. */
     texto: text("texto").notNull(),
+    /** Adjunto multimedia opcional (imagen, documento, flyer, etc.) */
+    mediaUrl: text("media_url"),
+    mediaName: text("media_name"),
+    mediaType: text("media_type"),
+    mediaSize: integer("media_size"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
