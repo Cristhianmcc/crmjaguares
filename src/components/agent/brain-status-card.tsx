@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 /**
  * «Quién responde a tus clientes»: arriba de la pantalla del Agente.
  *
- * 036 — Vocero no trae agente: contesta el cerebro que se conecta al lado
+ * 036 — Monterrial no trae agente: contesta el cerebro que se conecta al lado
  * (Nea u otro) y solo si el interruptor de esta página está encendido (el CRM
- * le despacha). Sin cerebro, Vocero es una bandeja manual: el aviso
+ * le despacha). Sin cerebro, Monterrial es una bandeja manual: el aviso
  * `sin_cerebro` informa, no alarma. Con cerebro y el interruptor apagado,
  * `apagado` sí avisa: nadie contesta en automático.
  */

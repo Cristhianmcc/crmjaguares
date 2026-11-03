@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, copyFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
@@ -21,7 +21,7 @@ const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Guía de Usuario - Jaguares CRM</title>
+  <title>Guía de Usuario - Monterrial CRM</title>
   <style>
     @page {
       size: A4;
@@ -65,9 +65,9 @@ const html = `<!DOCTYPE html>
     .cover-badge {
       display: inline-block;
       padding: 6px 16px;
-      background: rgba(245, 158, 11, 0.2);
-      border: 1px solid rgba(245, 158, 11, 0.5);
-      color: #fbbf24;
+      background: rgba(13, 91, 255, 0.25);
+      border: 1px solid rgba(13, 91, 255, 0.6);
+      color: #60a5fa;
       font-weight: 700;
       font-size: 10pt;
       text-transform: uppercase;
@@ -84,7 +84,7 @@ const html = `<!DOCTYPE html>
       letter-spacing: -1px;
     }
     .cover-title span {
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -98,117 +98,113 @@ const html = `<!DOCTYPE html>
     .cover-footer {
       margin-top: auto;
       font-size: 9.5pt;
-      color: #94a3b8;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 20px;
-      width: 80%;
+      color: #64748b;
       display: flex;
       justify-content: space-between;
+      width: 100%;
+      max-width: 520px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 16px;
     }
-
-    /* Encabezados de página */
+    /* Estructura de Páginas de Módulos */
     .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 8px;
-      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f1f5f9;
+      margin-bottom: 18px;
     }
     .header-tag {
-      font-size: 8.5pt;
-      font-weight: 800;
+      font-size: 9pt;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #d97706;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 3px 10px;
+      border-radius: 12px;
     }
     .header-doc {
-      font-size: 8.5pt;
-      color: #64748b;
+      font-size: 9pt;
+      color: #94a3b8;
+      font-weight: 500;
     }
-
     .section-title {
       font-size: 18pt;
       font-weight: 800;
       color: #0f172a;
-      margin-bottom: 6px;
       letter-spacing: -0.5px;
+      margin-bottom: 6px;
     }
     .section-desc {
       font-size: 10pt;
       color: #475569;
-      margin-bottom: 14px;
-      line-height: 1.45;
+      margin-bottom: 16px;
+      line-height: 1.4;
     }
-
-    /* Imagen con marco */
+    /* Contenedor de Capturas */
     .screenshot-container {
-      width: 100%;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      margin-bottom: 14px;
       background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px -2px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 140mm;
     }
     .screenshot-img {
       width: 100%;
       height: auto;
       display: block;
+      object-fit: contain;
     }
-
-    /* Tarjetas de puntos destacados */
+    /* Parrilla de Puntos Clave */
     .features-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-top: 8px;
+      margin-bottom: 14px;
     }
     .feature-card {
-      background: #f8fafc;
+      background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-left: 3.5px solid #d97706;
-      border-radius: 6px;
-      padding: 9px 12px;
+      border-left: 4px solid #0d5bff;
+      border-radius: 8px;
+      padding: 10px 14px;
     }
     .feature-card.green {
       border-left-color: #10b981;
     }
     .feature-card.blue {
-      border-left-color: #2563eb;
+      border-left-color: #0284c7;
     }
     .feature-title {
-      font-weight: 700;
       font-size: 9.5pt;
+      font-weight: 700;
       color: #0f172a;
-      margin-bottom: 2px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      margin-bottom: 3px;
     }
     .feature-desc {
       font-size: 8.5pt;
-      color: #475569;
+      color: #64748b;
       line-height: 1.35;
     }
-
-    /* Consejos pro */
     .tip-box {
-      margin-top: 10px;
-      background: #fef3c7;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-      padding: 8px 12px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 10px 14px;
       font-size: 8.5pt;
-      color: #92400e;
+      color: #1e40af;
       display: flex;
-      align-items: center;
       gap: 8px;
+      align-items: flex-start;
+      margin-top: auto;
     }
-    .tip-box strong {
-      color: #78350f;
-    }
-
     .footer-page {
       position: absolute;
       bottom: 0;
@@ -228,17 +224,17 @@ const html = `<!DOCTYPE html>
   <!-- PORTADA -->
   <div class="page cover">
     <div class="cover-badge">Guía Oficial de Usuario</div>
-    <h1 class="cover-title">Jaguares CRM<br><span>WhatsApp & Ventas</span></h1>
+    <h1 class="cover-title">Monterrial CRM<br><span>WhatsApp & Ventas</span></h1>
     <p class="cover-subtitle">Manual práctico ilustrado paso a paso para el equipo comercial y atención al cliente.</p>
     <div style="background: rgba(255,255,255,0.06); padding: 18px 24px; border-radius: 10px; max-width: 480px; text-align: left; margin-bottom: 20px; font-size: 9pt; color: #e2e8f0; line-height: 1.6;">
       ✓ Bandeja multicanal con respuestas rápidas y archivos adjuntos.<br>
-      ✓ Embudo de ventas visual (Kanban) con atajos a WhatsApp.<br>
+      ✓ Embudo de ventas visual (Kanban) con atajos directos a WhatsApp.<br>
       ✓ Catálogo de cupos y horarios en tiempo real.<br>
       ✓ Campañas masivas oficiales de WhatsApp sin riesgo de baneo.<br>
       ✓ Agente de Inteligencia Artificial que atiende 24/7.
     </div>
     <div class="cover-footer">
-      <span>Escuela Deportiva Jaguares &copy; 2026</span>
+      <span>Monterrial CRM &copy; 2026</span>
       <span>Versión 2.5 Comercial</span>
     </div>
   </div>
@@ -247,7 +243,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 1 · Atención en Vivo</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Bandeja de Entrada y Respuestas Rápidas</h2>
     <p class="section-desc">El centro neurálgico donde los asesores atienden todas las conversaciones en tiempo real, usan respuestas frecuentes y activan al asistente inteligente.</p>
@@ -281,7 +277,7 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 2</span>
     </div>
   </div>
@@ -290,7 +286,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 2 · Gestión Comercial</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Embudo de Ventas (Pipeline Kanban)</h2>
     <p class="section-desc">Tu tablero visual para no perder ningún prospecto. Organiza cada contacto según la fase en la que se encuentra y mide el valor de tu cartera.</p>
@@ -310,7 +306,7 @@ const html = `<!DOCTYPE html>
       </div>
       <div class="feature-card blue">
         <div class="feature-title">✋ Arrastre Fluido (Drag & Drop)</div>
-        <div class="feature-desc">Mueve los prospectos con el mouse o en tu tablet entre etapas (<i>Nuevo ➔ Cupos ➔ Clase de Prueba ➔ Inscrito</i>) para actualizar el estado del trato.</div>
+        <div class="feature-desc">Mueve los prospectos con el mouse o en tu tablet entre etapas (<i>Nuevo ➔ Cupos ➔ Link Enviado ➔ Inscrito</i>) para actualizar el estado del trato.</div>
       </div>
       <div class="feature-card">
         <div class="feature-title">💰 Montos y Métricas de Dinero</div>
@@ -324,7 +320,7 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 3</span>
     </div>
   </div>
@@ -333,7 +329,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 3 · Consulta en Vivo</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Cupos y Horarios en Tiempo Real</h2>
     <p class="section-desc">Permite a los asesores consultar vacantes y horarios disponibles en vivo sin tener que abrir otras pestañas, hojas de Excel o consultar al coordinador.</p>
@@ -363,11 +359,11 @@ const html = `<!DOCTYPE html>
 
     <div class="tip-box">
       <span>⚡</span>
-      <span><strong>Rapidez de Atención:</strong> Responder al cliente en menos de 2 minutos sobre vacantes disponibles multiplica por 3 la probabilidad de que asista a la clase de prueba.</span>
+      <span><strong>Rapidez de Atención:</strong> Responder al cliente en menos de 2 minutos sobre vacantes disponibles multiplica por 3 la probabilidad de que asista a la clase o concrete la matrícula.</span>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 4</span>
     </div>
   </div>
@@ -376,7 +372,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 4 · Marketing y Difusión</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Campañas Masivas por WhatsApp</h2>
     <p class="section-desc">Comunícate con decenas o cientos de contactos en minutos para promocionar nuevos ciclos, enviar recordatorios de pago o anunciar eventos importantes.</p>
@@ -392,7 +388,7 @@ const html = `<!DOCTYPE html>
       </div>
       <div class="feature-card">
         <div class="feature-title">🎯 Segmentación de Audiencias</div>
-        <div class="feature-desc">Elige enviar solo a prospectos en el embudo, a alumnos matriculados, a listas específicas o a toda la base de contactos de la escuela.</div>
+        <div class="feature-desc">Elige enviar solo a prospectos en el embudo, a alumnos matriculados, a listas específicas o a toda la base de contactos.</div>
       </div>
       <div class="feature-card blue">
         <div class="feature-title">📱 Mockup Realista de WhatsApp</div>
@@ -405,7 +401,7 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 5</span>
     </div>
   </div>
@@ -414,7 +410,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 5 · Automatización y Productividad</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Respuestas Rápidas con Fotos y PDFs</h2>
     <p class="section-desc">Configura los mensajes que se envían repetitivamente e incluye fotos, brochures y documentos para que tu equipo los comparta en un abrir y cerrar de ojos.</p>
@@ -430,7 +426,7 @@ const html = `<!DOCTYPE html>
       </div>
       <div class="feature-card">
         <div class="feature-title">🏷️ Atajos Fáciles de Recordar</div>
-        <div class="feature-desc">Crea atajos claros como <code>/sedes</code>, <code>/horarios</code>, <code>/requisitos</code> o <code>/promocion</code> para que todo el equipo hable el mismo idioma.</div>
+        <div class="feature-desc">Crea atajos claros como <code>/sedes</code>, <code>/cupos</code>, <code>/requisitos</code> o <code>/inscripcion</code> para que todo el equipo hable el mismo idioma.</div>
       </div>
       <div class="feature-card blue">
         <div class="feature-title">👤 Variable Automática {nombre}</div>
@@ -443,7 +439,7 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 6</span>
     </div>
   </div>
@@ -452,7 +448,7 @@ const html = `<!DOCTYPE html>
   <div class="page">
     <div class="header-bar">
       <span class="header-tag">Módulo 6 · Inteligencia Artificial 24/7</span>
-      <span class="header-doc">Jaguares CRM — Manual de Usuario</span>
+      <span class="header-doc">Monterrial CRM — Manual de Usuario</span>
     </div>
     <h2 class="section-title">Agente IA y Atención Ininterrumpida</h2>
     <p class="section-desc">Tu asistente virtual atiende al instante, resuelve preguntas sobre precios y ubicación, y guía a los clientes mientras el equipo comercial descansa.</p>
@@ -482,11 +478,11 @@ const html = `<!DOCTYPE html>
 
     <div class="tip-box" style="margin-top: 14px; background: #ecfdf5; border-color: #a7f3d0; color: #065f46;">
       <span>🏆</span>
-      <span><strong>¡Tu negocio está listo para despegar!</strong> Con Jaguares CRM no se pierde ningún prospecto, tus tiempos de respuesta son inmediatos y tienes el control total de tus ventas por WhatsApp.</span>
+      <span><strong>¡Tu negocio está listo para despegar!</strong> Con Monterrial CRM no se pierde ningún prospecto, tus tiempos de respuesta son inmediatos y tienes el control total de tus ventas por WhatsApp.</span>
     </div>
 
     <div class="footer-page">
-      <span>Escuela Deportiva Jaguares</span>
+      <span>Monterrial CRM</span>
       <span>Página 7</span>
     </div>
   </div>
@@ -503,7 +499,7 @@ const page = await browser.newPage();
 await page.setContent(html, { waitUntil: "load" });
 await page.waitForTimeout(1000);
 
-const pdfPath = "docs/Guia_Usuario_Jaguares_CRM.pdf";
+const pdfPath = "docs/Guia_Usuario_Monterrial_CRM.pdf";
 await page.pdf({
   path: pdfPath,
   format: "A4",
@@ -517,4 +513,8 @@ await page.pdf({
 });
 
 console.log(`✓ PDF generado exitosamente en: ${pdfPath}`);
+const desktopPath = "C:\\Users\\Cris\\Desktop\\Guia_Usuario_Monterrial_CRM.pdf";
+await copyFile(pdfPath, desktopPath);
+console.log(`✓ PDF copiado exitosamente al Escritorio: ${desktopPath}`);
+
 await browser.close();

@@ -45,9 +45,8 @@ export type Branding = {
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  name: "Vocero",
-  // El azul eléctrico de vocerocrm.com: la instancia recién instalada se ve
-  // igual que la landing. Una agencia lo cambia en Configuración → Marca.
+  name: "Monterrial",
+  // El azul eléctrico por defecto: la instancia recién instalada se ve limpia.
   accent: "#0d5bff",
   currency: DEFAULT_CURRENCY,
   favicon: null,

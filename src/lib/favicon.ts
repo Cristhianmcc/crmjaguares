@@ -41,10 +41,10 @@ export const FAVICON_MIMES = [
 export type FaviconMime = (typeof FAVICON_MIMES)[number];
 
 /**
- * 256 KB. Un favicon de más no existe; el tope está para que nadie use este
- * campo como almacén de archivos.
+ * 512 KB. El tope está para que nadie use este
+ * campo como almacén de archivos. Ampliado para íconos .ico multi-resolución.
  */
-export const MAX_FAVICON_BYTES = 256 * 1024;
+export const MAX_FAVICON_BYTES = 512 * 1024;
 
 export function isFaviconMime(value: string): value is FaviconMime {
   return (FAVICON_MIMES as readonly string[]).includes(value);
