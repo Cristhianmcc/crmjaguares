@@ -111,7 +111,7 @@ export async function onboardingStatus(
           ? "Meta dejó de aceptar el token de WhatsApp: vuelve a conectar el número."
           : null,
     },
-    await pasoCerebro(),
+    await pasoCerebro(ia.activa),
   ];
 
   if (agendaEnabled()) {
@@ -137,44 +137,45 @@ export async function onboardingStatus(
 type Perfil = { name: string; instructions: string | null; enabled: boolean };
 
 /**
- * 036 — «Conecta tu agente». El CRM ya no trae agente: contesta el cerebro al
- * que se le despacha (Nea u otro). La dirección vive en el entorno
- * (`BRAIN_DISPATCH_URL`, spec 036 D3), así que el paso no tiene pantalla a la
- * que llevar: dice qué falta y lleva a la guía. Listo cuando el despacho está
- * configurado y el `/health` del cerebro contesta.
+ * «Conecta tu agente»: listo si hay despacho configurado o proveedor de IA activo.
  */
-async function pasoCerebro(): Promise<ReadinessStep> {
-  const base = { key: "brain" as const, label: "Tu agente", href: null };
+async function pasoCerebro(iaActiva: boolean): Promise<ReadinessStep> {
+  const base = { key: "brain" as const, label: "Tu agente", href: "/agent" };
   const despacho = leerConfigDespacho();
-  if (!despacho.active) {
+  if (despacho.active) {
+    const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
+    if (salud && !salud.reachable) {
+      return {
+        ...base,
+        status: "pending",
+        nextAction: `Tu agente (${despacho.host}) está configurado pero no contesta`,
+        problem: `El /health de ${salud.host || despacho.host} no responde: revisa que el servicio esté corriendo.`,
+      };
+    }
     return {
       ...base,
-      status: "pending",
-      nextAction:
-        "Levanta tu agente (Nea) al lado del CRM y pon BRAIN_DISPATCH_URL y BOT_API_KEY en el entorno",
-      problem:
-        despacho.problem === "url"
-          ? "BRAIN_DISPATCH_URL no es una dirección válida."
-          : despacho.problem === "sin_llave"
-            ? "Falta BOT_API_KEY (16 caracteres o más): sin ella no se firma el despacho."
-            : null,
+      status: "ready",
+      nextAction: salud?.version
+        ? `Conectado: ${despacho.host} (versión ${salud.version})`
+        : `Conectado: ${despacho.host}`,
+      problem: null,
     };
   }
-  const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
-  if (salud && !salud.reachable) {
+
+  if (iaActiva) {
     return {
       ...base,
-      status: "pending",
-      nextAction: `Tu agente (${despacho.host}) está configurado pero no contesta`,
-      problem: `El /health de ${salud.host || despacho.host} no responde: revisa que el servicio esté corriendo.`,
+      status: "ready",
+      nextAction: "Agente IA Jaguares conectado y listo",
+      problem: null,
     };
   }
+
   return {
     ...base,
-    status: "ready",
-    nextAction: salud?.version
-      ? `Conectado: ${despacho.host} (versión ${salud.version})`
-      : `Conectado: ${despacho.host}`,
+    status: "pending",
+    nextAction:
+      "Configura tu proveedor de IA en Ajustes → IA para activar el agente",
     problem: null,
   };
 }

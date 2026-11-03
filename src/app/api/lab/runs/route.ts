@@ -38,21 +38,25 @@ export const GET = withAuth(async (session) => {
   return Response.json({
     runs: withDelta,
     aiConfigured: await isAiConfiguredFor(session.organizationId),
-    // 036 — Sin cerebro conectado, la pantalla lo dice en vez de ofrecer correr.
-    brainConnected: leerConfigDespacho().active,
+    // Reconocer si hay cerebro externo O agente IA integrado configurado
+    brainConnected:
+      leerConfigDespacho().active ||
+      (await isAiConfiguredFor(session.organizationId)),
   });
 });
 
 export const POST = withAuth(async (session) => {
-  // 036 — El Laboratorio prueba al cerebro conectado: sin él no hay a quién.
-  if (!leerConfigDespacho().active) {
+  const aiConfigured = await isAiConfiguredFor(session.organizationId);
+  const brainConnected = leerConfigDespacho().active || aiConfigured;
+
+  if (!brainConnected) {
     return apiError(
       409,
       "sin_cerebro",
-      "Conecta tu agente para correr el Laboratorio: prueba al cerebro que contesta a tus clientes"
+      "Configura tu proveedor de IA en Ajustes → IA para correr el Laboratorio"
     );
   }
-  if (!(await isAiConfiguredFor(session.organizationId))) {
+  if (!aiConfigured) {
     return apiError(
       409,
       "ai_not_configured",

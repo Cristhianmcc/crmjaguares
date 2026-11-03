@@ -96,11 +96,14 @@ export function guideFrom(status: OnboardingStatus): Guide {
       key: "brain",
       title: "Conecta tu agente",
       description:
-        "Vocero no trae agente: contesta el que conectas al lado (Nea, o el tuyo). Sin agente, Vocero funciona como bandeja manual y contestas tú.",
-      done: ready(brain),
-      href: GUIA_DEL_PAR,
-      cta: "Cómo conectarlo",
-      hint: ready(brain) ? null : (brain?.problem ?? brain?.nextAction ?? null),
+        "Tu agente IA responde las consultas de WhatsApp las 24 horas usando el catálogo de Jaguares en vivo y tu configuración.",
+      done: ready(brain) || ready(ai),
+      href: "/agent",
+      cta: "Ver agente",
+      hint:
+        ready(brain) || ready(ai)
+          ? null
+          : (brain?.problem ?? brain?.nextAction ?? null),
       optional: true,
     },
   ];
@@ -122,7 +125,7 @@ export function guideFrom(status: OnboardingStatus): Guide {
     steps,
     complete: steps.every((s) => s.done || s.optional),
     enabled: status.enabled,
-    brainConnected: ready(brain),
+    brainConnected: ready(brain) || ready(ai),
   };
 }
 

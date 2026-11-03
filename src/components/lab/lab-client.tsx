@@ -181,21 +181,18 @@ export function LabClient() {
         >
           <Cable aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-text-3" strokeWidth={1.7} />
           <div className="min-w-0 text-sm">
-            <p className="font-semibold">Sin agente conectado</p>
+            <p className="font-semibold">Sin proveedor de IA conectado</p>
             <p className="mt-0.5 leading-relaxed text-text-2">
               El Laboratorio prueba al agente que contesta a tus clientes:
               clientes simulados conversan con él y un juez califica cada
-              conversación. Vocero no trae agente propio, y esta instancia aún
-              no tiene uno conectado.{" "}
-              <a
-                href={GUIA_DEL_PAR_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-0.5 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
+              conversación. Conecta tu proveedor en{" "}
+              <Link
+                href="/settings/ai"
+                className="font-medium text-brand-text underline underline-offset-2 hover:text-brand"
               >
-                Cómo conectarlo
-                <ArrowUpRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.8} />
-              </a>
+                Ajustes → IA
+              </Link>{" "}
+              para habilitar las pruebas automáticas.
             </p>
           </div>
         </div>

@@ -11,6 +11,8 @@ import { iniciarWorker, programarTanda } from "@/server/dispatch/worker";
 import { computeScore, judgeCase } from "@/server/lab/judge";
 import { PERSONAS, type Persona } from "@/server/lab/personas";
 import { rolDe } from "@/lib/agent-roles";
+import { despachoActivo } from "@/server/brains/config";
+import { runAgentTurn } from "@/server/ai/pipeline";
 
 /**
  * Runner del Laboratorio (FR-030/FR-034): corrida en segundo plano DENTRO del
@@ -270,8 +272,16 @@ async function runConversation(
       .set({ lastInboundAt: now, lastMessageAt: now, updatedAt: now })
       .where(eq(schema.conversation.id, convId));
 
-    // Turno REAL del cerebro, secuencial y sin debounce (FR-030, 033).
-    falla = await turnoPorDespacho(organizationId, convId, messageId, now);
+    // Turno REAL del cerebro (por despacho externo o agente IA integrado).
+    if (despachoActivo()) {
+      falla = await turnoPorDespacho(organizationId, convId, messageId, now);
+    } else {
+      try {
+        await runAgentTurn(convId);
+      } catch (err) {
+        falla = err instanceof Error ? err.message : String(err);
+      }
+    }
     if (falla) break;
 
     const convRows = await db
