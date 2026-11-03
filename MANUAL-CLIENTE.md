@@ -109,3 +109,4 @@ Aquí tú o el dueño del negocio configuran las reglas a su medida:
 1. **Usa las Respuestas Rápidas:** Ahorran hasta un 70% del tiempo de atención diaria y evitan faltas de ortografía o errores al dar números de cuenta.
 2. **Arrastra los prospectos a diario:** Si un asesor habló con un cliente y ya le dio precio, debe mover su tarjeta a *«Información Enviada»*. Así el dueño o supervisor siempre sabe el estado real del negocio.
 3. **Deja notas internas:** Si un cliente te dice *«Escríbeme la próxima semana porque estoy de viaje»*, anótalo en la pestaña *Nota Interna*. Así cualquier compañero que atienda sabrá el contexto.
+

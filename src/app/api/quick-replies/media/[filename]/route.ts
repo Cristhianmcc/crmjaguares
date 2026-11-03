@@ -48,3 +48,4 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
     return apiError(404, "not_found", "Archivo no encontrado");
   }
 });
+
