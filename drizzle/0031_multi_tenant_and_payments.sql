@@ -18,3 +18,4 @@ CREATE TABLE IF NOT EXISTS "payment_order" (
 );--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payment_order_org_idx" ON "payment_order" ("organization_id", "created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payment_order_payment_id_idx" ON "payment_order" ("payment_id");
+

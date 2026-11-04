@@ -1,5 +1,7 @@
 import { getDb, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+
+export { syncSuperAdmin } from "./bootstrap-admin";
 
 /**
  * Determina si el usuario actual tiene permisos de Super-Admin
@@ -9,10 +11,13 @@ export async function isSuperAdminUser(userId: string, email: string): Promise<b
   const envAdmin = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
   const userEmail = email.trim().toLowerCase();
 
-  // 1. Coincide con SUPER_ADMIN_EMAIL configurado en entorno
-  if (envAdmin && userEmail === envAdmin) return true;
+  // 1. Coincide con cualquiera de los correos en SUPER_ADMIN_EMAIL (soporta múltiples separados por coma)
+  if (envAdmin) {
+    const allowed = envAdmin.split(",").map((s) => s.trim());
+    if (allowed.includes(userEmail)) return true;
+  }
 
-  // 2. Correos del creador / administrador de la plataforma
+  // 2. Correos del creador / administrador de la plataforma por defecto
   if (
     userEmail === "cris@jaguares.com" ||
     userEmail === "cristhianmc303@gmail.com"
@@ -20,25 +25,36 @@ export async function isSuperAdminUser(userId: string, email: string): Promise<b
     return true;
   }
 
-  // 3. O es el propietario de la organización principal / primera org
-  const db = getDb();
-  const firstOrg = await db
-    .select({ id: schema.organization.id })
-    .from(schema.organization)
-    .orderBy(schema.organization.createdAt)
-    .limit(1);
-
-  if (firstOrg[0]) {
-    const membership = await db
-      .select({ role: schema.member.role })
-      .from(schema.member)
-      .where(eq(schema.member.userId, userId))
+  // 3. O es el propietario ('owner') de la organización principal / primera org creada
+  try {
+    const db = getDb();
+    const firstOrg = await db
+      .select({ id: schema.organization.id })
+      .from(schema.organization)
+      .orderBy(schema.organization.createdAt)
       .limit(1);
 
-    if (membership[0]?.role === "owner") {
-      return true;
+    if (firstOrg[0]) {
+      const membership = await db
+        .select({ role: schema.member.role })
+        .from(schema.member)
+        .where(
+          and(
+            eq(schema.member.userId, userId),
+            eq(schema.member.organizationId, firstOrg[0].id)
+          )
+        )
+        .limit(1);
+
+      if (membership[0]?.role === "owner") {
+        return true;
+      }
     }
+  } catch (err) {
+    console.error("[isSuperAdminUser] Error verificando rol:", err);
   }
 
   return false;
 }
+
+
