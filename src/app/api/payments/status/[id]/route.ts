@@ -68,3 +68,4 @@ export async function GET(
     paidAt: order.paidAt,
   });
 }
+

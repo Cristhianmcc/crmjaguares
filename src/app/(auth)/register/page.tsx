@@ -5,13 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUp } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -28,24 +22,28 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
     const { error: err } = await signUp.email({
       name: nombre,
       email,
       password,
     });
+
     if (err) {
       setLoading(false);
       setError(err.message ?? "No se pudo crear la cuenta.");
       return;
     }
-    // Renombrar la organización con el nombre del negocio
+
+    // Renombrar la organización con el nombre del negocio si se ingresó
     if (negocio.trim()) {
       await fetch("/api/org/rename", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: negocio.trim() }),
-      });
+      }).catch(() => null);
     }
+
     router.push("/");
     router.refresh();
   }
@@ -65,6 +63,7 @@ export default function RegisterPage() {
             <Input
               id="nombre"
               required
+              placeholder="Ej: Carlos Ramos"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
             />
@@ -74,7 +73,7 @@ export default function RegisterPage() {
             <Input
               id="negocio"
               required
-              placeholder="Ej: Academia Fit Lima"
+              placeholder="Ej: Colegio San Agustín"
               value={negocio}
               onChange={(e) => setNegocio(e.target.value)}
             />
@@ -86,6 +85,7 @@ export default function RegisterPage() {
               type="email"
               autoComplete="email"
               required
+              placeholder="tu@negocio.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -103,13 +103,13 @@ export default function RegisterPage() {
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creando cuenta\u2026" : "Empezar prueba gratis"}
+          <Button type="submit" className="w-full font-medium" disabled={loading}>
+            {loading ? "Creando cuenta…" : "Empezar prueba gratis"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            \u00bfYa tienes cuenta?{" "}
-            <Link href="/login" className="text-primary hover:underline">
-              Inicia sesi\u00f3n
+            ¿Ya tienes cuenta?{" "}
+            <Link href="/login" className="text-primary hover:underline font-medium">
+              Inicia sesión
             </Link>
           </p>
         </form>

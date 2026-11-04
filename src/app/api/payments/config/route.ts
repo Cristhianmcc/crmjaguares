@@ -11,3 +11,4 @@ export async function GET() {
     publicKey: config.publicKey,
   });
 }
+

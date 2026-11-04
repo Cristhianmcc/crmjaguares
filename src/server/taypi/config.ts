@@ -139,3 +139,4 @@ export function getTaypiClient(): TaypiClient | null {
   if (!config.enabled) return null;
   return new TaypiClient(config.publicKey, config.secretKey, config.baseUrl);
 }
+

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Bell, BellOff, LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, LogOut, PanelLeftClose, PanelLeftOpen, Shield, X } from "lucide-react";
 import { BrandTile } from "@/components/brand-mark";
 import { BotonInstalar } from "@/components/pwa";
 import { BotonActivarAvisos } from "@/components/activar-avisos";
@@ -351,6 +351,24 @@ export function AppNav({
           <BotonInstalar className={navItemClass(false)} />
 
           {renderItem(SETTINGS_ITEM)}
+          {role === "owner" && (
+            <Link
+              href="/admin"
+              className={cn(navItemClass(pathname.startsWith("/admin")), "text-primary hover:bg-primary/10")}
+            >
+              <Shield className="h-4 w-4" />
+              <span>Super Admin</span>
+            </Link>
+          )}
+          {role === "owner" && (
+            <Link
+              href="/admin"
+              className={cn(navItemClass(pathname.startsWith("/admin")), "text-primary hover:bg-primary/10")}
+            >
+              <Shield className="h-4 w-4" />
+              <span>Super Admin</span>
+            </Link>
+          )}
 
           <div className="mt-1 flex items-center gap-2.5 rounded-xl bg-accent/30 p-2 border border-border/40">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">

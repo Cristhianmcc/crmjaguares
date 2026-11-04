@@ -1,15 +1,18 @@
 import { getDb, schema } from "@/lib/db";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import { isSuperAdminUser } from "@/server/auth/admin";
+
+export const dynamic = "force-dynamic";
 
 async function requireAdmin() {
-  const ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
-  if (!ADMIN_EMAIL) return null;
   const auth = getAuth();
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || session.user.email !== ADMIN_EMAIL) return null;
+  if (!session) return null;
+  const isAdmin = await isSuperAdminUser(session.user.id, session.user.email);
+  if (!isAdmin) return null;
   return session;
 }
 
@@ -41,11 +44,30 @@ export async function GET() {
 
   const memberMap = new Map(memberCounts.map((r) => [r.organizationId, r.n]));
 
-  const result = orgs.map((org) => ({
-    ...org,
-    memberCount: memberMap.get(org.id) ?? 0,
-  }));
+  // Buscar el correo del propietario (owner) de cada organización
+  const owners = await db
+    .select({
+      organizationId: schema.member.organizationId,
+      ownerEmail: schema.user.email,
+      ownerName: schema.user.name,
+    })
+    .from(schema.member)
+    .innerJoin(schema.user, eq(schema.member.userId, schema.user.id))
+    .where(eq(schema.member.role, "owner"));
+
+  const ownerMap = new Map(
+    owners.map((o) => [o.organizationId, { email: o.ownerEmail, name: o.ownerName }])
+  );
+
+  const result = orgs.map((org) => {
+    const owner = ownerMap.get(org.id);
+    return {
+      ...org,
+      ownerEmail: owner?.email ?? "—",
+      ownerName: owner?.name ?? "—",
+      memberCount: memberMap.get(org.id) ?? 0,
+    };
+  });
 
   return NextResponse.json(result);
 }
-

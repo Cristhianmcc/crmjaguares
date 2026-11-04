@@ -211,6 +211,20 @@
       "when": 1793668000000,
       "tag": "0029_jaguares_menu_y_pdf",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793730000000,
+      "tag": "0030_quick_reply_media",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793810000000,
+      "tag": "0031_multi_tenant_and_payments",
+      "breakpoints": true
     }
   ]
 }
