@@ -41,6 +41,7 @@ export function AdminPanelClient() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [noticeModal, setNoticeModal] = useState<{ title: string; message: string } | null>(null);
 
   const fetchOrgs = useCallback(async () => {
     try {
@@ -140,7 +141,7 @@ export function AdminPanelClient() {
         body: JSON.stringify({ plan: planToSet, durationDays: 30 }),
       });
       if (res.ok) {
-        alert("✅ Se han añadido +30 días a la organización.");
+        setNoticeModal({ title: "Suscripción Extendida", message: "Se han añadido exitosamente +30 días de servicio al negocio." });
         void fetchOrgs();
       }
     } catch {
@@ -207,32 +208,64 @@ export function AdminPanelClient() {
         </Card>
       </div>
 
-      {/* Modal / Card de confirmación de cuenta creada para WhatsApp */}
+      {/* Modal emergente vistoso de confirmación de cuenta creada para WhatsApp */}
       {createdData && (
-        <Card className="border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
-                <span>✅</span>
-                <span>¡Cuenta de {createdData.businessName} creada con éxito!</span>
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setCreatedData(null)}>
-                Cerrar
-              </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-lg shadow-2xl border-emerald-500/40 bg-card">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg text-emerald-600 flex items-center gap-2 font-bold">
+                  <span>🎉</span>
+                  <span>¡Cuenta de {createdData.businessName} Lista!</span>
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setCreatedData(null)}>
+                  ✕
+                </Button>
+              </div>
+              <CardDescription className="text-xs text-muted-foreground mt-1">
+                La cuenta ya fue creada. Copia este mensaje y pégalo directamente en WhatsApp para tu cliente:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="p-3.5 bg-muted/60 rounded-lg border text-xs whitespace-pre-wrap font-mono select-all leading-relaxed">
+                {whatsappMessage}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={copyWhatsApp}
+                  variant="default"
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-10 shadow-sm"
+                >
+                  <span>{copied ? "✓ ¡Mensaje Copiado al Portapapeles!" : "📋 Copiar mensaje para WhatsApp"}</span>
+                </Button>
+                <Button variant="outline" onClick={() => setCreatedData(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal vistoso de confirmación para acciones (como +30 días) */}
+      {noticeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-sm shadow-2xl border-emerald-500/30 text-center p-6 space-y-4 bg-card">
+            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+              ✓
             </div>
-            <CardDescription>
-              Copia este mensaje con 1 clic y envíaselo a tu cliente por WhatsApp:
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <pre className="p-3 bg-background rounded border text-xs whitespace-pre-wrap font-mono select-all">
-              {whatsappMessage}
-            </pre>
-            <Button onClick={copyWhatsApp} variant="default" size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-              <span>{copied ? "✓ Mensaje Copiado" : "📋 Copiar mensaje para WhatsApp"}</span>
+            <div>
+              <h3 className="font-bold text-lg text-foreground">{noticeModal.title}</h3>
+              <p className="text-sm text-muted-foreground mt-1.5">{noticeModal.message}</p>
+            </div>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+              onClick={() => setNoticeModal(null)}
+            >
+              Entendido
             </Button>
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {/* Modal de Creación */}

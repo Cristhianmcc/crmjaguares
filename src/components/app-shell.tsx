@@ -1,33 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, ShieldAlert } from "lucide-react";
 import type { Branding } from "@/lib/branding";
 import type { Apariencia } from "@/lib/temas";
 import type { ResolvedCommit } from "@/lib/version";
 import { AppNav } from "@/components/app-nav";
 import { BrandLogo } from "@/components/brand-mark";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BandaSinConexion } from "@/components/banda-sin-conexion";
 import { AtajosGlobales } from "@/components/atajos-globales";
 
 /**
  * Cascarón de la app en dos modos:
- *
- * - Escritorio (lg+): el panel lateral es una columna fija, como siempre.
- * - Móvil/tableta: el lateral sale de la izquierda como cajón sobre un velo,
- *   y arriba queda una barra azul marino con el hamburguesa y la marca. El
- *   cajón se cierra solo al navegar (el `pathname` cambia) y con Escape.
- *
- * La altura usa `100dvh` (no `100vh`) porque en el navegador móvil la barra de
- * direcciones se encoge al hacer scroll: con `vh` el compositor de la Bandeja
- * queda debajo del borde visible.
+ * - Escritorio (lg+): el panel lateral es una columna fija.
+ * - Móvil/tableta: el lateral sale como cajón.
+ * Incluye protección de expiración de plan (Paywall) y ocultamiento de Super Admin.
  */
 export function AppShell({
   branding,
   userName,
   role,
+  isSuperAdmin = false,
+  planExpired = false,
   apariencia,
   commit,
   agenda = false,
@@ -38,30 +36,20 @@ export function AppShell({
   branding: Branding;
   userName: string;
   role: string;
+  isSuperAdmin?: boolean;
+  planExpired?: boolean;
   apariencia: Apariencia;
-  /** Commit resuelto en el servidor, con su procedencia (ver `resolveCommit`). */
   commit?: ResolvedCommit;
-  /** 015 — ¿esta instancia tiene agenda? Lo decide el servidor. */
   agenda?: boolean;
-  /** 028 — La etiqueta bajo el logo (`navKicker`). */
   kicker?: string;
-  /**
-   * Franja de aviso por encima de TODA la aplicación (#85).
-   *
-   * Va aquí y no dentro de una pantalla porque lo que anuncia no es de una
-   * pantalla: es que el agente no puede contestar. Quien tiene ese problema
-   * no está mirando Ajustes, está mirando su bandeja y preguntándose por qué
-   * no responde nadie.
-   */
   aviso?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const esBandeja = pathname === "/inbox" || pathname.startsWith("/inbox/");
+  const esFacturacion = pathname.startsWith("/settings/billing");
   const [navOpen, setNavOpen] = useState(false);
 
-  // Navegar = cerrar el cajón. Sin esto, tocar "Pipeline" deja el velo encima
-  // de la pantalla recién cargada.
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
@@ -76,8 +64,6 @@ export function AppShell({
   }, [navOpen]);
 
   return (
-    // 061 · D1 — El marco: en escritorio la app son tarjetas separadas sobre
-    // un fondo suave; en el teléfono la pantalla entera es la tarjeta.
     <div className="app-marco app-escala flex overflow-hidden lg:gap-[var(--hueco)] lg:p-[var(--hueco)]">
       {navOpen && (
         <button
@@ -93,6 +79,8 @@ export function AppShell({
         commit={commit}
         userName={userName}
         role={role}
+        isSuperAdmin={isSuperAdmin}
+        planExpired={planExpired}
         apariencia={apariencia}
         agenda={agenda}
         kicker={kicker}
@@ -114,21 +102,44 @@ export function AppShell({
         </header>
 
         {aviso}
-        {/* 056 — El tiempo real caído se ve desde cualquier pantalla. */}
         <BandaSinConexion />
-        {/* 055 — Ctrl+K y «?» desde cualquier pantalla. */}
         <AtajosGlobales agenda={agenda} role={role} />
 
-        {/* La Bandeja trae sus propias tarjetas (lista, hilo, panel); el resto
-            de las pantallas vive en una sola. */}
-        <main
-          className={cn(
-            "min-h-0 min-w-0 flex-1 overflow-hidden bg-background",
-            esBandeja ? "lg:bg-transparent" : "lg:tarjeta"
-          )}
-        >
-          {children}
-        </main>
+        {/* Si el plan expiró y NO es super admin, bloquear el uso regular y dirigir a facturación */}
+        {planExpired && !isSuperAdmin && !esFacturacion ? (
+          <main className="min-h-0 min-w-0 flex-1 overflow-auto flex items-center justify-center p-4 sm:p-6 lg:tarjeta">
+            <div className="max-w-md w-full text-center space-y-4 p-6 sm:p-8 rounded-2xl border border-destructive/30 bg-card shadow-xl animate-in fade-in-50">
+              <div className="mx-auto w-14 h-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                <ShieldAlert className="h-7 w-7" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold text-foreground">Tu periodo de prueba ha finalizado</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Tus contactos, chats e información de WhatsApp están guardados de forma segura. Para reactivar tu CRM y que tu agente siga respondiendo, elige y activa un plan a continuación.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Link href="/settings/billing">
+                  <Button className="w-full bg-primary hover:bg-primary/90 font-semibold text-sm h-11 gap-2 shadow-md">
+                    <span>Activar mi plan con Yape o Plin →</span>
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ¿Prefieres pagar por transferencia bancaria? Comunícate con tu asesor para que te active +30 días al instante.
+              </p>
+            </div>
+          </main>
+        ) : (
+          <main
+            className={cn(
+              "min-h-0 min-w-0 flex-1 overflow-hidden bg-background",
+              esBandeja ? "lg:bg-transparent" : "lg:tarjeta"
+            )}
+          >
+            {children}
+          </main>
+        )}
       </div>
     </div>
   );

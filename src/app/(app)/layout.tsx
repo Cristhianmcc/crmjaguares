@@ -11,6 +11,13 @@ import { enabledChannels } from "@/server/channels/enabled";
 import { navKicker } from "@/lib/channels";
 import { avisoIaDe } from "@/server/ai/aviso";
 import { AvisoIaBanner } from "@/components/avisos/aviso-ia";
+import { isSuperAdminUser } from "@/server/auth/admin";
+import { getDb, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { isPlanActive } from "@/lib/plan-guard";
+import type { PlanId } from "@/lib/planes";
+
+export const dynamic = "force-dynamic";
 
 export default async function AppLayout({
   children,
@@ -28,19 +35,37 @@ export default async function AppLayout({
   // CUALQUIER pantalla, no solo desde el panel de un contacto (#85).
   const aviso = await avisoIaDe(session.organizationId);
 
+  // Verificación de Super Admin (solo el dueño real de la plataforma ve el panel)
+  const isSuperAdmin = await isSuperAdminUser(session.userId, authSession?.user.email ?? "");
+
+  // Verificación de expiración de plan
+  const db = getDb();
+  const orgRows = await db
+    .select({
+      plan: schema.organization.plan,
+      trialEndsAt: schema.organization.trialEndsAt,
+      planExpiresAt: schema.organization.planExpiresAt,
+    })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, session.organizationId))
+    .limit(1);
+
+  const org = orgRows[0];
+  const planActive = isSuperAdmin || !org || isPlanActive({
+    plan: (org.plan || "trial") as PlanId,
+    trialEndsAt: org.trialEndsAt,
+    planExpiresAt: org.planExpiresAt,
+  });
+
   return (
     <AppShell
       branding={branding}
       userName={authSession?.user.name ?? "Usuario"}
       role={session.role}
+      isSuperAdmin={isSuperAdmin}
+      planExpired={!planActive}
       apariencia={apariencia}
-      // Se resuelve aquí, en el servidor: el cliente no ve `SOURCE_COMMIT`.
-      // Baja con su procedencia, para que la insignia no presente como
-      // verificado un commit que no salió del build (#50).
       commit={resolveCommit()}
-      // Qué módulos opcionales existen se decide en el servidor y baja por
-      // prop, igual que los canales de la Bandeja. El nav es un componente de
-      // cliente: no puede —ni debe— leer variables de entorno.
       agenda={agendaEnabled()}
       kicker={navKicker([...enabledChannels()])}
       aviso={<AvisoIaBanner aviso={aviso} />}

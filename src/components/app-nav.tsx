@@ -71,6 +71,8 @@ export function AppNav({
   branding,
   userName,
   role,
+  isSuperAdmin = false,
+  planExpired = false,
   apariencia,
   commit,
   agenda = false,
@@ -81,6 +83,8 @@ export function AppNav({
   branding: Branding;
   userName: string;
   role: string;
+  isSuperAdmin?: boolean;
+  planExpired?: boolean;
   apariencia: Apariencia;
   /**
    * Commit resuelto en el servidor. Gana al de build porque puede venir de la
@@ -351,7 +355,7 @@ export function AppNav({
           <BotonInstalar className={navItemClass(false)} />
 
           {renderItem(SETTINGS_ITEM)}
-          {role === "owner" && (
+          {isSuperAdmin && (
             <Link
               href="/admin"
               className={cn(navItemClass(pathname.startsWith("/admin")), "text-primary hover:bg-primary/10")}
