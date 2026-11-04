@@ -41,77 +41,69 @@ export default function PreciosPage() {
             >
               {isPro && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-                    Recomendado · Más popular
+                  <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
+                    Más popular
                   </span>
                 </div>
               )}
-              {isTrial && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-                    Prueba sin costo
-                  </span>
-                </div>
-              )}
-              <CardHeader className="pb-2 pt-6">
+              <CardHeader>
                 <CardTitle className="text-xl">{plan.nombre}</CardTitle>
-                <CardDescription className="min-h-[40px] text-xs">
+                <CardDescription className="min-h-[40px]">
                   {plan.descripcion}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="mb-6">
-                  {plan.precio === 0 ? (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-foreground">S/ 0</span>
-                      <span className="text-muted-foreground text-sm font-medium">/ 14 días</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-foreground">S/ {plan.precio}</span>
-                      <span className="text-muted-foreground text-sm font-medium">/ mes</span>
-                    </div>
+              <CardContent className="flex-1 space-y-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold tracking-tight">
+                    {plan.precio === 0 ? "Gratis" : `S/ ${plan.precio}`}
+                  </span>
+                  {plan.precio > 0 && (
+                    <span className="text-muted-foreground text-sm">/ mes</span>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {plan.precio === 0 ? "Sin tarjeta de crédito requerida" : "Facturación mensual en soles"}
-                  </p>
                 </div>
-                <ul className="space-y-2.5 text-sm">
+
+                <ul className="space-y-2.5 text-sm pt-2">
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span className="text-primary font-bold">✓</span>
                     <span>
-                      Hasta {plan.maxUsuarios} usuario{plan.maxUsuarios > 1 ? "s" : ""}
+                      {plan.maxUsuarios >= 999
+                        ? "Asesores ilimitados"
+                        : `Hasta ${plan.maxUsuarios} asesores`}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span className="text-primary font-bold">✓</span>
                     <span>
-                      {plan.maxContactos === -1
+                      {plan.maxContactos === -1 || plan.maxContactos >= 999999
                         ? "Contactos ilimitados"
-                        : `Hasta ${plan.maxContactos.toLocaleString("es-PE")} contactos`}
+                        : `Hasta ${plan.maxContactos.toLocaleString()} contactos`}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span>
-                    <span>Bandeja WhatsApp + Respuestas Rápidas</span>
+                    <span className="text-primary font-bold">✓</span>
+                    <span>Agente IA + Bandeja de WhatsApp</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span>
-                    <span>Agente de Inteligencia Artificial</span>
+                    <span className="text-primary font-bold">✓</span>
+                    <span>Respuestas rápidas y catálogo</span>
                   </li>
                   <li className="flex items-center gap-2">
                     {plan.campanasMasivas ? (
-                      <span className="text-emerald-500 font-bold">✓</span>
+                      <span className="text-primary font-bold">✓</span>
                     ) : (
                       <span className="text-muted-foreground/60 font-medium">✕</span>
                     )}
-                    <span className={plan.campanasMasivas ? "" : "text-muted-foreground"}>
+                    <span
+                      className={
+                        plan.campanasMasivas ? "" : "text-muted-foreground"
+                      }
+                    >
                       Campañas masivas programadas
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     {plan.whiteLabel ? (
-                      <span className="text-emerald-500 font-bold">✓</span>
+                      <span className="text-primary font-bold">✓</span>
                     ) : (
                       <span className="text-muted-foreground/60 font-medium">✕</span>
                     )}
@@ -123,7 +115,7 @@ export default function PreciosPage() {
               </CardContent>
               <div className="p-5 pt-0">
                 <Link
-                  href="/register"
+                  href="/login"
                   className={cn(
                     buttonVariants({
                       variant: isPro ? "default" : isTrial ? "secondary" : "outline",
@@ -131,7 +123,7 @@ export default function PreciosPage() {
                     "w-full font-medium"
                   )}
                 >
-                  {isTrial ? "Iniciar prueba gratis" : "Elegir este plan"}
+                  {isTrial ? "Iniciar sesión" : "Elegir este plan"}
                 </Link>
               </div>
             </Card>
@@ -145,10 +137,10 @@ export default function PreciosPage() {
           Ofrecemos servicio de puesta en marcha para configurar tus respuestas y entrenar a tu equipo desde el primer día.
         </p>
         <Link
-          href="/register"
+          href="/login"
           className="text-primary font-medium hover:underline text-sm"
         >
-          Crear cuenta gratuita por 14 días →
+          Iniciar sesión en tu cuenta →
         </Link>
       </div>
     </div>
