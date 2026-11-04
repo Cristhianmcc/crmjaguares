@@ -17,3 +17,4 @@ const rows = await sql`SELECT id, name, metadata FROM organization`;
 console.log("Current organization:", rows);
 
 await sql.end();
+

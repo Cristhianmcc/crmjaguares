@@ -82,6 +82,11 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
+  plan: text("plan").notNull().default("trial"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  planExpiresAt: timestamp("plan_expires_at"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
 });
 
 export const member = pgTable("member", {

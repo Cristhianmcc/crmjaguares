@@ -1,0 +1,270 @@
+[
+  {
+    "file": "s00.wav",
+    "text": "Bienvenido a Monterrial CRM. En este video te mostramos, apartado por apartado, cómo usar tu nuevo sistema de atención y ventas por WhatsApp."
+  },
+  {
+    "file": "s01.wav",
+    "text": "El menú principal. A la izquierda está todo el sistema. Siempre visible, en cualquier pantalla."
+  },
+  {
+    "file": "s01_0.wav",
+    "text": "Trabajo: lo del día a día — Bandeja, Embudo, Contactos, Cupos y Campañas."
+  },
+  {
+    "file": "s01_1.wav",
+    "text": "Agente: tu asistente de IA — guía de inicio, configuración, laboratorio y resultados."
+  },
+  {
+    "file": "s01_2.wav",
+    "text": "Abajo: activa los avisos de mensajes nuevos y entra a Ajustes."
+  },
+  {
+    "file": "s02.wav",
+    "text": "Bandeja de entrada. Aquí conversas en tiempo real con tus prospectos y clientes."
+  },
+  {
+    "file": "s02_0.wav",
+    "text": "Todos tus chats, del más reciente al más antiguo. La etiqueta muestra en qué etapa está cada cliente."
+  },
+  {
+    "file": "s02_1.wav",
+    "text": "Busca a cualquier cliente por nombre o teléfono."
+  },
+  {
+    "file": "s02_2.wav",
+    "text": "La conversación completa. Los mensajes marcados con IA los respondió tu asistente automáticamente."
+  },
+  {
+    "file": "s02_3.wav",
+    "text": "IA en esta conversación: apágalo si quieres atender tú personalmente a este cliente."
+  },
+  {
+    "file": "s02_4.wav",
+    "text": "Nota interna: escribe recordatorios para tu equipo. El cliente nunca los ve."
+  },
+  {
+    "file": "s02_5.wav",
+    "text": "El ícono del rayo abre tus respuestas rápidas. También puedes escribir una barra en la caja de texto."
+  },
+  {
+    "file": "s03.wav",
+    "text": "Respuestas rápidas. Los mensajes que repites todos los días, listos a un clic. Ajustes , Respuestas rápidas."
+  },
+  {
+    "file": "s03_0.wav",
+    "text": "Cada atajo empieza con una barra. Por ejemplo, barra cupos envía el enlace de horarios."
+  },
+  {
+    "file": "s03_1.wav",
+    "text": "La palabra nombre, entre llaves, se reemplaza sola por el nombre del cliente. Por ejemplo: ¡Hola Luis!"
+  },
+  {
+    "file": "s03_2.wav",
+    "text": "Con el lápiz editas, y con el tacho borras cualquier respuesta cuando quieras."
+  },
+  {
+    "file": "s03_3.wav",
+    "text": "Nueva respuesta para crear las tuyas. Puedes adjuntar fotos o PDF."
+  },
+  {
+    "file": "s04.wav",
+    "text": "Embudo de ventas. Un tablero de tarjetas para ver en qué paso está cada prospecto."
+  },
+  {
+    "file": "s04_0.wav",
+    "text": "Cada columna es una etapa. Arrastra la tarjeta del cliente a la siguiente cuando avance."
+  },
+  {
+    "file": "s04_1.wav",
+    "text": "Encuentra cualquier tarjeta escribiendo el nombre o teléfono."
+  },
+  {
+    "file": "s04_2.wav",
+    "text": "Arriba ves cuántos prospectos tienes y cuánto dinero hay en juego."
+  },
+  {
+    "file": "s04_3.wav",
+    "text": "El botón verde abre el chat en WhatsApp Web o en tu celular. El botón Chat lo abre aquí, en el CRM."
+  },
+  {
+    "file": "s04_4.wav",
+    "text": "Gestionar etapas: renombra, agrega o cambia el color de las columnas."
+  },
+  {
+    "file": "s05.wav",
+    "text": "Ficha del trato. Haz clic en cualquier tarjeta del embudo y se abre su ficha."
+  },
+  {
+    "file": "s05_0.wav",
+    "text": "Abre la conversación en el CRM o directo en WhatsApp."
+  },
+  {
+    "file": "s05_1.wav",
+    "text": "Anota el monto de la venta para medir cuánto vas a cobrar."
+  },
+  {
+    "file": "s05_2.wav",
+    "text": "Marca la prioridad: Alta, Media o Baja."
+  },
+  {
+    "file": "s05_3.wav",
+    "text": "Cambia la etapa con un clic, sin arrastrar."
+  },
+  {
+    "file": "s06.wav",
+    "text": "Contactos. Tu libreta de clientes. Cada persona que escribe a tu WhatsApp se registra sola."
+  },
+  {
+    "file": "s06_0.wav",
+    "text": "Nuevo contacto para registrar a alguien a mano."
+  },
+  {
+    "file": "s06_1.wav",
+    "text": "Importar para subir una lista de clientes desde Excel / CSV."
+  },
+  {
+    "file": "s06_2.wav",
+    "text": "Busca por nombre o teléfono y abre su historial completo."
+  },
+  {
+    "file": "s07.wav",
+    "text": "Cupos por clase. Horarios, precios y vacantes en tiempo real, sin abrir otro sistema."
+  },
+  {
+    "file": "s07_0.wav",
+    "text": "Resumen: cuántas clases hay, vacantes libres y clases llenas."
+  },
+  {
+    "file": "s07_1.wav",
+    "text": "Filtra por disciplina: Baby Fútbol, Fútbol, Mamás Fit, Vóley…"
+  },
+  {
+    "file": "s07_2.wav",
+    "text": "Cada tarjeta muestra horario, edades, días, ocupación y precio."
+  },
+  {
+    "file": "s07_3.wav",
+    "text": "Copiar copia el horario listo para pegarlo en el chat del cliente."
+  },
+  {
+    "file": "s08.wav",
+    "text": "Campañas masivas. Envía avisos y promociones a muchos contactos a la vez, de forma oficial."
+  },
+  {
+    "file": "s08_0.wav",
+    "text": "Mira cuántas campañas creaste y cuántos mensajes se enviaron."
+  },
+  {
+    "file": "s08_1.wav",
+    "text": "Haz clic en Nueva Campaña para empezar."
+  },
+  {
+    "file": "s09.wav",
+    "text": "Crear una campaña. Arma el mensaje y revisa cómo llegará antes de enviarlo."
+  },
+  {
+    "file": "s09_0.wav",
+    "text": "Carga una plantilla sugerida: renovación mensual, aviso o torneo."
+  },
+  {
+    "file": "s09_1.wav",
+    "text": "Elige la audiencia: alumnos del embudo o todos los contactos."
+  },
+  {
+    "file": "s09_2.wav",
+    "text": "Escribe el mensaje. Usa la palabra nombre, entre llaves, para personalizarlo."
+  },
+  {
+    "file": "s09_3.wav",
+    "text": "La vista previa muestra exactamente cómo lo verá el papá en WhatsApp."
+  },
+  {
+    "file": "s09_4.wav",
+    "text": "Guarda como borrador o Enviar ahora."
+  },
+  {
+    "file": "s10.wav",
+    "text": "Agente de IA. Tu asistente que responde 24/7 con la información de tu negocio."
+  },
+  {
+    "file": "s10_0.wav",
+    "text": "Interruptor general: enciende o apaga el agente para todas las conversaciones."
+  },
+  {
+    "file": "s10_1.wav",
+    "text": "Confirma que el agente está conectado y listo para responder."
+  },
+  {
+    "file": "s10_2.wav",
+    "text": "Decide qué puede hacer: llenar la ficha, mover de etapa o pasar a una persona."
+  },
+  {
+    "file": "s10_3.wav",
+    "text": "Knowledge base: escribe preguntas y respuestas. El agente solo afirma lo que está aquí."
+  },
+  {
+    "file": "s11.wav",
+    "text": "Laboratorio. Prueba a tu agente sin enviar mensajes reales."
+  },
+  {
+    "file": "s11_0.wav",
+    "text": "Correr evaluación: 6 clientes simulados conversan con tu agente."
+  },
+  {
+    "file": "s11_1.wav",
+    "text": "Un juez califica cada conversación para que mejores las respuestas antes de usarlas con clientes reales."
+  },
+  {
+    "file": "s12.wav",
+    "text": "Resultados. Los números del negocio: ventas, el agente y de dónde llegan tus clientes."
+  },
+  {
+    "file": "s12_0.wav",
+    "text": "Elige el periodo: 7 días, 30 días, este mes o fechas personalizadas."
+  },
+  {
+    "file": "s12_1.wav",
+    "text": "Prospectos nuevos, tratos ganados, dinero, tasa de cierre y ticket promedio."
+  },
+  {
+    "file": "s12_2.wav",
+    "text": "El embudo del periodo: cuántos pasan de una etapa a la siguiente."
+  },
+  {
+    "file": "s12_3.wav",
+    "text": "Dónde se atoran: cuántos días pasan los clientes en cada etapa."
+  },
+  {
+    "file": "s13.wav",
+    "text": "Ajustes. Configura el sistema a la medida de tu negocio."
+  },
+  {
+    "file": "s13_0.wav",
+    "text": "WhatsApp, IA, Marca, Apariencia, Plantillas, Respuestas rápidas y Equipo."
+  },
+  {
+    "file": "s13_1.wav",
+    "text": "En IA se conecta el proveedor que usa tu agente. La llave se guarda cifrada."
+  },
+  {
+    "file": "s13_2.wav",
+    "text": "En Equipo invitas a tus asesores para que atiendan contigo."
+  },
+  {
+    "file": "s14.wav",
+    "text": "Guía de inicio. Si algo falta por configurar, esta pantalla te lo dice."
+  },
+  {
+    "file": "s14_0.wav",
+    "text": "Tu avance de configuración. Aquí está completo: 4 de 4."
+  },
+  {
+    "file": "s14_1.wav",
+    "text": "Cada paso tiene un botón que te lleva directo a la pantalla correcta."
+  },
+  {
+    "file": "s15.wav",
+    "text": "Tres consejos: usa las respuestas rápidas, mueve el embudo todos los días y deja notas internas. ¡Listo para vender más!"
+  }
+]

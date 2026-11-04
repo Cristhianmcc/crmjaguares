@@ -44,3 +44,9 @@ Thumbs.db
 .dev-media/
 # Capturas y salidas de los self-tests (p. ej. scripts/e2e-responsive.mjs)
 scratch/
+
+# Video tutorial binaries
+video-tutorial/*.mp4
+video-tutorial/*.webm
+video-tutorial/audio/*.wav
+video-tutorial/audio/*.webm

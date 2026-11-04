@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monterrial CRM — Tutorial interactivo</title>
+<style>
+  :root {
+    --accent: #0d5bff;
+    --ink: #0f172a;
+    --muted: #5b6575;
+    --bg1: #eef3ee;
+    --bg2: #dfe8e1;
+    --card: #ffffff;
+    --wa: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1220; }
+  body { font-family: "Archivo", "Segoe UI", system-ui, sans-serif; color: var(--ink); }
+
+  /* Escenario fijo 1920x1080, escalado al tamaño de la ventana */
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1920px; height: 1080px;
+    transform-origin: 0 0;
+    background: radial-gradient(1200px 800px at 15% 10%, #f7faf7 0%, var(--bg1) 45%, var(--bg2) 100%);
+    overflow: hidden;
+  }
+
+  /* Barra superior */
+  #topbar { position: absolute; left: 48px; right: 48px; top: 34px; height: 72px; display: flex; align-items: center; gap: 22px; }
+  .logo { width: 56px; height: 56px; border-radius: 16px; background: #10302a; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(16,48,42,.25); }
+  .brand b { display: block; font-size: 28px; letter-spacing: -.3px; }
+  .brand span { font: 600 14px/1 "IBM Plex Mono", Consolas, monospace; letter-spacing: 3px; color: var(--muted); }
+  #chapters { margin-left: auto; display: flex; gap: 8px; }
+  .chip { height: 40px; padding: 0 16px; border-radius: 999px; border: 1.5px solid rgba(15,23,42,.10); background: rgba(255,255,255,.7);
+          font-size: 16px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+  .chip i { font-style: normal; font-size: 13px; opacity: .7; }
+  .chip.done { color: var(--ink); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 16px rgba(13,91,255,.35); }
+
+  /* Ventana con la captura */
+  #frame { position: absolute; left: 48px; top: 140px; width: 1360px; height: 850px; border-radius: 26px; overflow: hidden;
+           background: #fff; box-shadow: 0 30px 80px rgba(15,23,42,.22), 0 0 0 1px rgba(15,23,42,.06); }
+  #cam { position: absolute; left: 0; top: 0; width: 1360px; height: 850px; transform-origin: 0 0; }
+  .shot { position: absolute; left: 0; top: 0; width: 1360px; height: 850px; }
+  #spot { position: absolute; border-radius: 14px; box-shadow: 0 0 0 4000px rgba(10,18,32,.50); outline: 3px solid #ffd43b; outline-offset: 3px; pointer-events: none; }
+  #cursor { position: absolute; width: 34px; height: 34px; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  #ripple { position: absolute; border-radius: 50%; border: 3px solid #ffd43b; pointer-events: none; }
+
+  /* Panel lateral */
+  #panel { position: absolute; left: 1440px; top: 140px; width: 432px; height: 850px; border-radius: 26px; background: rgba(255,255,255,.88);
+           box-shadow: 0 20px 60px rgba(15,23,42,.12); padding: 40px 36px; display: flex; flex-direction: column; }
+  #pnum { font: 600 15px/1 "IBM Plex Mono", Consolas, monospace; letter-spacing: 3px; color: var(--accent); }
+  #ptitle { font-size: 46px; line-height: 1.05; letter-spacing: -1px; margin: 14px 0 14px; }
+  #pdesc { font-size: 19px; line-height: 1.45; color: var(--muted); }
+  #steps { margin-top: 28px; display: flex; flex-direction: column; gap: 12px; }
+  .step { display: flex; gap: 14px; padding: 14px 16px; border-radius: 16px; font-size: 19px; line-height: 1.38; color: #8a93a2; transition: none; }
+  .step .n { flex: 0 0 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 700; background: #eef1f5; color: #8a93a2; }
+  .step.on { background: #eef4ff; color: var(--ink); box-shadow: inset 0 0 0 1.5px rgba(13,91,255,.25); }
+  .step.on .n { background: var(--accent); color: #fff; }
+  .step.past { color: #5b6575; }
+  .step.past .n { background: #dff3e6; color: var(--wa); }
+  .step > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 2px; }
+  .step.on > span:last-child { white-space: normal; font-size: 21px; }
+
+  /* Barra de progreso */
+  #prog { position: absolute; left: 48px; right: 48px; bottom: 38px; height: 8px; border-radius: 99px; background: rgba(15,23,42,.10); overflow: hidden; cursor: pointer; }
+  #progfill { height: 100%; width: 0; background: var(--accent); border-radius: 99px; }
+
+  /* Portada / cierre */
+  .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .card .bgshot { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(14px) saturate(1.1); opacity: .35; }
+  .card .veil { position: absolute; inset: 0; background: radial-gradient(900px 600px at 50% 50%, rgba(247,250,247,.92), rgba(223,232,225,.96)); }
+  .card .inner { position: relative; }
+  .kicker { font: 600 18px/1 "IBM Plex Mono", Consolas, monospace; letter-spacing: 6px; color: var(--accent); }
+  .big { font-size: 112px; letter-spacing: -3px; line-height: 1; margin: 26px 0 22px; }
+  .sub { font-size: 32px; color: var(--muted); }
+  .pills { display: flex; gap: 14px; justify-content: center; margin-top: 46px; flex-wrap: wrap; max-width: 1300px; }
+  .pill { padding: 12px 22px; border-radius: 999px; background: #fff; font-size: 22px; font-weight: 600; box-shadow: 0 6px 18px rgba(15,23,42,.08); }
+  .tips { display: grid; grid-template-columns: repeat(3, 420px); gap: 26px; margin-top: 48px; text-align: left; }
+  .tip { background: #fff; border-radius: 24px; padding: 30px; box-shadow: 0 12px 30px rgba(15,23,42,.10); }
+  .tip b { display: block; font-size: 26px; margin: 14px 0 10px; }
+  .tip p { font-size: 20px; line-height: 1.45; color: var(--muted); }
+  .tip .ic { font-size: 40px; }
+
+  /* Controles (solo modo interactivo) */
+  #controls { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10;
+              background: rgba(15,23,42,.88); padding: 8px; border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  #controls button { border: 0; background: transparent; color: #fff; font: 600 15px "Segoe UI", system-ui, sans-serif; padding: 10px 16px; border-radius: 999px; cursor: pointer; }
+  #controls button:hover { background: rgba(255,255,255,.12); }
+  #controls button.on { background: var(--accent); }
+  body.record #controls { display: none; }
+  #hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); color: #cbd5e1; font: 13px "Segoe UI", sans-serif; z-index: 10; opacity: .8; }
+  body.record #hint { display: none; }
+</style>
+</head>
+<body>
+<div id="hint">Clic en un apartado para saltar · Espacio: pausa · ← → paso anterior/siguiente</div>
+<div id="stage">
+  <div id="topbar">
+    <div class="logo">
+      <svg width="34" height="34" viewBox="0 0 24 24"><path d="M2 19 L9 8 L13 14 L16 10 L22 19 Z" fill="#f4f1e8"/><path d="M9 8 L11 11 L7.5 11 Z" fill="#10302a" opacity=".25"/></svg>
+    </div>
+    <div class="brand"><b>Monterrial</b><span>CRM · WHATSAPP</span></div>
+    <div id="chapters"></div>
+  </div>
+
+  <div id="main">
+    <div id="frame">
+      <div id="cam">
+        <img class="shot" id="shotA" alt="">
+        <img class="shot" id="shotB" alt="">
+        <div id="spot"></div>
+        <div id="ripple"></div>
+        <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.8 L11.4 21.5 L14.2 20.3 L11.3 13.7 L17.5 13.7 Z" fill="#111827" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div id="panel">
+      <div id="pnum"></div>
+      <h1 id="ptitle"></h1>
+      <p id="pdesc"></p>
+      <div id="steps"></div>
+    </div>
+  </div>
+
+  <div id="cardIntro" class="card">
+    <div class="bgshot" style="background-image:url(capturas/01_bandeja_chat.png)"></div>
+    <div class="veil"></div>
+    <div class="inner">
+      <div class="kicker">GUÍA RÁPIDA DE USO</div>
+      <div class="big">Monterrial CRM</div>
+      <div class="sub">Todo tu WhatsApp de ventas, ordenado en un solo lugar</div>
+      <div class="pills" id="introPills"></div>
+    </div>
+  </div>
+
+  <div id="cardOutro" class="card">
+    <div class="bgshot" style="background-image:url(capturas/02_embudo.png)"></div>
+    <div class="veil"></div>
+    <div class="inner">
+      <div class="kicker">BUENAS PRÁCTICAS</div>
+      <div class="big" style="font-size:84px">¡Listo para vender más!</div>
+      <div class="tips">
+        <div class="tip"><div class="ic">⚡</div><b>Usa respuestas rápidas</b><p>Ahorran hasta 70% del tiempo y evitan errores al dar precios o números de cuenta.</p></div>
+        <div class="tip"><div class="ic">🗂️</div><b>Mueve el embudo a diario</b><p>Cada tarjeta en su etapa real: así el dueño sabe cómo va el negocio de un vistazo.</p></div>
+        <div class="tip"><div class="ic">🔒</div><b>Deja notas internas</b><p>«Llamar el lunes», «pidió descuento»: tu equipo tendrá el contexto y el cliente no lo ve.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="prog"><div id="progfill"></div></div>
+</div>
+
+<div id="controls">
+  <button id="bPrev">⏮ Anterior</button>
+  <button id="bPlay">⏸ Pausa</button>
+  <button id="bNext">Siguiente ⏭</button>
+  <button id="bVoice">🔈 Narración</button>
+  <button id="bRestart">↺ Inicio</button>
+</div>
+
+<script src="audio/narracion.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Guion. Coordenadas de los focos en el espacio 2000x1250 de cada captura.
+// ---------------------------------------------------------------------------
+const W = 2000, H = 1250;
+const SCENES = [
+  { kind: "intro", short: "Inicio", dur: 6500,
+    say: "Bienvenido a Monterrial CRM. En este video te mostramos, apartado por apartado, cómo usar tu nuevo sistema de atención y ventas por WhatsApp." },
+
+  { short: "Menú", title: "El menú principal", img: "01_bandeja_chat.png",
+    desc: "A la izquierda está todo el sistema. Siempre visible, en cualquier pantalla.",
+    steps: [
+      { f: [36, 140, 292, 270], t: "«Trabajo»: lo del día a día — Bandeja, Embudo, Contactos, Cupos y Campañas." },
+      { f: [36, 430, 292, 280], t: "«Agente»: tu asistente de IA — guía de inicio, configuración, laboratorio y resultados." },
+      { f: [36, 985, 295, 200], t: "Abajo: activa los avisos de mensajes nuevos y entra a Ajustes." },
+    ] },
+
+  { short: "Bandeja", title: "Bandeja de entrada", img: "01_bandeja_chat.png",
+    desc: "Aquí conversas en tiempo real con tus prospectos y clientes.",
+    steps: [
+      { f: [368, 100, 470, 1130], t: "Todos tus chats, del más reciente al más antiguo. La etiqueta muestra en qué etapa está cada cliente." },
+      { f: [368, 18, 470, 62], t: "Busca a cualquier cliente por nombre o teléfono." },
+      { f: [870, 225, 640, 520], t: "La conversación completa. Los mensajes marcados con «IA» los respondió tu asistente automáticamente." },
+      { f: [1562, 175, 398, 80], t: "«IA en esta conversación»: apágalo si quieres atender tú personalmente a este cliente." },
+      { f: [880, 1075, 260, 40], t: "«Nota interna»: escribe recordatorios para tu equipo. El cliente nunca los ve." },
+      { f: [890, 1122, 150, 60], t: "El rayo ⚡ abre tus respuestas rápidas. También puedes escribir «/» en la caja.", v: "El ícono del rayo abre tus respuestas rápidas. También puedes escribir una barra en la caja de texto." },
+    ] },
+
+  { short: "Respuestas", title: "Respuestas rápidas", img: "05_respuestas_rapidas.png",
+    desc: "Los mensajes que repites todos los días, listos a un clic. Ajustes → Respuestas rápidas.",
+    steps: [
+      { f: [697, 307, 1007, 195], t: "Cada atajo empieza con «/». Ejemplo: /cupos envía el enlace de horarios.", v: "Cada atajo empieza con una barra. Por ejemplo, barra cupos envía el enlace de horarios." },
+      { f: [697, 505, 1007, 220], t: "{nombre} se reemplaza solo por el nombre del cliente: «¡Hola Luis!».", v: "La palabra nombre, entre llaves, se reemplaza sola por el nombre del cliente. Por ejemplo: ¡Hola Luis!" },
+      { f: [1580, 320, 110, 50], t: "Edita ✏️ o borra 🗑️ cualquier respuesta cuando quieras.", v: "Con el lápiz editas, y con el tacho borras cualquier respuesta cuando quieras." },
+      { f: [697, 1160, 190, 45], t: "«Nueva respuesta» para crear las tuyas. Puedes adjuntar fotos o PDF." },
+    ] },
+
+  { short: "Embudo", title: "Embudo de ventas", img: "02_embudo.png",
+    desc: "Un tablero de tarjetas para ver en qué paso está cada prospecto.",
+    steps: [
+      { f: [390, 190, 1590, 440], t: "Cada columna es una etapa. Arrastra la tarjeta del cliente a la siguiente cuando avance." },
+      { f: [400, 100, 535, 45], t: "Encuentra cualquier tarjeta escribiendo el nombre o teléfono." },
+      { f: [610, 45, 268, 32], t: "Arriba ves cuántos prospectos tienes y cuánto dinero hay en juego." },
+      { f: [420, 385, 140, 30], t: "«WA» abre el chat en WhatsApp Web o en tu celular. «Chat» lo abre aquí en el CRM.", v: "El botón verde abre el chat en WhatsApp Web o en tu celular. El botón Chat lo abre aquí, en el CRM." },
+      { f: [1755, 40, 195, 45], t: "«Gestionar etapas»: renombra, agrega o cambia el color de las columnas." },
+    ] },
+
+  { short: "Ficha", title: "Ficha del trato", img: "14_embudo_ficha.png",
+    desc: "Haz clic en cualquier tarjeta del embudo y se abre su ficha.",
+    steps: [
+      { f: [1524, 155, 454, 116], t: "Abre la conversación en el CRM o directo en WhatsApp." },
+      { f: [1524, 315, 440, 80], t: "Anota el monto de la venta para medir cuánto vas a cobrar." },
+      { f: [1524, 435, 350, 70], t: "Marca la prioridad: Alta, Media o Baja." },
+      { f: [1524, 550, 400, 160], t: "Cambia la etapa con un clic, sin arrastrar." },
+    ] },
+
+  { short: "Contactos", title: "Contactos", img: "07_contactos.png",
+    desc: "Tu libreta de clientes. Cada persona que escribe a tu WhatsApp se registra sola.",
+    steps: [
+      { f: [514, 42, 190, 45], t: "«Nuevo contacto» para registrar a alguien a mano." },
+      { f: [714, 42, 140, 45], t: "«Importar» para subir una lista de clientes desde Excel / CSV." },
+      { f: [1550, 40, 400, 50], t: "Busca por nombre o teléfono y abre su historial completo." },
+    ] },
+
+  { short: "Cupos", title: "Cupos por clase", img: "03_cupos.png",
+    desc: "Horarios, precios y vacantes en tiempo real, sin abrir otro sistema.",
+    steps: [
+      { f: [400, 198, 622, 78], t: "Resumen: cuántas clases hay, vacantes libres y clases llenas." },
+      { f: [400, 318, 845, 48], t: "Filtra por disciplina: Baby Fútbol, Fútbol, Mamás Fit, Vóley…" },
+      { f: [400, 420, 505, 290], t: "Cada tarjeta muestra horario, edades, días, ocupación y precio." },
+      { f: [796, 652, 90, 34], t: "«Copiar» copia el horario listo para pegarlo en el chat del cliente." },
+    ] },
+
+  { short: "Campañas", title: "Campañas masivas", img: "04_campanas.png",
+    desc: "Envía avisos y promociones a muchos contactos a la vez, de forma oficial.",
+    steps: [
+      { f: [368, 122, 1614, 170], t: "Mira cuántas campañas creaste y cuántos mensajes se enviaron." },
+      { f: [1762, 28, 220, 50], t: "Haz clic en «Nueva Campaña» para empezar." },
+    ] },
+
+  { short: "Nueva campaña", title: "Crear una campaña", img: "15_campana_nueva.png",
+    desc: "Arma el mensaje y revisa cómo llegará antes de enviarlo.",
+    steps: [
+      { f: [412, 300, 630, 145], t: "Carga una plantilla sugerida: renovación mensual, aviso o torneo." },
+      { f: [412, 510, 672, 100], t: "Elige la audiencia: alumnos del embudo o todos los contactos." },
+      { f: [412, 755, 672, 200], t: "Escribe el mensaje. Usa {nombre} para personalizarlo.", v: "Escribe el mensaje. Usa la palabra nombre, entre llaves, para personalizarlo." },
+      { f: [1118, 300, 470, 490], t: "La vista previa muestra exactamente cómo lo verá el papá en WhatsApp." },
+      { f: [1188, 1040, 400, 55], t: "Guarda como borrador o «Enviar ahora»." },
+    ] },
+
+  { short: "Agente IA", title: "Agente de IA", img: "08_agente.png",
+    desc: "Tu asistente que responde 24/7 con la información de tu negocio.",
+    steps: [
+      { f: [1780, 35, 170, 45], t: "Interruptor general: enciende o apaga el agente para todas las conversaciones." },
+      { f: [430, 240, 1490, 240], t: "Confirma que el agente está conectado y listo para responder." },
+      { f: [430, 650, 1490, 210], t: "Decide qué puede hacer: llenar la ficha, mover de etapa o pasar a una persona." },
+      { f: [1192, 960, 758, 290], t: "«Knowledge base»: escribe preguntas y respuestas. El agente solo afirma lo que está aquí." },
+    ] },
+
+  { short: "Laboratorio", title: "Laboratorio", img: "09_laboratorio.png",
+    desc: "Prueba a tu agente sin enviar mensajes reales.",
+    steps: [
+      { f: [1722, 42, 228, 52], t: "«Correr evaluación»: 6 clientes simulados conversan con tu agente." },
+      { f: [822, 155, 1128, 300], t: "Un juez califica cada conversación para que mejores las respuestas antes de usarlas con clientes reales." },
+    ] },
+
+  { short: "Resultados", title: "Resultados", img: "10_resultados.png",
+    desc: "Los números del negocio: ventas, el agente y de dónde llegan tus clientes.",
+    steps: [
+      { f: [400, 115, 1050, 45], t: "Elige el periodo: 7 días, 30 días, este mes o fechas personalizadas." },
+      { f: [430, 335, 1490, 148], t: "Prospectos nuevos, tratos ganados, dinero, tasa de cierre y ticket promedio." },
+      { f: [415, 820, 760, 420], t: "El embudo del periodo: cuántos pasan de una etapa a la siguiente." },
+      { f: [1180, 820, 750, 220], t: "«Dónde se atoran»: cuántos días pasan los clientes en cada etapa." },
+    ] },
+
+  { short: "Ajustes", title: "Ajustes", img: "06_agente_ia.png",
+    desc: "Configura el sistema a la medida de tu negocio.",
+    steps: [
+      { f: [383, 100, 232, 520], t: "WhatsApp, IA, Marca, Apariencia, Plantillas, Respuestas rápidas y Equipo." },
+      { f: [668, 132, 932, 260], t: "En «IA» se conecta el proveedor que usa tu agente. La llave se guarda cifrada." },
+      { f: [383, 570, 232, 60], t: "En «Equipo» invitas a tus asesores para que atiendan contigo." },
+    ] },
+
+  { short: "Guía", title: "Guía de inicio", img: "12_guia_inicio.png",
+    desc: "Si algo falta por configurar, esta pantalla te lo dice.",
+    steps: [
+      { f: [686, 215, 980, 65], t: "Tu avance de configuración. Aquí está completo: 4 de 4." },
+      { f: [686, 305, 980, 205], t: "Cada paso tiene un botón que te lleva directo a la pantalla correcta." },
+    ] },
+
+  { kind: "outro", short: "Fin", dur: 9000,
+    say: "Tres consejos: usa las respuestas rápidas, mueve el embudo todos los días y deja notas internas. ¡Listo para vender más!" },
+];
+
+// Duración de cada paso según el largo del texto (o del audio de narración, si existe)
+function stepDur(text) { const w = text.split(/\s+/).length; return Math.max(3600, 1400 + w * 290); }
+const LEAD = 1800; // pausa al entrar a cada apartado (vista general)
+const NARR = window.NARRACION || {}; // { clave: duración en ms } generado por narrar.mjs
+
+// Texto hablado de cada tramo
+function spoken(s, k) {
+  if (s.kind) return s.say;
+  if (k < 0) return `${s.title}. ${s.desc.replace("→", ",")}`;
+  const st = s.steps[k];
+  return (st.v || st.t).replace(/[«»⚡✏️🗑️]/gu, "").replace(/\s+/g, " ").trim();
+}
+
+// Línea de tiempo plana
+let T = 0; const TL = []; // {si, k(-1=entrada), start, dur, key}
+SCENES.forEach((s, si) => {
+  s.start = T;
+  const push = (k, base) => {
+    const key = k < 0 ? `s${String(si).padStart(2, "0")}` : `s${String(si).padStart(2, "0")}_${k}`;
+    const a = NARR[key];
+    const dur = a ? Math.max(base, a + (k < 0 ? 500 : 900)) : base;
+    TL.push({ si, k, start: T, dur, key, a }); T += dur;
+    return dur;
+  };
+  if (s.kind) push(-1, s.dur);
+  else {
+    push(-1, LEAD);
+    s.steps.forEach((st, k) => { st.dur = push(k, stepDur(st.t)); });
+  }
+  s.end = T;
+});
+const TOTAL = T;
+window.__textos = () => TL.map((e) => ({ file: e.key + ".wav", text: spoken(SCENES[e.si], e.k) }));
+window.__pistas = () => TL.filter((e) => e.a).map((e) => ({ file: e.key + ".wav", start: e.start + (e.k < 0 ? 300 : 450) }));
+
+// ---------------------------------------------------------------------------
+// Render determinista: todo depende solo de t (para poder grabar cuadro a cuadro)
+// ---------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const FW = 1360, FH = 850, SC = FW / W; // escala captura→marco
+const ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+
+// Chips de capítulos + pills de portada
+const chapterScenes = SCENES.map((s, i) => [s, i]).filter(([s]) => !s.kind);
+const chipWrap = $("chapters");
+chapterScenes.forEach(([s, i]) => {
+  const c = document.createElement("div"); c.className = "chip"; c.dataset.si = i; c.textContent = s.short;
+  c.onclick = () => seek(SCENES[i].start); chipWrap.appendChild(c);
+});
+chapterScenes.forEach(([s]) => { const p = document.createElement("div"); p.className = "pill"; p.textContent = s.short; $("introPills").appendChild(p); });
+
+function camFor(f) {
+  // cámara que encuadra el foco f con margen; devuelve {s, x, y} en px del marco
+  if (!f) return { s: 1, x: 0, y: 0 };
+  const [fx, fy, fw, fh] = f.map((v) => v * SC);
+  let s = Math.min(FW / (fw * 1.9), FH / (fh * 1.9));
+  s = clamp(s, 1, 1.85);
+  const cx = fx + fw / 2, cy = fy + fh / 2;
+  let x = FW / 2 - cx * s, y = FH / 2 - cy * s;
+  x = clamp(x, FW - FW * s, 0); y = clamp(y, FH - FH * s, 0);
+  return { s, x, y };
+}
+
+let lastScene = -1, lastStep = -2, curImg = "";
+function entryAt(t) {
+  t = clamp(t, 0, TOTAL - 1);
+  let lo = 0, hi = TL.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (TL[m].start <= t) lo = m; else hi = m - 1; }
+  return lo;
+}
+
+function render(t) {
+  t = clamp(t, 0, TOTAL - 1);
+  const ei = entryAt(t), e = TL[ei], s = SCENES[e.si];
+  const local = t - e.start;
+
+  // Portada / cierre
+  const isCard = !!s.kind;
+  $("cardIntro").style.display = s.kind === "intro" ? "flex" : "none";
+  $("cardOutro").style.display = s.kind === "outro" ? "flex" : "none";
+  $("main").style.display = isCard ? "none" : "block";
+  $("topbar").style.visibility = isCard ? "hidden" : "visible";
+  if (isCard) {
+    const p = clamp(local / 900, 0, 1), out = clamp((e.dur - local) / 600, 0, 1);
+    const card = s.kind === "intro" ? $("cardIntro") : $("cardOutro");
+    card.querySelector(".inner").style.opacity = Math.min(ease(p), out);
+    card.querySelector(".inner").style.transform = `translateY(${(1 - ease(p)) * 30}px)`;
+    // pills/tips en cascada
+    card.querySelectorAll(".pill, .tip").forEach((el, i) => {
+      const q = clamp((local - 900 - i * 120) / 500, 0, 1);
+      el.style.opacity = ease(q); el.style.transform = `translateY(${(1 - ease(q)) * 18}px)`;
+    });
+  }
+
+  // Chips
+  if (e.si !== lastScene) {
+    chipWrap.querySelectorAll(".chip").forEach((c) => {
+      const i = +c.dataset.si; c.classList.toggle("active", i === e.si); c.classList.toggle("done", i < e.si);
+    });
+  }
+  $("progfill").style.width = (t / TOTAL * 100) + "%";
+  if (isCard) { lastScene = e.si; lastStep = e.k; return; }
+
+  // Imagen (con fundido entre apartados que cambian de captura)
+  const prevS = SCENES[e.si - 1];
+  const sceneLocal = t - s.start;
+  if (curImg !== s.img) { $("shotB").src = "capturas/" + s.img; curImg = s.img; $("shotA").src = prevS && prevS.img ? "capturas/" + prevS.img : ""; }
+  const fadeP = prevS && prevS.img && prevS.img !== s.img ? clamp(sceneLocal / 600, 0, 1) : 1;
+  $("shotB").style.opacity = ease(fadeP);
+  $("shotA").style.opacity = fadeP < 1 ? 1 : 0;
+  // entrada desde portada: sube el panel
+  const enter = clamp(sceneLocal / 700, 0, 1);
+  $("panel").style.opacity = e.si === 1 ? ease(enter) : 1;
+  $("frame").style.opacity = e.si === 1 ? ease(enter) : 1;
+
+  // Cámara: interpola desde el foco anterior al actual
+  const curF = e.k >= 0 ? s.steps[e.k].f : null;
+  const prevF = e.k >= 1 ? s.steps[e.k - 1].f : null;
+  const a = camFor(prevF), b = camFor(curF);
+  const mp = ease(clamp(local / 1000, 0, 1));
+  const cam = { s: lerp(a.s, b.s, mp), x: lerp(a.x, b.x, mp), y: lerp(a.y, b.y, mp) };
+  $("cam").style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`;
+
+  // Foco (spotlight) en coordenadas del marco sin escalar (vive dentro de #cam)
+  const spot = $("spot");
+  if (curF) {
+    const pad = 10 / cam.s;
+    const [fx, fy, fw, fh] = curF.map((v) => v * SC);
+    const sp = ease(clamp((local - 650) / 450, 0, 1));
+    spot.style.display = "block";
+    spot.style.left = (fx - pad) + "px"; spot.style.top = (fy - pad) + "px";
+    spot.style.width = (fw + pad * 2) + "px"; spot.style.height = (fh + pad * 2) + "px";
+    spot.style.boxShadow = `0 0 0 4000px rgba(10,18,32,${0.5 * sp})`;
+    spot.style.outline = `${3 / cam.s}px solid rgba(255,212,59,${sp})`;
+    spot.style.outlineOffset = `${3 / cam.s}px`;
+    spot.style.borderRadius = `${12 / cam.s}px`;
+  } else spot.style.display = "none";
+
+  // Cursor: viaja al centro del foco y hace clic
+  const cur = $("cursor"), rip = $("ripple");
+  const home = [FW * 0.62, FH * 0.7];
+  const tgt = curF ? [(curF[0] + curF[2] / 2) * SC, (curF[1] + curF[3] / 2) * SC] : home;
+  const from = prevF ? [(prevF[0] + prevF[2] / 2) * SC, (prevF[1] + prevF[3] / 2) * SC] : home;
+  const cp = ease(clamp((local - 150) / 900, 0, 1));
+  const arc = Math.sin(cp * Math.PI) * -40;
+  const cx = lerp(from[0], tgt[0], cp), cy = lerp(from[1], tgt[1], cp) + arc;
+  const cs = 1 / cam.s;
+  cur.style.left = cx + "px"; cur.style.top = cy + "px";
+  cur.style.transform = `scale(${cs * 1.15})`; cur.style.transformOrigin = "0 0";
+  cur.style.opacity = curF ? 1 : 0;
+  const rp = clamp((local - 1100) / 600, 0, 1);
+  if (curF && rp > 0 && rp < 1) {
+    const r = (10 + rp * 34) * cs;
+    rip.style.display = "block"; rip.style.left = (tgt[0] - r) + "px"; rip.style.top = (tgt[1] - r) + "px";
+    rip.style.width = rip.style.height = (r * 2) + "px"; rip.style.opacity = 1 - rp; rip.style.borderWidth = (3 * cs) + "px";
+  } else rip.style.display = "none";
+
+  // Panel lateral
+  if (e.si !== lastScene) {
+    const n = chapterScenes.findIndex(([, i]) => i === e.si) + 1;
+    $("pnum").textContent = `APARTADO ${n} DE ${chapterScenes.length}`;
+    $("ptitle").textContent = s.title; $("pdesc").textContent = s.desc;
+    $("steps").innerHTML = s.steps.map((st, k) => `<div class="step" data-k="${k}"><span class="n">${k + 1}</span><span>${st.t}</span></div>`).join("");
+    $("steps").querySelectorAll(".step").forEach((el) => el.onclick = () => seek(s.steps[+el.dataset.k].start ?? 0));
+  }
+  if (e.si !== lastScene || e.k !== lastStep) {
+    $("steps").querySelectorAll(".step").forEach((el) => {
+      const k = +el.dataset.k; el.classList.toggle("on", k === e.k); el.classList.toggle("past", k < e.k);
+    });
+  }
+  lastScene = e.si; lastStep = e.k;
+}
+// inicio absoluto de cada paso (para clic en pasos)
+TL.forEach((e) => { if (e.k >= 0) SCENES[e.si].steps[e.k].start = e.start; });
+
+// ---------------------------------------------------------------------------
+// Escalado del escenario
+// ---------------------------------------------------------------------------
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  $("stage").style.transform = `scale(${s}) translate(-50%, -50%)`;
+}
+addEventListener("resize", fit); fit();
+
+// ---------------------------------------------------------------------------
+// Reproducción interactiva (o modo grabación con ?record)
+// ---------------------------------------------------------------------------
+const RECORD = new URLSearchParams(location.search).has("record");
+const HAS_AUDIO = Object.keys(NARR).length > 0;
+let t = 0, playing = !RECORD && !HAS_AUDIO, last = performance.now(), voice = HAS_AUDIO, spokenAt = -1;
+const player = new Audio();
+const isSpeaking = () => HAS_AUDIO ? !player.paused && !player.ended : !!window.speechSynthesis?.speaking;
+function hush() { player.pause(); window.speechSynthesis?.cancel(); }
+function seek(nt) { t = clamp(nt, 0, TOTAL - 1); spokenAt = -1; hush(); render(t); }
+
+function speak() {
+  if (!voice) return;
+  const ei = entryAt(t); if (ei === spokenAt) return; spokenAt = ei;
+  const e = TL[ei], s = SCENES[e.si];
+  hush();
+  if (HAS_AUDIO) {
+    if (e.a) { player.src = "audio/" + e.key + ".wav"; player.play().catch(() => {}); }
+    return;
+  }
+  if (!window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(spoken(s, e.k));
+  u.lang = "es-ES"; u.rate = 1.05;
+  const v = speechSynthesis.getVoices().find((v) => /^es/i.test(v.lang)); if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+function loop(now) {
+  const dt = now - last; last = now;
+  if (playing) {
+    // con narración, no avanza de paso hasta que termine de hablar
+    const ei = entryAt(t), e = TL[ei];
+    const holding = voice && isSpeaking() && t + dt >= e.start + e.dur - 1;
+    if (!holding) t += dt;
+    if (t >= TOTAL - 1) { t = TOTAL - 1; playing = false; updPlay(); }
+    render(t); speak();
+  }
+  requestAnimationFrame(loop);
+}
+function updPlay() { $("bPlay").textContent = playing ? "⏸ Pausa" : "▶ Reproducir"; }
+const stepStarts = () => TL.map((e) => e.start);
+function jump(dir) {
+  const ei = entryAt(t); const target = TL[clamp(ei + dir, 0, TL.length - 1)];
+  seek(target.start);
+}
+
+if (RECORD) {
+  document.body.classList.add("record");
+  window.__TOTAL = TOTAL;
+  window.__render = (ms) => render(ms);
+  window.__ready = Promise.all([...new Set(SCENES.filter((s) => s.img).map((s) => s.img))].map((src) => new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = "capturas/" + src; })));
+  render(0);
+} else {
+  $("bPlay").onclick = () => { if (t >= TOTAL - 1) seek(0); playing = !playing; updPlay(); if (!playing) hush(); else spokenAt = -1; };
+  $("bPrev").onclick = () => jump(-1);
+  $("bNext").onclick = () => jump(1);
+  $("bRestart").onclick = () => { seek(0); playing = true; updPlay(); };
+  $("bVoice").onclick = () => { voice = !voice; $("bVoice").classList.toggle("on", voice); spokenAt = -1; if (!voice) hush(); };
+  $("prog").onclick = (ev) => { const r = $("prog").getBoundingClientRect(); seek((ev.clientX - r.left) / r.width * TOTAL); };
+  addEventListener("keydown", (ev) => {
+    if (ev.code === "Space") { ev.preventDefault(); $("bPlay").click(); }
+    if (ev.code === "ArrowRight") jump(1);
+    if (ev.code === "ArrowLeft") jump(-1);
+  });
+  $("bVoice").classList.toggle("on", voice); updPlay();
+  render(0); requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

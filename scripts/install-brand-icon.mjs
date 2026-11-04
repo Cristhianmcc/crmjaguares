@@ -44,3 +44,4 @@ const uploadRes = await context.request.fetch(`${BASE}/api/settings/branding/fav
 console.log("Resultado subida:", uploadRes.status(), await uploadRes.text());
 
 await browser.close();
+
