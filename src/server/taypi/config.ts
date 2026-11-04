@@ -12,10 +12,18 @@ export interface TaypiConfig {
 }
 
 export function getTaypiConfig(env = process.env): TaypiConfig {
-  const mode = (env.TAYPI_ENV || "sandbox") as TaypiMode;
-  const publicKey = env.TAYPI_PUBLIC_KEY || "";
-  const secretKey = env.TAYPI_SECRET_KEY || "";
-  const webhookSecret = env.TAYPI_WEBHOOK_SECRET || "";
+  let mode = (env.TAYPI_ENV?.trim() || "sandbox") as TaypiMode;
+  const publicKey = (env.TAYPI_PUBLIC_KEY || "").trim();
+  const secretKey = (env.TAYPI_SECRET_KEY || "").trim();
+  const webhookSecret = (env.TAYPI_WEBHOOK_SECRET || "").trim();
+
+  // Auto-detección inteligente: si las llaves son 'live', el ambiente es 'production'
+  if (publicKey.startsWith("taypi_pk_live_") || secretKey.startsWith("taypi_sk_live_")) {
+    mode = "production";
+  } else if (publicKey.startsWith("taypi_pk_test_") || secretKey.startsWith("taypi_sk_test_")) {
+    mode = "sandbox";
+  }
+
   const enabled = Boolean(publicKey && secretKey);
   const baseUrl =
     mode === "production"

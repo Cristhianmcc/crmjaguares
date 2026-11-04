@@ -149,12 +149,20 @@ export function BillingClient() {
         body: JSON.stringify({ planId }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "No se pudo iniciar el cobro.");
+      const text = await res.text();
+      let data: Record<string, unknown> = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Respuesta no válida del servidor (${res.status}): ${text.slice(0, 120)}`);
       }
 
-      const { orderId, checkout_token } = data;
+      if (!res.ok) {
+        throw new Error((data.error as string) || "No se pudo iniciar el cobro.");
+      }
+
+      const orderId = String(data.orderId || "");
+      const checkout_token = String(data.checkout_token || "");
       activeOrderRef.current = orderId;
 
       if (!taypi) throw new Error("Taypi no está disponible en la ventana.");

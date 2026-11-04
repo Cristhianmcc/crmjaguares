@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       console.error("[Taypi createPayment error]:", msg);
       return NextResponse.json(
         { error: `No pudimos generar el cobro QR en Taypi: ${msg}` },
-        { status: 502 }
+        { status: 400 }
       );
     }
 
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     if (!checkoutToken || !paymentId) {
       return NextResponse.json(
         { error: "Taypi no devolvió un token de pago válido." },
-        { status: 502 }
+        { status: 400 }
       );
     }
 
