@@ -10,7 +10,6 @@ import {
   onUserCreated,
   resolveActiveOrganizationId,
 } from "@/server/auth/on-signup";
-import { isPublicSignupAllowed } from "@/server/auth/registration";
 
 /**
  * Contexto interno del proceso: permite que el alta de cuentas de equipo
@@ -34,7 +33,7 @@ export function runInternalSignup<T>(fn: () => Promise<T>): Promise<T> {
   return internalSignupContext().run(true, fn);
 }
 
-function isInternalSignup(): boolean {
+export function isInternalSignup(): boolean {
   return internalSignupContext().getStore() === true;
 }
 
@@ -79,15 +78,6 @@ function createAuth() {
           if (!result.allowed) {
             throw new APIError("TOO_MANY_REQUESTS", {
               message: "Demasiados intentos; espera unos minutos",
-            });
-          }
-        }
-        // Registro público cerrado tras la primera organización (FR-060).
-        if (ctx.path === "/sign-up/email") {
-          if (!isInternalSignup() && !(await isPublicSignupAllowed())) {
-            throw new APIError("FORBIDDEN", {
-              message:
-                "El registro está cerrado: esta instancia ya tiene su organización",
             });
           }
         }
