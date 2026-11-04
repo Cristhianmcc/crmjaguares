@@ -3,7 +3,9 @@ export type PlanId = "trial" | "basico" | "pro" | "agencia";
 export interface Plan {
   id: PlanId;
   nombre: string;
-  precio: number; // USD/mes
+  precio: number; // Soles (PEN) por mes
+  moneda: string;
+  simbolo: string;
   maxUsuarios: number;
   maxContactos: number; // -1 = ilimitado
   campanasMasivas: boolean;
@@ -14,47 +16,54 @@ export interface Plan {
 export const PLANES: Record<PlanId, Plan> = {
   trial: {
     id: "trial",
-    nombre: "Prueba gratuita",
+    nombre: "Prueba Gratuita",
     precio: 0,
+    moneda: "PEN",
+    simbolo: "S/",
     maxUsuarios: 2,
-    maxContactos: 100,
+    maxContactos: 200,
     campanasMasivas: false,
     whiteLabel: false,
-    descripcion: "14 días gratis, sin tarjeta",
+    descripcion: "14 días de prueba con todas las funciones para probar",
   },
   basico: {
     id: "basico",
-    nombre: "Básico",
-    precio: 49,
+    nombre: "Plan Básico",
+    precio: 79,
+    moneda: "PEN",
+    simbolo: "S/",
     maxUsuarios: 2,
-    maxContactos: 500,
+    maxContactos: 1500,
     campanasMasivas: false,
     whiteLabel: false,
-    descripcion: "Para negocios que empiezan",
+    descripcion: "Ideal para colegios, consultorios o negocios que empiezan",
   },
   pro: {
     id: "pro",
-    nombre: "Pro",
-    precio: 99,
+    nombre: "Plan Pro",
+    precio: 109,
+    moneda: "PEN",
+    simbolo: "S/",
     maxUsuarios: 5,
     maxContactos: -1,
     campanasMasivas: true,
-    whiteLabel: false,
-    descripcion: "Para equipos en crecimiento",
+    whiteLabel: true,
+    descripcion: "Para negocios con alta demanda, campañas masivas y más asesores",
   },
   agencia: {
     id: "agencia",
-    nombre: "Agencia",
-    precio: 199,
-    maxUsuarios: 10,
+    nombre: "Plan Corporativo / Agencia",
+    precio: 249,
+    moneda: "PEN",
+    simbolo: "S/",
+    maxUsuarios: 15,
     maxContactos: -1,
     campanasMasivas: true,
     whiteLabel: true,
-    descripcion: "Para agencias y revendedores",
+    descripcion: "Múltiples sucursales, sedes o revendedores",
   },
 };
 
 export function getPlan(planId: string | null | undefined): Plan {
   return PLANES[(planId as PlanId) ?? "trial"] ?? PLANES.trial;
 }
-
