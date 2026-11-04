@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import Link from "next/link";
+import { Shield } from "lucide-react";
 import { PLANES, type PlanId } from "@/lib/planes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ interface OrgBillingInfo {
   diasRestantes: number | null;
   trialEndsAt: string | null;
   planExpiresAt: string | null;
+  isSuperAdmin?: boolean;
 }
 
 declare global {
@@ -225,6 +228,33 @@ export function BillingClient() {
         </div>
       )}
 
+      {info?.isSuperAdmin && (
+        <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👑</span>
+                <CardTitle className="text-base font-bold text-foreground">
+                  Cuenta Super Admin (Dueño de la Plataforma)
+                </CardTitle>
+              </div>
+              <Badge className="bg-amber-600 text-white font-semibold">Acceso Maestro</Badge>
+            </div>
+            <CardDescription className="text-xs text-muted-foreground mt-1">
+              Esta es tu cuenta principal. No necesitas pagar suscripción ni renovar planes. Desde tu Panel de Super Admin puedes dar de alta clientes, asignarles planes y gestionar sus vencimientos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Link href="/admin">
+              <Button className="gap-2 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs h-9">
+                <Shield className="h-4 w-4" />
+                Ir al Panel Super Admin (Crear y Administrar Clientes) →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tarjeta de estado actual */}
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="pb-3">
@@ -307,14 +337,20 @@ export function BillingClient() {
             </ul>
           </CardContent>
           <div className="p-6 pt-0">
-            <Button
-              className="w-full"
-              variant={info?.plan === "basico" ? "default" : "outline"}
-              disabled={payingPlan !== null}
-              onClick={() => void handlePay("basico")}
-            >
-              {payingPlan === "basico" ? "Abriendo QR…" : "Pagar S/ 79 con Yape / Plin"}
-            </Button>
+            {info?.isSuperAdmin ? (
+              <Button className="w-full" variant="outline" disabled>
+                Plan para clientes (S/ 79 / mes)
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                variant={info?.plan === "basico" ? "default" : "outline"}
+                disabled={payingPlan !== null}
+                onClick={() => void handlePay("basico")}
+              >
+                {payingPlan === "basico" ? "Abriendo QR…" : "Pagar S/ 79 con Yape / Plin"}
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -365,13 +401,19 @@ export function BillingClient() {
             </ul>
           </CardContent>
           <div className="p-6 pt-0">
-            <Button
-              className="w-full shadow-sm"
-              disabled={payingPlan !== null}
-              onClick={() => void handlePay("pro")}
-            >
-              {payingPlan === "pro" ? "Abriendo QR…" : "Pagar S/ 109 con Yape / Plin"}
-            </Button>
+            {info?.isSuperAdmin ? (
+              <Button className="w-full bg-emerald-600/10 text-emerald-700 border border-emerald-500/30 hover:bg-emerald-600/10 cursor-default" variant="outline">
+                ✓ Plan Maestro Activo en tu Organización
+              </Button>
+            ) : (
+              <Button
+                className="w-full shadow-sm"
+                disabled={payingPlan !== null}
+                onClick={() => void handlePay("pro")}
+              >
+                {payingPlan === "pro" ? "Abriendo QR…" : "Pagar S/ 109 con Yape / Plin"}
+              </Button>
+            )}
           </div>
         </Card>
       </div>

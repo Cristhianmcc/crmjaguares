@@ -1,8 +1,6 @@
 /**
- * Script para crear o sincronizar la cuenta de Super Admin directamente en la BD.
- * 
- * Uso:
- *   SUPER_ADMIN_EMAIL=cristhianmc303@gmail.com SUPER_ADMIN_PASSWORD=TuPassword123! node scripts/sync-admin.mjs
+ * Script para crear o sincronizar la cuenta de Super Admin directamente en la BD,
+ * vinculándolo a la organización principal para no perder WhatsApp ni DeepSeek.
  */
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -44,68 +42,75 @@ const sql = postgres(dbUrl, { max: 1 });
 async function main() {
   console.log(`🔍 Sincronizando Super Admin para: ${adminEmail}...`);
 
+  const primaryOrgs = await sql`SELECT id, name FROM "organization" ORDER BY created_at ASC LIMIT 1`;
+  const primaryOrg = primaryOrgs[0];
+
   const users = await sql`SELECT id, email FROM "user" WHERE LOWER(email) = ${adminEmail} LIMIT 1`;
-  const user = users[0];
+  let user = users[0];
   const hashedPassword = await hashPassword(adminPassword);
 
   if (!user) {
     const userId = randomUUID();
     const accountId = randomUUID();
-    const orgId = "org_" + randomUUID().replace(/-/g, "").slice(0, 16);
-    const memberId = "mem_" + randomUUID().replace(/-/g, "").slice(0, 16);
 
     await sql.begin(async (tx) => {
-      // 1. User
       await tx`
         INSERT INTO "user" (id, name, email, email_verified, created_at, updated_at)
         VALUES (${userId}, ${adminName}, ${adminEmail}, true, NOW(), NOW())
       `;
-
-      // 2. Account
       await tx`
         INSERT INTO "account" (id, account_id, provider_id, user_id, password, created_at, updated_at)
         VALUES (${accountId}, ${userId}, 'credential', ${userId}, ${hashedPassword}, NOW(), NOW())
       `;
-
-      // 3. Organization
-      await tx`
-        INSERT INTO "organization" (id, name, slug, plan, plan_expires_at, created_at)
-        VALUES (${orgId}, 'Monterrial Central', ${orgId}, 'pro', NOW() + INTERVAL '10 years', NOW())
-        ON CONFLICT (id) DO NOTHING
-      `;
-
-      // 4. Member
-      await tx`
-        INSERT INTO "member" (id, organization_id, user_id, role, created_at)
-        VALUES (${memberId}, ${orgId}, ${userId}, 'owner', NOW())
-      `;
     });
 
-    console.log(`✅ Super Admin CREADO exitosamente:`);
-    console.log(`   Email: ${adminEmail}`);
-    console.log(`   Password: ${adminPassword}`);
+    user = { id: userId, email: adminEmail };
+    console.log(`✅ Super Admin CREADO: ${adminEmail}`);
   } else {
     // Actualizar contraseña
-    const existingAccounts = await sql`SELECT id FROM "account" WHERE user_id = ${user.id} LIMIT 1`;
-    if (existingAccounts[0]) {
-      await sql`UPDATE "account" SET password = ${hashedPassword}, updated_at = NOW() WHERE id = ${existingAccounts[0].id}`;
+    const accounts = await sql`SELECT id FROM "account" WHERE user_id = ${user.id} LIMIT 1`;
+    if (accounts[0]) {
+      await sql`UPDATE "account" SET password = ${hashedPassword}, updated_at = NOW() WHERE id = ${accounts[0].id}`;
     } else {
       await sql`
         INSERT INTO "account" (id, account_id, provider_id, user_id, password, created_at, updated_at)
         VALUES (${randomUUID()}, ${user.id}, 'credential', ${user.id}, ${hashedPassword}, NOW(), NOW())
       `;
     }
+    console.log(`✅ Contraseña de Super Admin actualizada`);
+  }
 
-    // Asegurar rol owner en su membresía
-    const members = await sql`SELECT id, organization_id FROM "member" WHERE user_id = ${user.id} LIMIT 1`;
-    if (members[0]) {
+  // Vincular con la organización principal si existe
+  if (primaryOrg) {
+    const members = await sql`SELECT id FROM "member" WHERE user_id = ${user.id} AND organization_id = ${primaryOrg.id} LIMIT 1`;
+    if (!members[0]) {
+      const anyMember = await sql`SELECT id FROM "member" WHERE user_id = ${user.id} LIMIT 1`;
+      if (anyMember[0]) {
+        await sql`UPDATE "member" SET organization_id = ${primaryOrg.id}, role = 'owner' WHERE id = ${anyMember[0].id}`;
+      } else {
+        await sql`
+          INSERT INTO "member" (id, organization_id, user_id, role, created_at)
+          VALUES (${'mem_' + randomUUID().replace(/-/g, '').slice(0, 16)}, ${primaryOrg.id}, ${user.id}, 'owner', NOW())
+        `;
+      }
+    } else {
       await sql`UPDATE "member" SET role = 'owner' WHERE id = ${members[0].id}`;
-      await sql`UPDATE "organization" SET plan = 'pro' WHERE id = ${members[0].organization_id}`;
     }
 
-    console.log(`✅ Super Admin ACTUALIZADO exitosamente:`);
-    console.log(`   Email: ${adminEmail}`);
-    console.log(`   Password: ${adminPassword}`);
+    // Asegurar plan pro
+    await sql`UPDATE "organization" SET plan = 'pro', plan_expires_at = NOW() + INTERVAL '10 years' WHERE id = ${primaryOrg.id}`;
+    console.log(`✅ Vinculado como Owner a la organización principal '${primaryOrg.name}'`);
+  }
+
+  // Eliminar organizaciones huérfanas creadas por error si están vacías
+  if (primaryOrg) {
+    await sql`
+      DELETE FROM "organization" 
+      WHERE id != ${primaryOrg.id} 
+      AND name = 'Monterrial Central'
+      AND id NOT IN (SELECT organization_id FROM "credentials" WHERE organization_id IS NOT NULL)
+      AND id NOT IN (SELECT organization_id FROM "ai_credentials" WHERE organization_id IS NOT NULL)
+    `.catch(() => {});
   }
 
   await sql.end();

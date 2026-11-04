@@ -4,6 +4,7 @@ import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getPlan, type PlanId } from "@/lib/planes";
 import { getRemainingTrialDays, isPlanActive } from "@/lib/plan-guard";
+import { isSuperAdminUser } from "@/server/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,14 @@ export async function GET() {
   try {
     const session = await requireSession();
     const db = getDb();
+
+    const userRow = await db
+      .select({ email: schema.user.email })
+      .from(schema.user)
+      .where(eq(schema.user.id, session.userId))
+      .limit(1);
+
+    const isSuperAdmin = await isSuperAdminUser(session.userId, userRow[0]?.email || "");
 
     const orgs = await db
       .select()
@@ -48,9 +57,11 @@ export async function GET() {
       diasRestantes,
       trialEndsAt: org.trialEndsAt,
       planExpiresAt: org.planExpiresAt,
+      isSuperAdmin,
     });
   } catch {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 }
+
 
