@@ -87,6 +87,36 @@ export function BillingClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const activeOrderRef = useRef<string | null>(null);
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
+
+  function forceCloseTaypiModal() {
+    try {
+      window.Taypi?.close?.();
+    } catch {}
+    try {
+      document.querySelectorAll("iframe[src*='taypi']").forEach((el) => {
+        el.parentElement?.remove();
+        el.remove();
+      });
+      const overlays = document.querySelectorAll("[id*='taypi'], [class*='taypi']");
+      overlays.forEach((el) => {
+        if (el.tagName !== "SCRIPT") el.remove();
+      });
+    } catch {}
+  }
 
   const fetchBilling = useCallback(async () => {
     try {
@@ -107,29 +137,37 @@ export function BillingClient() {
   }, [fetchBilling]);
 
   // Verificar estado del pedido pendiente si el modal se cierra o tras pagar
-  const checkPaymentStatus = useCallback(async (orderId: string) => {
-    try {
-      const res = await fetch(`/api/payments/status/${orderId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === "completed") {
-          setSuccess("¡Pago confirmado con éxito! Tu plan ha sido renovado por 30 días.");
-          setMessage(null);
-          void fetchBilling();
-          return true;
+  const checkPaymentStatus = useCallback(
+    async (orderId: string, isTest = false) => {
+      try {
+        const res = await fetch(`/api/payments/status/${orderId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "completed") {
+            setSuccess(
+              isTest || data.planId === "test"
+                ? "¡Pago de prueba de S/ 1.00 confirmado con éxito! Tu dinero ha ingresado a tu cuenta de Taypi."
+                : "¡Pago confirmado con éxito! Tu plan ha sido renovado por 30 días."
+            );
+            setMessage(null);
+            void fetchBilling();
+            return true;
+          }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-    return false;
-  }, [fetchBilling]);
+      return false;
+    },
+    [fetchBilling]
+  );
 
   async function handlePay(planId: PlanId) {
     if (payingPlan) return;
     setPayingPlan(planId);
     setMessage(null);
     setSuccess(null);
+    stopPolling();
 
     try {
       // 1. Obtener configuración pública de Taypi
@@ -169,21 +207,38 @@ export function BillingClient() {
 
       taypi.publicKey = config.publicKey;
 
-      // 4. Abrir modal con QR de Yape / Plin
+      // 4. Iniciar verificación continua cada 2.5s mientras el modal esté abierto
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const isPaid = await checkPaymentStatus(orderId, planId === "test");
+          if (isPaid) {
+            stopPolling();
+            forceCloseTaypiModal();
+          }
+        } catch {
+          // ignore
+        }
+      }, 2500);
+
+      // 5. Abrir modal con QR de Yape / Plin
       taypi.open({
         sessionToken: checkout_token,
         onSuccess: () => {
-          taypi.close?.();
-          void checkPaymentStatus(orderId);
+          stopPolling();
+          forceCloseTaypiModal();
+          void checkPaymentStatus(orderId, planId === "test");
         },
         onClose: () => {
-          void checkPaymentStatus(orderId);
+          stopPolling();
+          void checkPaymentStatus(orderId, planId === "test");
         },
         onExpired: () => {
+          stopPolling();
           setMessage("El código QR de pago expiró. Puedes generar uno nuevo en cualquier momento.");
-          taypi.close?.();
+          forceCloseTaypiModal();
         },
         onError: () => {
+          stopPolling();
           setMessage("Ocurrió un error al procesar el pago con QR. Intenta nuevamente.");
         },
       });

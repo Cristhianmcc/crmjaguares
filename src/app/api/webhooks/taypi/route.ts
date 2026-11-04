@@ -63,7 +63,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true, not_found: true });
   }
 
-  if (eventName === "payment.completed" || status === "completed") {
+  const isCompletedEvent =
+    eventName === "payment.completed" ||
+    eventName === "payment.paid" ||
+    eventName === "charge.success" ||
+    status === "completed" ||
+    status === "paid";
+
+  if (isCompletedEvent) {
     const paidAt = event.paid_at ? new Date(event.paid_at) : new Date();
     // 30 días de suscripción
     const planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

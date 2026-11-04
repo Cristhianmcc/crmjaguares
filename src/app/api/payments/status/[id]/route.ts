@@ -29,8 +29,9 @@ export async function GET(
       const client = getTaypiClient();
       if (client) {
         const remote = await client.getPayment(order.paymentId);
-        if (remote && remote.status === "completed") {
-          const paidAt = remote.paid_at ? new Date(remote.paid_at as string) : new Date();
+        const remoteStatus = String(remote?.status || "").toLowerCase();
+        if (remoteStatus === "completed" || remoteStatus === "paid" || remoteStatus === "approved") {
+          const paidAt = remote?.paid_at ? new Date(remote.paid_at as string) : new Date();
           const planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
           await db
@@ -38,13 +39,15 @@ export async function GET(
             .set({ status: "completed", paidAt })
             .where(eq(schema.paymentOrder.id, id));
 
-          await db
-            .update(schema.organization)
-            .set({
-              plan: order.planId,
-              planExpiresAt,
-            })
-            .where(eq(schema.organization.id, order.organizationId));
+          if (order.planId !== "test") {
+            await db
+              .update(schema.organization)
+              .set({
+                plan: order.planId,
+                planExpiresAt,
+              })
+              .where(eq(schema.organization.id, order.organizationId));
+          }
 
           return NextResponse.json({
             orderId: order.id,
