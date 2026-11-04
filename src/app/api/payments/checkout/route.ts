@@ -14,9 +14,9 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const planId = body.planId as PlanId;
 
-    if (!planId || !["basico", "pro"].includes(planId)) {
+    if (!planId || !["basico", "pro", "test"].includes(planId)) {
       return NextResponse.json(
-        { error: "Plan inválido para pago. Elige 'basico' o 'pro'." },
+        { error: "Plan inválido para pago. Elige 'basico', 'pro' o 'test'." },
         { status: 422 }
       );
     }

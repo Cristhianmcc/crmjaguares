@@ -1,4 +1,4 @@
-export type PlanId = "trial" | "basico" | "pro" | "agencia";
+export type PlanId = "trial" | "basico" | "pro" | "agencia" | "test";
 
 export interface Plan {
   id: PlanId;
@@ -25,6 +25,18 @@ export const PLANES: Record<PlanId, Plan> = {
     campanasMasivas: false,
     whiteLabel: false,
     descripcion: "14 días de prueba con todas las funciones para probar",
+  },
+  test: {
+    id: "test",
+    nombre: "Prueba de Cobro",
+    precio: 1, // S/ 1.00
+    moneda: "PEN",
+    simbolo: "S/",
+    maxUsuarios: 10,
+    maxContactos: -1,
+    campanasMasivas: true,
+    whiteLabel: true,
+    descripcion: "Pago de prueba de S/ 1.00 para verificar que el dinero ingresa a Taypi",
   },
   basico: {
     id: "basico",

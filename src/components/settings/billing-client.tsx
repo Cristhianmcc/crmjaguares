@@ -305,6 +305,36 @@ export function BillingClient() {
         </CardContent>
       </Card>
 
+      {/* Tarjeta de Prueba de Pago en Vivo de S/ 1.00 */}
+      <Card className="border-dashed border-amber-500/50 bg-amber-500/5">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🧪</span>
+              <CardTitle className="text-sm font-bold text-foreground">
+                Prueba de Cobro en Vivo (S/ 1.00)
+              </CardTitle>
+            </div>
+            <Badge variant="outline" className="text-amber-700 border-amber-500/40 font-mono text-xs">
+              S/ 1.00 PEN
+            </Badge>
+          </div>
+          <CardDescription className="text-xs text-muted-foreground">
+            Genera un código QR real de <strong>S/ 1.00</strong> para probar con tu Yape o Plin desde tu celular y confirmar que el dinero llega a tu cuenta de Taypi.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-1 pb-4">
+          <Button
+            onClick={() => void handlePay("test")}
+            disabled={payingPlan !== null}
+            variant="outline"
+            className="gap-2 border-amber-500/40 hover:bg-amber-500/10 text-amber-900 dark:text-amber-200 font-semibold text-xs h-9 shadow-sm"
+          >
+            <span>{payingPlan === "test" ? "Generando QR…" : "Pagar S/ 1.00 de prueba con Yape / Plin →"}</span>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Opciones de renovación / cambio de plan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         {/* Plan Básico */}

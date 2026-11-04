@@ -78,18 +78,24 @@ export async function POST(req: Request) {
       })
       .where(eq(schema.paymentOrder.id, order.id));
 
-    // 2. Activar plan y extender expiración en la organización
-    await db
-      .update(schema.organization)
-      .set({
-        plan: order.planId,
-        planExpiresAt,
-      })
-      .where(eq(schema.organization.id, order.organizationId));
+    // 2. Activar plan y extender expiración en la organización (si no es pago de prueba)
+    if (order.planId !== "test") {
+      await db
+        .update(schema.organization)
+        .set({
+          plan: order.planId,
+          planExpiresAt,
+        })
+        .where(eq(schema.organization.id, order.organizationId));
 
-    console.log(
-      `[Taypi Webhook] ✅ Plan '${order.planId}' activado exitosamente para org '${order.organizationId}' hasta ${planExpiresAt.toISOString()}`
-    );
+      console.log(
+        `[Taypi Webhook] ✅ Plan '${order.planId}' activado exitosamente para org '${order.organizationId}' hasta ${planExpiresAt.toISOString()}`
+      );
+    } else {
+      console.log(
+        `[Taypi Webhook] 🧪 Pago de prueba de S/ 1.00 recibido con éxito. Orden ${order.id} completada.`
+      );
+    }
   } else if (eventName === "payment.failed" || eventName === "payment.expired") {
     await db
       .update(schema.paymentOrder)
