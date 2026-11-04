@@ -62,6 +62,23 @@ export function SettingsNav({
           })}
         </div>
       ))}
+
+      <div className="flex shrink-0 items-center gap-1 sm:flex-col sm:items-stretch sm:gap-0.5 sm:mt-2 sm:pt-2 sm:border-t">
+        <span className="kicker mr-1 shrink-0 sm:mb-1 sm:mr-0 sm:px-3">Suscripción</span>
+        <Link
+          href="/settings/billing"
+          aria-current={pathname.startsWith("/settings/billing") ? "page" : undefined}
+          className={cn(
+            "block shrink-0 whitespace-nowrap rounded-sm px-3 py-2 text-[13.5px] font-semibold transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            pathname.startsWith("/settings/billing")
+              ? "bg-brand-tint text-brand-text"
+              : "text-text-2 hover:bg-accent hover:text-foreground"
+          )}
+        >
+          Planes y Pagos
+        </Link>
+      </div>
     </nav>
   );
 }

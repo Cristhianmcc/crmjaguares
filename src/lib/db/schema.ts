@@ -1469,3 +1469,30 @@ export const campaign = pgTable(
     index("campaign_org_status_idx").on(t.organizationId, t.status, t.createdAt),
   ]
 );
+
+/* ============================================================
+ * Pasarela de pagos (Taypi — Yape / Plin / QR interoperable)
+ * ============================================================ */
+
+export const paymentOrder = pgTable(
+  "payment_order",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    planId: text("plan_id").notNull(),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("PEN"),
+    status: text("status").notNull().default("pending"),
+    checkoutToken: text("checkout_token"),
+    paymentId: text("payment_id"),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("payment_order_org_idx").on(t.organizationId, t.createdAt),
+    index("payment_order_payment_id_idx").on(t.paymentId),
+  ]
+);
