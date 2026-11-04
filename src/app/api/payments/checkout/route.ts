@@ -5,6 +5,7 @@ import { getPlan, type PlanId } from "@/lib/planes";
 import { getTaypiClient } from "@/server/taypi/config";
 import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { isSuperAdminUser } from "@/server/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,24 @@ export async function POST(req: Request) {
         { error: "Plan inválido para pago. Elige 'basico', 'pro' o 'test'." },
         { status: 422 }
       );
+    }
+
+    const db = getDb();
+
+    // El plan de prueba de S/ 1.00 es estrictamente para el Super Admin
+    if (planId === "test") {
+      const userRow = await db
+        .select({ email: schema.user.email })
+        .from(schema.user)
+        .where(eq(schema.user.id, session.userId))
+        .limit(1);
+      const isSuper = await isSuperAdminUser(session.userId, userRow[0]?.email || "");
+      if (!isSuper) {
+        return NextResponse.json(
+          { error: "El cobro de prueba de S/ 1.00 está reservado únicamente para el Super Administrador." },
+          { status: 403 }
+        );
+      }
     }
 
     const plan = getPlan(planId);
@@ -40,8 +59,6 @@ export async function POST(req: Request) {
     const orderId = randomUUID();
     const amountStr = plan.precio.toFixed(2); // ej. "79.00" o "109.00"
     const amountCents = Math.round(plan.precio * 100);
-
-    const db = getDb();
 
     // 1. Registrar pedido inicial
     await db.insert(schema.paymentOrder).values({
