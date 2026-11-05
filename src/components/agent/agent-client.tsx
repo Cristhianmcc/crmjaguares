@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { BrainStatusCard } from "@/components/agent/brain-status-card";
 import { externalDown, type BrainStatusDto } from "@/lib/brain-status";
 import { Badge } from "@/components/ui/badge";
@@ -381,6 +381,21 @@ function KbSection({
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [block, setBlock] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === "string") {
+        setBlock((prev) => (prev ? `${prev}\n\n${text}` : text));
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function addQa() {
     if (!question.trim() || !answer.trim()) return;
@@ -415,10 +430,9 @@ function KbSection({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Knowledge base</CardTitle>
+            <CardTitle>Base de Conocimiento (Entrenamiento de la IA)</CardTitle>
             <CardDescription>
-              La única fuente de verdad del agente: lo que no está aquí, no lo
-              afirma.
+              La fuente de verdad de tu bot: la IA responderá las dudas de tus clientes basándose fielmente en lo que agregues aquí.
             </CardDescription>
           </div>
           {kbSize && (
@@ -429,21 +443,52 @@ function KbSection({
         </div>
         {kbSize?.warning && (
           <p className="text-xs text-warning-text">
-            El conocimiento se acerca al límite del contexto del modelo (v1 lo
-            inyecta completo en cada turno). Considera depurar entradas.
+            El conocimiento se acerca al límite de memoria del modelo. Considera resumir o depurar entradas muy extensas.
           </p>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Nueva pregunta / respuesta</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Nuevo bloque de texto libre</p>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.csv,.json"
+                className="hidden"
+                id="kb-file-input"
+                onChange={handleFileUpload}
+              />
+              <label
+                htmlFor="kb-file-input"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Importar archivo (.txt, .md)</span>
+              </label>
+            </div>
+          </div>
+          <Textarea
+            placeholder="Pega aquí servicios, precios, tratamientos, dirección o información de folletos/PDFs…"
+            rows={4}
+            value={block}
+            onChange={(e) => setBlock(e.target.value)}
+          />
+          <Button size="sm" onClick={() => void addBlock()} disabled={!block.trim()}>
+            <Plus className="h-4 w-4" /> Agregar bloque al conocimiento
+          </Button>
+        </div>
+
+        <div className="space-y-2 rounded-md border p-3">
+          <p className="text-sm font-medium">Nueva pregunta frecuente (P/R)</p>
           <Input
-            placeholder="Pregunta (p. ej. ¿Hacen envíos?)"
+            placeholder="Pregunta (p. ej. ¿Cuánto cuesta la curación dental?)"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
           />
           <Textarea
-            placeholder="Respuesta"
+            placeholder="Respuesta (p. ej. La curación con resina cuesta S/ 100 e incluye evaluación inicial.)"
             rows={2}
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
@@ -453,20 +498,7 @@ function KbSection({
             onClick={() => void addQa()}
             disabled={!question.trim() || !answer.trim()}
           >
-            <Plus className="h-4 w-4" /> Agregar P/R
-          </Button>
-        </div>
-
-        <div className="space-y-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Nuevo bloque de texto libre</p>
-          <Textarea
-            placeholder="Horarios, direcciones, políticas…"
-            rows={3}
-            value={block}
-            onChange={(e) => setBlock(e.target.value)}
-          />
-          <Button size="sm" onClick={() => void addBlock()} disabled={!block.trim()}>
-            <Plus className="h-4 w-4" /> Agregar bloque
+            <Plus className="h-4 w-4" /> Agregar pregunta y respuesta
           </Button>
         </div>
 
@@ -495,7 +527,7 @@ function KbSection({
           ))}
           {entries.length === 0 && (
             <p className="py-2 text-center text-xs text-muted-foreground">
-              Sin entradas todavía: agrega lo que el agente debe saber.
+              Sin información todavía: agrega los servicios y respuestas clave de tu negocio.
             </p>
           )}
         </ul>
