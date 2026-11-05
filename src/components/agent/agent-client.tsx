@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import type { RubroPresetId } from "@/lib/rubro-presets";
 import { BrainStatusCard } from "@/components/agent/brain-status-card";
+import { PresetConfirmDialog, RoleConfirmDialog } from "@/components/agent/preset-confirm-dialog";
 import { externalDown, type BrainStatusDto } from "@/lib/brain-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export function AgentClient() {
   // «Quién responde»: se refresca solo, porque la última llamada del cerebro
   // externo y su /health cambian sin que nadie toque esta pantalla.
   const [brain, setBrain] = useState<BrainStatusDto | null>(null);
+  const [confirmRole, setConfirmRole] = useState(false);
 
   const loadBrain = useCallback(async () => {
     const b = await fetch("/api/agent/brain-status")
@@ -95,11 +97,7 @@ export function AgentClient() {
     );
   }
 
-  async function cargarPreset() {
-    const ok = window.confirm(
-      `Cargar el rol «${ROLES.calificador.etiqueta}» reemplaza las instrucciones y las reglas de escalado, y enciende todas sus herramientas. ¿Continuar?`
-    );
-    if (!ok) return;
+  async function executeRolePreset() {
     await fetch("/api/agent/profile/preset", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -107,6 +105,7 @@ export function AgentClient() {
     }).catch(() => null);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+    setConfirmRole(false);
     void refetch();
   }
 
@@ -215,11 +214,19 @@ export function AgentClient() {
           profile={profile}
           agendaEnabled={agendaEnabled}
           onTools={(tools) => void saveProfile({ tools })}
-          onPreset={() => void cargarPreset()}
+          onPreset={() => setConfirmRole(true)}
         />
         <ProfileSection profile={profile} onSave={saveProfile} />
         <KbSection entries={entries} kbSize={kbSize} onChanged={() => void refetch()} />
       </div>
+
+      {confirmRole && (
+        <RoleConfirmDialog
+          roleLabel={ROLES.calificador.etiqueta}
+          onCancel={() => setConfirmRole(false)}
+          onConfirm={executeRolePreset}
+        />
+      )}
     </div>
   );
 }
@@ -383,26 +390,22 @@ function KbSection({
   const [answer, setAnswer] = useState("");
   const [block, setBlock] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<RubroPresetId>("dental");
-  const [loadingPreset, setLoadingPreset] = useState(false);
+  const [confirmPreset, setConfirmPreset] = useState<RubroPresetId | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadRubroPreset(presetId: RubroPresetId) {
-    const ok = window.confirm(
-      "¿Deseas cargar la plantilla predefinida para este rubro? Se añadirán servicios, precios de referencia, preguntas frecuentes e instrucciones sugeridas para guiarte."
-    );
-    if (!ok) return;
-    setLoadingPreset(true);
+  async function executeLoadPreset(replaceKb: boolean) {
+    if (!confirmPreset) return;
     try {
       const res = await fetch("/api/agent/preset-rubro", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ presetId }),
+        body: JSON.stringify({ presetId: confirmPreset, replaceKb }),
       });
       if (res.ok) {
         onChanged();
       }
     } finally {
-      setLoadingPreset(false);
+      setConfirmPreset(null);
     }
   }
 
@@ -491,10 +494,9 @@ function KbSection({
               variant="outline"
               size="sm"
               className="h-8 text-xs font-medium"
-              onClick={() => void loadRubroPreset(selectedPreset)}
-              disabled={loadingPreset}
+              onClick={() => setConfirmPreset(selectedPreset)}
             >
-              {loadingPreset ? "Cargando…" : "Cargar plantilla"}
+              Cargar plantilla
             </Button>
           </div>
         </div>
@@ -583,6 +585,14 @@ function KbSection({
           )}
         </ul>
       </CardContent>
+
+      {confirmPreset && (
+        <PresetConfirmDialog
+          presetId={confirmPreset}
+          onCancel={() => setConfirmPreset(null)}
+          onConfirm={executeLoadPreset}
+        />
+      )}
     </Card>
   );
 }

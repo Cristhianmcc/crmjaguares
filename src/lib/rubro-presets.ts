@@ -239,3 +239,4 @@ export function inferRubroPreset(rubro?: string, businessName?: string): RubroPr
   }
   return "servicios";
 }
+
