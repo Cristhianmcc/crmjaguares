@@ -28,6 +28,10 @@ export function AdminPanelClient() {
   const [orgs, setOrgs] = useState<OrgItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [orgToSuspend, setOrgToSuspend] = useState<OrgItem | null>(null);
+  const [orgToDelete, setOrgToDelete] = useState<OrgItem | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [createdData, setCreatedData] = useState<{
     businessName: string;
     clientName: string;
@@ -66,6 +70,17 @@ export function AdminPanelClient() {
   useEffect(() => {
     void fetchOrgs();
   }, [fetchOrgs]);
+
+  function isOrgActive(org: OrgItem): boolean {
+    if (org.plan === "trial") {
+      if (!org.trialEndsAt) return true;
+      return new Date() < new Date(org.trialEndsAt);
+    }
+    if (org.planExpiresAt) {
+      return new Date() < new Date(org.planExpiresAt);
+    }
+    return true;
+  }
 
   function generatePassword() {
     const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
@@ -170,23 +185,111 @@ export function AdminPanelClient() {
     }
   }
 
-  async function handleExtend30Days(orgId: string, currentPlan: PlanId) {
-    const planToSet = currentPlan === "trial" ? "basico" : currentPlan;
+  async function handleExtend(orgId: string) {
+    setActionLoading(true);
     try {
-      const res = await fetch(`/api/admin/orgs/${orgId}/plan`, {
+      const res = await fetch(`/api/admin/orgs/${orgId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planToSet, durationDays: 30 }),
+        body: JSON.stringify({ action: "extend" }),
       });
-      if (res.ok) {
-        setNoticeModal({
-          title: "Suscripción Extendida",
-          message: "Se han añadido exitosamente +30 días de servicio al negocio.",
-        });
-        void fetchOrgs();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo extender la suscripción.");
       }
-    } catch {
-      // ignore
+      setNoticeModal({
+        title: "Suscripción Extendida",
+        message: "Se han añadido exitosamente +30 días de vigencia al negocio.",
+      });
+      void fetchOrgs();
+    } catch (err) {
+      setNoticeModal({
+        title: "Error",
+        message: err instanceof Error ? err.message : "Error al extender suscripción",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleSuspend(org: OrgItem) {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orgs/${org.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "suspend" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo suspender la cuenta.");
+      }
+      setOrgToSuspend(null);
+      setNoticeModal({
+        title: "Cuenta Suspendida",
+        message: `El acceso de ${org.name} ha sido pausado. Su agente de IA dejará de contestar y verá la pantalla de pago al ingresar.`,
+      });
+      void fetchOrgs();
+    } catch (err) {
+      setNoticeModal({
+        title: "Error",
+        message: err instanceof Error ? err.message : "Error al suspender cuenta",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleReactivate(orgId: string) {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orgs/${orgId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reactivate" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo reactivar la cuenta.");
+      }
+      setNoticeModal({
+        title: "Cuenta Reactivada",
+        message: "El negocio ha sido reactivado exitosamente con +30 días de servicio.",
+      });
+      void fetchOrgs();
+    } catch (err) {
+      setNoticeModal({
+        title: "Error",
+        message: err instanceof Error ? err.message : "Error al reactivar cuenta",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDelete(org: OrgItem) {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orgs/${org.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo eliminar la cuenta.");
+      }
+      setOrgToDelete(null);
+      setNoticeModal({
+        title: "Cliente Eliminado",
+        message: `La organización ${org.name} y sus credenciales asociadas han sido eliminadas permanentemente.`,
+      });
+      void fetchOrgs();
+    } catch (err) {
+      setNoticeModal({
+        title: "Error",
+        message: err instanceof Error ? err.message : "Error al eliminar cliente",
+      });
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -217,9 +320,9 @@ export function AdminPanelClient() {
 
   // Métricas
   const totalOrgs = orgs.length;
-  const trials = orgs.filter((o) => o.plan === "trial").length;
-  const basicos = orgs.filter((o) => o.plan === "basico").length;
-  const pros = orgs.filter((o) => o.plan === "pro").length;
+  const activos = orgs.filter((o) => isOrgActive(o)).length;
+  const suspendidos = orgs.filter((o) => !isOrgActive(o)).length;
+  const trials = orgs.filter((o) => o.plan === "trial" && isOrgActive(o)).length;
 
   return (
     <div className="space-y-6">
@@ -229,7 +332,7 @@ export function AdminPanelClient() {
             Administración de Clientes
           </h2>
           <p className="text-sm text-muted-foreground">
-            Crea cuentas llave en mano para tus clientes, administra sus planes y módulos según su rubro.
+            Crea cuentas llave en mano para tus clientes, administra sus planes, suspende o reactiva sus servicios.
           </p>
         </div>
         <Button
@@ -250,22 +353,22 @@ export function AdminPanelClient() {
           <p className="text-2xl font-bold text-foreground">{totalOrgs}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Prueba Gratuita</p>
+          <p className="text-xs text-muted-foreground">Activos / Pagados</p>
+          <p className="text-2xl font-bold text-emerald-600">{activos}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">Suspendidos / Vencidos</p>
+          <p className="text-2xl font-bold text-destructive">{suspendidos}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">En Prueba Gratuita</p>
           <p className="text-2xl font-bold text-amber-600">{trials}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Plan Básico (S/ 79)</p>
-          <p className="text-2xl font-bold text-blue-600">{basicos}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Plan Pro (S/ 109)</p>
-          <p className="text-2xl font-bold text-emerald-600">{pros}</p>
         </Card>
       </div>
 
       {/* Modal emergente vistoso de confirmación de cuenta creada para WhatsApp */}
       {createdData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
           <Card className="w-full max-w-lg shadow-2xl border-emerald-500/40 bg-card">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
@@ -302,11 +405,11 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* Modal vistoso de confirmación para acciones (como +30 días o cambio de rubro) */}
+      {/* Modal vistoso de confirmación para avisos/éxito */}
       {noticeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-sm shadow-2xl border-emerald-500/30 text-center p-6 space-y-4 bg-card">
-            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-sm shadow-2xl border-primary/30 text-center p-6 space-y-4 bg-card">
+            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold">
               ✓
             </div>
             <div>
@@ -314,11 +417,119 @@ export function AdminPanelClient() {
               <p className="text-sm text-muted-foreground mt-1.5">{noticeModal.message}</p>
             </div>
             <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
               onClick={() => setNoticeModal(null)}
             >
               Entendido
             </Button>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de confirmación para Suspender */}
+      {orgToSuspend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-md shadow-2xl border-amber-500/40 bg-card">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base text-amber-600 flex items-center gap-2 font-bold">
+                  <span>⏸️</span>
+                  <span>Suspender Cuenta de Cliente</span>
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOrgToSuspend(null)}
+                  disabled={actionLoading}
+                >
+                  ✕
+                </Button>
+              </div>
+              <CardDescription className="text-xs text-muted-foreground mt-1">
+                Pausará el acceso de forma inmediata sin borrar ningún dato del negocio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <p className="text-sm text-foreground">
+                ¿Estás seguro de suspender a <strong>{orgToSuspend.name}</strong> ({orgToSuspend.ownerEmail})?
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
+                <li>El agente de IA detendrá su atención automática de inmediato.</li>
+                <li>Los usuarios verán la pantalla de pago al ingresar al CRM.</li>
+                <li>Podrás reactivar el negocio en cualquier momento con un solo clic.</li>
+              </ul>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setOrgToSuspend(null)}
+                  disabled={actionLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                  onClick={() => void handleSuspend(orgToSuspend)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Suspendiendo…" : "Sí, Suspender Cuenta"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de confirmación para Eliminar permanentemente */}
+      {orgToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-md shadow-2xl border-destructive/40 bg-card">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base text-destructive flex items-center gap-2 font-bold">
+                  <span>🗑️</span>
+                  <span>Eliminar Cliente Permanentemente</span>
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOrgToDelete(null)}
+                  disabled={actionLoading}
+                >
+                  ✕
+                </Button>
+              </div>
+              <CardDescription className="text-xs text-muted-foreground mt-1">
+                Esta acción es irreversible y eliminará todos los datos del negocio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <p className="text-sm text-foreground">
+                ¿Deseas eliminar permanentemente a <strong>{orgToDelete.name}</strong>?
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
+                <li>Se borrarán todos sus contactos, mensajes y campañas de WhatsApp.</li>
+                <li>Se revocarán los accesos y credenciales de <strong>{orgToDelete.ownerEmail}</strong>.</li>
+                <li>No se podrá recuperar la información después de confirmar.</li>
+              </ul>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setOrgToDelete(null)}
+                  disabled={actionLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="font-medium"
+                  onClick={() => void handleDelete(orgToDelete)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Eliminando…" : "Sí, Eliminar Permanentemente"}
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}
@@ -451,7 +662,7 @@ export function AdminPanelClient() {
         <CardHeader>
           <CardTitle>Clientes Registrados ({orgs.length})</CardTitle>
           <CardDescription>
-            Puedes cambiar el plan de cualquier cliente, añadirle +30 días o cambiar su rubro/módulo con un clic.
+            Administra los planes de tus clientes, añade +30 días, suspende su servicio temporalmente o elimina cuentas inactivas.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -463,7 +674,7 @@ export function AdminPanelClient() {
                   <th className="py-3 px-4 text-left">Dueño / Correo</th>
                   <th className="py-3 px-4 text-left">Rubro / Módulo</th>
                   <th className="py-3 px-4 text-left">Plan Actual</th>
-                  <th className="py-3 px-4 text-left">Vigencia / Vencimiento</th>
+                  <th className="py-3 px-4 text-left">Vigencia / Estado</th>
                   <th className="py-3 px-4 text-left">Creado</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
@@ -483,6 +694,7 @@ export function AdminPanelClient() {
                   </tr>
                 ) : (
                   orgs.map((org) => {
+                    const active = isOrgActive(org);
                     const isTrial = org.plan === "trial";
                     const expires = org.planExpiresAt || org.trialEndsAt;
                     const fechaExp = expires
@@ -533,10 +745,22 @@ export function AdminPanelClient() {
                           </select>
                         </td>
                         <td className="py-3 px-4 text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant={isTrial ? "outline" : "default"} className="text-[10px]">
-                              {isTrial ? "Trial" : "Pagado"}
-                            </Badge>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {active ? (
+                              isTrial ? (
+                                <Badge variant="outline" className="text-[10px] text-amber-600 bg-amber-500/10 border-amber-500/30">
+                                  Trial Activo
+                                </Badge>
+                              ) : (
+                                <Badge variant="default" className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">
+                                  Pagado
+                                </Badge>
+                              )
+                            ) : (
+                              <Badge variant="destructive" className="text-[10px] bg-destructive/15 text-destructive border-destructive/30">
+                                Suspendido / Vencido
+                              </Badge>
+                            )}
                             <span className="text-muted-foreground">{fechaExp}</span>
                           </div>
                         </td>
@@ -544,14 +768,58 @@ export function AdminPanelClient() {
                           {new Date(org.createdAt).toLocaleDateString("es-PE")}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 gap-1"
-                            onClick={() => void handleExtend30Days(org.id, org.plan)}
-                          >
-                            <span>+30 días</span>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {active ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7 px-2.5 hover:bg-muted font-medium"
+                                  onClick={() => void handleExtend(org.id)}
+                                  title="Añadir +30 días de vigencia"
+                                  disabled={actionLoading}
+                                >
+                                  +30 días
+                                </Button>
+                                {!org.isCurrentOrg && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-7 px-2.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-500/30 font-medium"
+                                    onClick={() => setOrgToSuspend(org)}
+                                    title="Pausar o suspender acceso"
+                                    disabled={actionLoading}
+                                  >
+                                    ⏸️ Suspender
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="text-xs h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                                onClick={() => void handleReactivate(org.id)}
+                                title="Reactivar servicio con +30 días"
+                                disabled={actionLoading}
+                              >
+                                ▶️ Reactivar (+30d)
+                              </Button>
+                            )}
+
+                            {!org.isCurrentOrg && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setOrgToDelete(org)}
+                                title="Eliminar cliente permanentemente"
+                                disabled={actionLoading}
+                              >
+                                🗑️
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

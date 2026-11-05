@@ -9,6 +9,8 @@ import { isAiConfiguredFor } from "@/lib/ai/provider";
 import { publish } from "@/server/events/bus";
 import { isWindowOpen } from "@/server/inbox/window";
 import { SendError, sendInteractiveList, sendText } from "@/server/inbox/send";
+import { isPlanActive } from "@/lib/plan-guard";
+import type { PlanId } from "@/lib/planes";
 import {
   MENU_INTERACTIVO_JAGUARES,
   TEXTO_MENU_JAGUARES,
@@ -110,6 +112,29 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
   if (!conversation) return;
   const organizationId = conversation.organizationId;
 
+  const orgRows = await db
+    .select({
+      rubro: schema.organization.rubro,
+      plan: schema.organization.plan,
+      trialEndsAt: schema.organization.trialEndsAt,
+      planExpiresAt: schema.organization.planExpiresAt,
+    })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, organizationId))
+    .limit(1);
+  const org = orgRows[0];
+  if (!org) return;
+
+  if (
+    !isPlanActive({
+      plan: (org.plan || "trial") as PlanId,
+      trialEndsAt: org.trialEndsAt,
+      planExpiresAt: org.planExpiresAt,
+    })
+  ) {
+    return;
+  }
+
   // ¿Esta organización tiene IA? Lo guardado en Ajustes → IA, o si no, el
   // entorno. Sin proveedor, o con la llave pausada por el proveedor, el
   // mensaje se queda en la bandeja para que lo atienda una persona — y el
@@ -167,13 +192,7 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
     .where(eq(schema.pipelineStage.organizationId, organizationId))
     .orderBy(asc(schema.pipelineStage.position));
 
-  const orgRow = await db
-    .select({ rubro: schema.organization.rubro })
-    .from(schema.organization)
-    .where(eq(schema.organization.id, organizationId))
-    .limit(1);
-
-  const agenda = agendaEnabled(orgRow[0]?.rubro);
+  const agenda = agendaEnabled(org.rubro);
 
   /**
    * 015 — Los huecos vigentes, con su instante exacto.
