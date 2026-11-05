@@ -43,6 +43,28 @@ El CRM opera bajo una arquitectura **multi-tenant**, permitiendo aislar organiza
   - Reconocimiento automático en lenguaje natural de solicitudes como *"tarde"*, *"en la tarde"*, *"pm"* o *"después de almuerzo"*, entregando turnos a partir de las 12:00.
   - Ampliación del catálogo reservable a **24 turnos** distribuidos en varios días para ofrecer variedad de fechas (jueves, viernes, lunes, etc.).
 
+### C. Consulta por Día Específico y Catálogo Completo del Día
+- **Problema previo:** Si el cliente preguntaba por un día en específico (ej. *"¿Qué horas tienes el viernes?"* o *"¿Otros días?"*), el bot repetía los primeros 3 turnos del primer día o devolvía listas genéricas.
+- **Mejora:**
+  - Función `resolveRequestedDate()` en `src/server/agenda/agent.ts`: interpreta términos relativos (*"hoy"*, *"mañana"*, *"pasado mañana"*), días de la semana (*"lunes"* ... *"domingo"* con cálculo del próximo día calendario) y fechas específicas (*"6 de noviembre"*, *"10 de nov"*, ISO).
+  - Parámetro `date?: string` en la acción `offer_slots`.
+  - Cuando se solicita una fecha, el motor calcula y devuelve **todos los horarios disponibles de ese día completo**, divididos claramente entre Turno Mañana y Turno Tarde.
+
+### D. Flujo de Cancelación en Dos Pasos con Registro de Motivo
+- **Problema previo:** La cita se cancelaba directamente sin conocer la razón del cliente.
+- **Mejora:**
+  - Protocolo estricto en el prompt del sistema (`src/server/ai/prompts.ts`): si el cliente pide cancelar sin explicar la razón, la IA primero consulta cortésmente el motivo (*"¿Nos podrías indicar el motivo de tu cancelación?"*).
+  - Al recibir la razón, ejecuta `cancel_slot(reason)` en `src/server/agenda/service.ts`.
+  - El motivo se registra en `booking.notes` (`[Motivo de cancelación]: ...`) y en el historial del contacto en el CRM (`[IA - Cita Cancelada]: ...`).
+  - El bot confirma la cancelación con amabilidad y deja la puerta abierta para reagendar cuando el cliente lo desee.
+
+### E. Diseño Estructurado y Visual de Mensajes en WhatsApp
+- **Problema previo:** Las listas de turnos se enviaban como texto plano o listas largas difíciles de leer en dispositivos móviles.
+- **Mejora:**
+  - Formato tipo tarjeta con divisores limpios (`━━━━━━━━━━━━━━━━━━━━━━`).
+  - Separación visual clara entre `☀️ *Turno Mañana:*` y `🌤️ *Turno Tarde:*`.
+  - Horarios organizados en viñetas compactas (`• 09:00   • 09:30   • 10:00`) para una lectura rápida y atractiva en WhatsApp.
+
 ---
 
 ## 3. Mejoras de Interfaz de Usuario (UI/UX)
@@ -73,6 +95,7 @@ El CRM opera bajo una arquitectura **multi-tenant**, permitiendo aislar organiza
 
 | Commit | Descripción |
 |---|---|
+| `6a080ac` | `feat(agenda): consulta por fecha especifica con horarios completos, flujo de cancelacion con motivo y diseno estructurado de mensajes` |
 | `5153126` | `feat(agenda): cancelacion automatica sin escalacion humana y soporte de turnos por la tarde` |
 | `0e33e4e` | `feat(agenda): soporte de variedad multifecha en turnos del bot y vista ampliada de agenda` |
 | `a380610` | `feat: edicion en linea de base de conocimiento, exportacion completa de citas a calendario y mejoras de texto` |
