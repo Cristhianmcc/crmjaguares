@@ -464,25 +464,24 @@ export function BookingsClient({
 
       {syncModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-lg shadow-2xl border-primary/40 bg-card">
+          <Card className="w-full max-w-lg shadow-xl border-border bg-card">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
-                  <span>📲</span>
-                  <span>Sincronizar Citas con tu Celular</span>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Sincronizar calendario con celular
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setSyncModalOpen(false)}>
                   ✕
                 </Button>
               </div>
               <CardDescription className="text-xs text-muted-foreground mt-1">
-                Conecta tus citas con iPhone (Apple Calendar) o Android (Google Calendar) para recibir notificaciones automáticas y alarmas en tu teléfono.
+                Conecta tus citas con iPhone (Apple Calendar) o Android (Google Calendar) para recibir recordatorios en tu dispositivo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               {syncInfo ? (
                 <>
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2">
                     <a
                       href={syncInfo.webcalUrl}
                       target="_blank"
@@ -491,10 +490,9 @@ export function BookingsClient({
                     >
                       <Button
                         variant="default"
-                        className="w-full gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-xs h-10 shadow-sm"
+                        className="w-full text-xs h-9 font-medium"
                       >
-                        <span>🍏</span>
-                        <span>Suscribirse en iPhone / iPad / Mac (1 Clic)</span>
+                        Suscribirse en iPhone / iPad / Mac
                       </Button>
                     </a>
 
@@ -506,36 +504,34 @@ export function BookingsClient({
                     >
                       <Button
                         variant="outline"
-                        className="w-full gap-2 border-primary/40 hover:bg-primary/10 text-primary font-semibold text-xs h-10 shadow-sm"
+                        className="w-full text-xs h-9 font-medium"
                       >
-                        <span>📅</span>
-                        <span>Abrir en Google Calendar (Android / PC)</span>
+                        Abrir en Google Calendar
                       </Button>
                     </a>
 
                     <Button
                       variant="outline"
-                      className="w-full text-xs h-9.5 gap-2 font-medium"
+                      className="w-full text-xs h-9 font-medium"
                       onClick={() => {
                         navigator.clipboard.writeText(syncInfo.httpFeedUrl);
                         setCopiedSync(true);
                         setTimeout(() => setCopiedSync(false), 3000);
                       }}
                     >
-                      <span>{copiedSync ? "✓ ¡Enlace de suscripción copiado!" : "📋 Copiar Enlace Directo (iCal)"}</span>
+                      {copiedSync ? "Enlace copiado al portapapeles" : "Copiar enlace directo (iCal)"}
                     </Button>
                   </div>
 
-                  <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
-                    <p className="font-semibold text-foreground flex items-center gap-1.5">
-                      <span>🔔</span>
-                      <span>¿Cómo funciona la sincronización?</span>
+                  <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
+                    <p className="font-medium text-foreground">
+                      Instrucciones de sincronización:
                     </p>
                     <p>
-                      • <strong>En iPhone / Mac:</strong> Haz clic en el botón negro y dale a <em>«Suscribirse»</em>. Las citas agendadas por la IA aparecerán en tu calendario del celular con alarma 30 minutos antes.
+                      - iPhone / iPad / Mac: Abre el enlace desde tu dispositivo y confirma la suscripción. Las citas agendadas por la IA aparecerán en tu calendario con alerta 30 minutos antes.
                     </p>
                     <p>
-                      • <strong>En Android / Google Calendar:</strong> Haz clic en <em>«Abrir en Google Calendar»</em> o copia el enlace y pégalo en <em>Google Calendar → Otros calendarios (+) → Desde URL</em>.
+                      - Android / Google Calendar: Haz clic en Abrir en Google Calendar o copia el enlace y agrégalo en Otros calendarios &gt; Desde URL.
                     </p>
                   </div>
                 </>

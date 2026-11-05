@@ -156,11 +156,11 @@ export function CalendarToolbar({
             size="sm"
             variant="outline"
             onClick={onSync}
-            className="gap-1.5 text-xs h-8 border-primary/30 hover:bg-primary/10 text-primary font-medium"
+            className="gap-1.5 text-xs h-8 border-border hover:bg-accent text-foreground font-medium"
             title="Sincronizar citas con Google Calendar y iPhone"
           >
             <Smartphone className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Sincronizar Celular</span>
+            <span className="hidden sm:inline">Sincronizar</span>
           </Button>
         )}
 

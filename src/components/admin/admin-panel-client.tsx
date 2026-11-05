@@ -172,7 +172,7 @@ export function AdminPanelClient() {
           title: "Módulo / Rubro actualizado",
           message: `El negocio ahora tiene activo el módulo de ${
             newRubro === "servicios"
-              ? "Citas y Calendario con Google Calendar"
+              ? "Citas y Calendario interactivo"
               : newRubro === "escuela"
               ? "Malla de Cupos de Escuela"
               : "Comercio General"
@@ -198,7 +198,7 @@ export function AdminPanelClient() {
         throw new Error(data.error || "No se pudo extender la suscripción.");
       }
       setNoticeModal({
-        title: "Suscripción Extendida",
+        title: "Suscripción extendida",
         message: "Se han añadido exitosamente +30 días de vigencia al negocio.",
       });
       void fetchOrgs();
@@ -226,8 +226,8 @@ export function AdminPanelClient() {
       }
       setOrgToSuspend(null);
       setNoticeModal({
-        title: "Cuenta Suspendida",
-        message: `El acceso de ${org.name} ha sido pausado. Su agente de IA dejará de contestar y verá la pantalla de pago al ingresar.`,
+        title: "Cuenta suspendida",
+        message: `El acceso de ${org.name} ha sido pausado. Su agente dejará de contestar y verá la pantalla de pago al ingresar.`,
       });
       void fetchOrgs();
     } catch (err) {
@@ -253,7 +253,7 @@ export function AdminPanelClient() {
         throw new Error(data.error || "No se pudo reactivar la cuenta.");
       }
       setNoticeModal({
-        title: "Cuenta Reactivada",
+        title: "Cuenta reactivada",
         message: "El negocio ha sido reactivado exitosamente con +30 días de servicio.",
       });
       void fetchOrgs();
@@ -279,7 +279,7 @@ export function AdminPanelClient() {
       }
       setOrgToDelete(null);
       setNoticeModal({
-        title: "Cliente Eliminado",
+        title: "Cliente eliminado",
         message: `La organización ${org.name} y sus credenciales asociadas han sido eliminadas permanentemente.`,
       });
       void fetchOrgs();
@@ -295,18 +295,18 @@ export function AdminPanelClient() {
 
   const moduloTexto =
     createdData?.rubro === "servicios"
-      ? "📅 Módulo: Citas, Calendario interactivo y agendamiento con Google Calendar\n"
+      ? "Módulo: Citas, Calendario interactivo y agendamiento con IA\n"
       : createdData?.rubro === "escuela"
-      ? "⚽ Módulo: Malla de Cupos y horarios por categoría\n"
+      ? "Módulo: Malla de Cupos y horarios por categoría\n"
       : "";
 
   const whatsappMessage = createdData
     ? `¡Hola ${createdData.clientName}! Tu cuenta en el CRM de WhatsApp ya está lista:\n\n` +
-      `🏢 Negocio: ${createdData.businessName}\n` +
-      `🌐 Acceso: ${typeof window !== "undefined" ? window.location.origin : "https://crm.jaguarescar.com"}\n` +
-      `📧 Usuario: ${createdData.email}\n` +
-      `🔑 Contraseña: ${createdData.password}\n` +
-      `📊 Plan: ${createdData.planNombre}\n` +
+      `Negocio: ${createdData.businessName}\n` +
+      `Acceso: ${typeof window !== "undefined" ? window.location.origin : "https://crm.jaguarescar.com"}\n` +
+      `Usuario: ${createdData.email}\n` +
+      `Contraseña: ${createdData.password}\n` +
+      `Plan: ${createdData.planNombre}\n` +
       moduloTexto +
       `\nInicia sesión para conectar tu WhatsApp y comenzar a responder a tus clientes.`
     : "";
@@ -366,15 +366,14 @@ export function AdminPanelClient() {
         </Card>
       </div>
 
-      {/* Modal emergente vistoso de confirmación de cuenta creada para WhatsApp */}
+      {/* Modal de confirmación de cuenta creada para WhatsApp */}
       {createdData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-lg shadow-2xl border-emerald-500/40 bg-card">
+          <Card className="w-full max-w-lg shadow-xl border-border bg-card">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg text-emerald-600 flex items-center gap-2 font-bold">
-                  <span>🎉</span>
-                  <span>¡Cuenta de {createdData.businessName} Lista!</span>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Cuenta de {createdData.businessName} lista
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setCreatedData(null)}>
                   ✕
@@ -392,11 +391,11 @@ export function AdminPanelClient() {
                 <Button
                   onClick={copyWhatsApp}
                   variant="default"
-                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-10 shadow-sm"
+                  className="flex-1 text-xs h-9 font-medium"
                 >
-                  <span>{copied ? "✓ ¡Mensaje Copiado al Portapapeles!" : "📋 Copiar mensaje para WhatsApp"}</span>
+                  {copied ? "Mensaje copiado al portapapeles" : "Copiar mensaje para WhatsApp"}
                 </Button>
-                <Button variant="outline" onClick={() => setCreatedData(null)}>
+                <Button variant="outline" className="text-xs h-9" onClick={() => setCreatedData(null)}>
                   Cerrar
                 </Button>
               </div>
@@ -405,19 +404,16 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* Modal vistoso de confirmación para avisos/éxito */}
+      {/* Modal de aviso/éxito */}
       {noticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-sm shadow-2xl border-primary/30 text-center p-6 space-y-4 bg-card">
-            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold">
-              ✓
-            </div>
+          <Card className="w-full max-w-sm shadow-xl border-border text-center p-6 space-y-4 bg-card">
             <div>
-              <h3 className="font-bold text-lg text-foreground">{noticeModal.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1.5">{noticeModal.message}</p>
+              <h3 className="font-semibold text-base text-foreground">{noticeModal.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{noticeModal.message}</p>
             </div>
             <Button
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+              className="w-full text-xs h-9 font-medium"
               onClick={() => setNoticeModal(null)}
             >
               Entendido
@@ -429,12 +425,11 @@ export function AdminPanelClient() {
       {/* Modal de confirmación para Suspender */}
       {orgToSuspend && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-md shadow-2xl border-amber-500/40 bg-card">
+          <Card className="w-full max-w-md shadow-xl border-border bg-card">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base text-amber-600 flex items-center gap-2 font-bold">
-                  <span>⏸️</span>
-                  <span>Suspender Cuenta de Cliente</span>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Suspender cuenta de cliente
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -461,6 +456,7 @@ export function AdminPanelClient() {
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   variant="outline"
+                  className="text-xs h-9"
                   onClick={() => setOrgToSuspend(null)}
                   disabled={actionLoading}
                 >
@@ -468,11 +464,11 @@ export function AdminPanelClient() {
                 </Button>
                 <Button
                   variant="destructive"
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                  className="text-xs h-9 font-medium"
                   onClick={() => void handleSuspend(orgToSuspend)}
                   disabled={actionLoading}
                 >
-                  {actionLoading ? "Suspendiendo…" : "Sí, Suspender Cuenta"}
+                  {actionLoading ? "Suspendiendo…" : "Suspender Cuenta"}
                 </Button>
               </div>
             </CardContent>
@@ -483,12 +479,11 @@ export function AdminPanelClient() {
       {/* Modal de confirmación para Eliminar permanentemente */}
       {orgToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-          <Card className="w-full max-w-md shadow-2xl border-destructive/40 bg-card">
+          <Card className="w-full max-w-md shadow-xl border-border bg-card">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base text-destructive flex items-center gap-2 font-bold">
-                  <span>🗑️</span>
-                  <span>Eliminar Cliente Permanentemente</span>
+                <CardTitle className="text-base font-semibold text-destructive">
+                  Eliminar cliente permanentemente
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -515,6 +510,7 @@ export function AdminPanelClient() {
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   variant="outline"
+                  className="text-xs h-9"
                   onClick={() => setOrgToDelete(null)}
                   disabled={actionLoading}
                 >
@@ -522,11 +518,11 @@ export function AdminPanelClient() {
                 </Button>
                 <Button
                   variant="destructive"
-                  className="font-medium"
+                  className="text-xs h-9 font-medium"
                   onClick={() => void handleDelete(orgToDelete)}
                   disabled={actionLoading}
                 >
-                  {actionLoading ? "Eliminando…" : "Sí, Eliminar Permanentemente"}
+                  {actionLoading ? "Eliminando…" : "Eliminar Permanentemente"}
                 </Button>
               </div>
             </CardContent>
@@ -579,16 +575,16 @@ export function AdminPanelClient() {
                     value={selectedRubro}
                     onChange={(e) => setSelectedRubro(e.target.value as RubroId)}
                   >
-                    <option value="servicios">🦷 Citas / Salud / Dental / Consultorio (Calendario con IA + Google Calendar)</option>
-                    <option value="escuela">⚽ Escuela Deportiva / Talleres (Malla de Cupos por categorías)</option>
-                    <option value="comercio">🛍️ Comercio / Ventas Generales (Sin citas ni cupos)</option>
+                    <option value="servicios">Citas / Salud / Dental / Consultorio (Calendario con IA)</option>
+                    <option value="escuela">Escuela Deportiva / Talleres (Malla de Cupos por categorías)</option>
+                    <option value="comercio">Comercio / Ventas Generales (Sin citas ni cupos)</option>
                   </select>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     {selectedRubro === "servicios"
-                      ? "✓ Activa Citas, horarios semanales, Google Calendar y agendamiento automático por IA."
+                      ? "Activa Citas, horarios semanales y agendamiento automático por IA."
                       : selectedRubro === "escuela"
-                      ? "✓ Activa la malla de Cupos por categorías para academias deportivas."
-                      : "✓ Deja la interfaz limpia: Bandeja, Embudo, Contactos y Campañas masivas."}
+                      ? "Activa la malla de Cupos por categorías para academias deportivas."
+                      : "Deja la interfaz limpia: Bandeja, Embudo, Contactos y Campañas masivas."}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -727,9 +723,9 @@ export function AdminPanelClient() {
                             value={org.rubro || "servicios"}
                             onChange={(e) => void handleRubroChange(org.id, e.target.value)}
                           >
-                            <option value="servicios">🦷 Citas / Dental</option>
-                            <option value="escuela">⚽ Escuela (Cupos)</option>
-                            <option value="comercio">🛍️ Comercio</option>
+                            <option value="servicios">Citas / Dental</option>
+                            <option value="escuela">Escuela (Cupos)</option>
+                            <option value="comercio">Comercio</option>
                           </select>
                         </td>
                         <td className="py-3 px-4">
@@ -790,7 +786,7 @@ export function AdminPanelClient() {
                                     title="Pausar o suspender acceso"
                                     disabled={actionLoading}
                                   >
-                                    ⏸️ Suspender
+                                    Suspender
                                   </Button>
                                 )}
                               </>
@@ -803,20 +799,20 @@ export function AdminPanelClient() {
                                 title="Reactivar servicio con +30 días"
                                 disabled={actionLoading}
                               >
-                                ▶️ Reactivar (+30d)
+                                Reactivar (+30d)
                               </Button>
                             )}
 
                             {!org.isCurrentOrg && (
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="text-xs h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                variant="outline"
+                                className="text-xs h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-border"
                                 onClick={() => setOrgToDelete(org)}
                                 title="Eliminar cliente permanentemente"
                                 disabled={actionLoading}
                               >
-                                🗑️
+                                Eliminar
                               </Button>
                             )}
                           </div>

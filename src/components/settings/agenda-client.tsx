@@ -164,24 +164,19 @@ export function AgendaClient() {
 
   return (
     <div className="space-y-6">
-      {/* Sincronización con iPhone y Google Calendar con alertas */}
+      {/* Sincronización con iPhone y Google Calendar */}
       {sync && (
-        <Card className="border-primary/40 bg-gradient-to-r from-primary/5 via-card to-card shadow-sm">
+        <Card className="border-border">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">📲</span>
-              <div>
-                <CardTitle className="text-base font-bold text-foreground">
-                  Sincronizar Citas con tu Celular (Google Calendar & iPhone)
-                </CardTitle>
-                <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                  Recibe notificaciones automáticas y alertas en tu teléfono cada vez que el bot agende una cita, sin necesidad de entrar al CRM.
-                </CardDescription>
-              </div>
-            </div>
+            <CardTitle className="text-base font-semibold text-foreground">
+              Sincronización con teléfono (Google Calendar e iPhone)
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Sincroniza tus citas en vivo para recibir notificaciones y alarmas en tu dispositivo móvil.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3.5">
-            <div className="flex flex-col sm:flex-row gap-2.5">
+          <CardContent className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
               <a
                 href={sync.webcalUrl}
                 className="flex-1"
@@ -190,10 +185,9 @@ export function AgendaClient() {
               >
                 <Button
                   variant="default"
-                  className="w-full gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-xs h-9.5 shadow-sm"
+                  className="w-full text-xs h-9 font-medium"
                 >
-                  <span>🍏</span>
-                  <span>Suscribirse en iPhone / iPad / Mac</span>
+                  Suscribirse en iPhone / iPad / Mac
                 </Button>
               </a>
 
@@ -205,36 +199,34 @@ export function AgendaClient() {
               >
                 <Button
                   variant="outline"
-                  className="w-full gap-2 border-primary/40 hover:bg-primary/10 text-primary font-semibold text-xs h-9.5 shadow-sm"
+                  className="w-full text-xs h-9 font-medium"
                 >
-                  <span>📅</span>
-                  <span>Abrir en Google Calendar (Android / PC)</span>
+                  Abrir en Google Calendar
                 </Button>
               </a>
 
               <Button
                 variant="outline"
-                className="text-xs h-9.5 px-3.5 gap-1.5 font-medium"
+                className="text-xs h-9 px-3 font-medium"
                 onClick={() => {
                   navigator.clipboard.writeText(sync.httpFeedUrl);
                   setCopiedFeed(true);
                   setTimeout(() => setCopiedFeed(false), 3000);
                 }}
               >
-                <span>{copiedFeed ? "✓ ¡Enlace Copiado!" : "📋 Copiar Enlace"}</span>
+                {copiedFeed ? "Enlace copiado" : "Copiar enlace directo"}
               </Button>
             </div>
 
-            <div className="rounded-lg border bg-background/90 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
-              <p className="font-semibold text-foreground flex items-center gap-1.5">
-                <span>🔔</span>
-                <span>¿Cómo funciona la sincronización automática?</span>
+            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
+              <p className="font-medium text-foreground">
+                Instrucciones de sincronización:
               </p>
               <p>
-                • <strong>En iPhone / iPad / Mac:</strong> Toca el botón negro y presiona <em>«Suscribirse»</em>. Las citas del bot aparecerán en tu app nativa Calendario con alarma de aviso 30 minutos antes.
+                - iPhone / iPad / Mac: Abre el enlace desde tu dispositivo y confirma la suscripción. Las citas se actualizan automáticamente y recibirás una alerta 30 minutos antes.
               </p>
               <p>
-                • <strong>En Android / Google Calendar:</strong> Toca <em>«Abrir en Google Calendar»</em> o copia el enlace y pégalo en <em>Google Calendar → Otros calendarios (+) → Desde URL</em>. Te sonarán las notificaciones en tu app de Google Calendar.
+                - Google Calendar (Android / PC): Haz clic en Abrir en Google Calendar o copia el enlace y agrégalo en Otros calendarios &gt; Desde URL.
               </p>
             </div>
           </CardContent>
@@ -475,7 +467,7 @@ export function AgendaClient() {
         <Button onClick={save} disabled={saving}>
           {saving ? "Guardando…" : "Guardar Configuración"}
         </Button>
-        {saved && <span className="text-sm text-brand-text">✓ Guardado</span>}
+        {saved && <span className="text-sm text-brand-text">Guardado</span>}
         {error && <span className="text-sm text-destructive">{error}</span>}
       </div>
 
