@@ -479,17 +479,16 @@ export function AgendaClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Próximos huecos</CardTitle>
+          <CardTitle>Próximos turnos disponibles para el bot</CardTitle>
           <CardDescription>
-            Lo que se le ofrecería a un cliente ahora mismo según tu zona horaria.
+            Horarios reales en vivo que el asistente de IA ofrecerá por WhatsApp cuando un cliente solicite agendar cita.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {slots === null && <p className="text-sm text-text-3">Calculando…</p>}
           {slots?.length === 0 && (
             <p className="text-sm text-text-3">
-              Sin huecos: revisa el horario, el aviso mínimo o si ya está todo
-              ocupado.
+              Sin turnos libres por el momento: revisa tu horario de atención, el aviso mínimo o si todos los turnos ya están ocupados.
             </p>
           )}
           {slots && slots.length > 0 && (

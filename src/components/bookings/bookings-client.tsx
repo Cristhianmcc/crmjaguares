@@ -521,17 +521,30 @@ export function BookingsClient({
                     >
                       {copiedSync ? "Enlace copiado al portapapeles" : "Copiar enlace directo (iCal)"}
                     </Button>
+
+                    <a
+                      href={syncInfo.httpFeedUrl}
+                      download="citas.ics"
+                      className="w-full"
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full text-xs h-9 font-medium"
+                      >
+                        Descargar archivo .ics (Importación instantánea)
+                      </Button>
+                    </a>
                   </div>
 
                   <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
                     <p className="font-medium text-foreground">
-                      Instrucciones de sincronización:
+                      Cómo funciona la sincronización:
                     </p>
                     <p>
-                      - iPhone / iPad / Mac: Abre el enlace desde tu dispositivo y confirma la suscripción. Las citas agendadas por la IA aparecerán en tu calendario con alerta 30 minutos antes.
+                      • iPhone / iPad / Mac: Se sincroniza periódicamente con recordatorios 30 min antes. En la app Calendario desliza hacia abajo para refrescar en el acto.
                     </p>
                     <p>
-                      - Android / Google Calendar: Haz clic en Abrir en Google Calendar o copia el enlace y agrégalo en Otros calendarios &gt; Desde URL.
+                      • Google Calendar: Al suscribirse por URL, Google procesa el enlace en sus servidores en ciclos periódicos. Si deseas ver las citas ya creadas al segundo sin esperar la sincronización automática de Google, descarga el archivo .ics e impórtalo en tu Google Calendar.
                     </p>
                   </div>
                 </>

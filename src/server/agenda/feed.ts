@@ -61,7 +61,6 @@ export async function buildIcsFeed(orgId: string): Promise<string> {
     .where(
       and(
         eq(schema.booking.organizationId, orgId),
-        eq(schema.booking.isTest, false),
         inArray(schema.booking.status, ["agendada", "realizada"]),
         gte(schema.booking.scheduledAt, since)
       )
@@ -109,6 +108,8 @@ export async function buildIcsFeed(orgId: string): Promise<string> {
       lines.push(`LOCATION:${escapeIcalText(b.meetingLink)}`);
     }
     lines.push("STATUS:CONFIRMED");
+    lines.push("TRANSP:OPAQUE");
+    lines.push("SEQUENCE:0");
 
     // Alarma 30 minutos antes para iPhone y Android
     lines.push("BEGIN:VALARM");
