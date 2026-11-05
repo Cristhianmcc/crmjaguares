@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { scoped } from "@/lib/db/tenant";
@@ -26,8 +26,15 @@ import { buildAgentSystemPrompt } from "@/server/ai/prompts";
 import { catalogoEnVivo } from "@/server/escuela/client";
 import { formatearParaWhatsapp, partirMensaje } from "@/lib/whatsapp-format";
 import { agendaEnabled } from "@/server/agenda/flag";
-import { bookSlot, offerSlots } from "@/server/agenda/agent";
+import {
+  bookSlot,
+  cancelSlot,
+  offerSlots,
+  type AgendaTurn,
+} from "@/server/agenda/agent";
 import { getOffers, mapaDeHuecosParaModelo } from "@/server/agenda/offers";
+import { dayLabelInTz, timeInTz } from "@/lib/time/slots";
+import { getSettings } from "@/server/agenda/settings";
 
 /**
  * Turno del agente (FR-021..FR-025).
@@ -218,6 +225,41 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
   const ofertas = agenda ? await getOffers(organizationId, conversationId) : [];
   const mapaDeHuecos = mapaDeHuecosParaModelo(ofertas);
 
+  /** Contexto de cita activa del contacto si existe */
+  let activeBookingPrompt: string | null = null;
+  if (agenda && conversation.contactId) {
+    const activeBooking = await db
+      .select({
+        id: schema.booking.id,
+        scheduledAt: schema.booking.scheduledAt,
+      })
+      .from(schema.booking)
+      .where(
+        scoped(
+          schema.booking.organizationId,
+          organizationId,
+          and(
+            eq(schema.booking.contactId, conversation.contactId),
+            eq(schema.booking.kind, "session"),
+            eq(schema.booking.status, "agendada"),
+            gte(schema.booking.scheduledAt, new Date())
+          )
+        )
+      )
+      .orderBy(asc(schema.booking.scheduledAt))
+      .limit(1);
+
+    if (activeBooking[0]) {
+      const b = activeBooking[0];
+      const calSettings = await getSettings(organizationId);
+      const label =
+        dayLabelInTz(b.scheduledAt.toISOString(), calSettings.timezone, new Date()) +
+        " a las " +
+        timeInTz(b.scheduledAt.toISOString(), calSettings.timezone);
+      activeBookingPrompt = `CITA AGENDADA DEL CLIENTE: ${label}. Si el cliente pide cancelarla, usa cancel_slot. Si pide reagendarla o cambiar de horario, usa cancel_slot o offer_slots para mostrarle nuevas opciones.`;
+    }
+  }
+
   /**
    * Catálogo de la escuela leído en vivo (planes, horarios y cupos). Es de
    * solo lectura y viene cacheado; si el backend de la escuela no responde,
@@ -249,6 +291,9 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
      * Va AL FINAL, después del historial: es el estado de AHORA, y ponerlo
      * antes lo dejaría enterrado bajo la conversación en cuanto esta crezca.
      */
+    ...(activeBookingPrompt
+      ? [{ role: "system" as const, content: activeBookingPrompt }]
+      : []),
     ...(mapaDeHuecos
       ? [{ role: "system" as const, content: mapaDeHuecos }]
       : []),
@@ -267,26 +312,51 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
 
   let action: AgentActionType = result.data;
 
-  // 015 — Agenda. Un fallo del motor degrada el turno (el agente responde sin
-  // agendar), nunca lo tumba: quedarse callado es peor que no agendar.
-  if (action.action === "offer_slots" || action.action === "book_slot") {
+  // 015 — Agenda: ofrecer, agendar o cancelar citas automáticamente sin escalación.
+  if (
+    action.action === "offer_slots" ||
+    action.action === "book_slot" ||
+    action.action === "cancel_slot"
+  ) {
     if (!agenda) {
       action = degradeAction(action);
     } else {
       try {
-        const turn =
-          action.action === "offer_slots"
-            ? await offerSlots({
-                organizationId,
-                conversationId,
-                intro: action.reply,
-              })
-            : await bookSlot({
-                organizationId,
-                conversationId,
-                startUtc: action.startUtc,
-                confirmation: action.reply,
-              });
+        let turn: AgendaTurn;
+        if (action.action === "offer_slots") {
+          const userText = (lastInbound.text ?? "").toLowerCase();
+          const isAfternoon =
+            action.shift === "afternoon" ||
+            /\b(tarde|tardes|pm|noche)\b/i.test(userText);
+          const isMorning =
+            action.shift === "morning" ||
+            /\b(en la mañana|por la mañana|am|temprano)\b/i.test(userText);
+
+          turn = await offerSlots({
+            organizationId,
+            conversationId,
+            intro: action.reply,
+            shiftPreference: isAfternoon
+              ? "afternoon"
+              : isMorning
+                ? "morning"
+                : undefined,
+          });
+        } else if (action.action === "book_slot") {
+          turn = await bookSlot({
+            organizationId,
+            conversationId,
+            startUtc: action.startUtc,
+            confirmation: action.reply,
+          });
+        } else {
+          turn = await cancelSlot({
+            organizationId,
+            conversationId,
+            confirmation: action.reply,
+          });
+        }
+
         await deliverReply(conversation, turn.text);
         if (turn.ok) {
           publish(organizationId, {

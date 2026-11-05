@@ -30,14 +30,27 @@ export type SpreadSlot = AvailableSlot & {
 
 export function spreadByDay(
   slots: AvailableSlot[],
-  opts: { timezone: string; limit: number; perDay: number; now?: Date }
+  opts: {
+    timezone: string;
+    limit: number;
+    perDay: number;
+    now?: Date;
+    shift?: "morning" | "afternoon";
+  }
 ): SpreadSlot[] {
-  const { timezone, limit, perDay } = opts;
+  const { timezone, limit, perDay, shift } = opts;
   const now = opts.now ?? new Date();
   if (limit <= 0 || perDay <= 0) return [];
 
+  let candidateSlots = slots;
+  if (shift === "morning") {
+    candidateSlots = slots.filter((s) => timeInTz(s.startUtc, timezone) < "12:00");
+  } else if (shift === "afternoon") {
+    candidateSlots = slots.filter((s) => timeInTz(s.startUtc, timezone) >= "12:00");
+  }
+
   const byDay = new Map<string, AvailableSlot[]>();
-  for (const slot of slots) {
+  for (const slot of candidateSlots) {
     const dayIso = dayIsoInTz(new Date(slot.startUtc), timezone);
     const bucket = byDay.get(dayIso);
     if (bucket) bucket.push(slot);

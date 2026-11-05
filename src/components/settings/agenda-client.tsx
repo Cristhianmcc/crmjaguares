@@ -79,7 +79,7 @@ export function AgendaClient() {
       }
       if (avail?.ok) {
         const data = (await avail.json()) as { slots: { label: string }[] };
-        setSlots(data.slots.slice(0, 12));
+        setSlots(data.slots.slice(0, 18));
       } else {
         setSlots([]);
       }
@@ -90,7 +90,7 @@ export function AgendaClient() {
     const res = await fetch("/api/calendar/availability").catch(() => null);
     if (!res?.ok) return setSlots([]);
     const data = (await res.json()) as { slots: { label: string }[] };
-    setSlots(data.slots.slice(0, 12));
+    setSlots(data.slots.slice(0, 18));
   }
 
   function patch(next: Partial<Settings>) {
@@ -235,10 +235,9 @@ export function AgendaClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Horario de atención</CardTitle>
+          <CardTitle>Horario de atención (Mañanas y Tardes)</CardTitle>
           <CardDescription>
-            Los días y horas en que el negocio recibe citas. Fuera de aquí el
-            agente no ofrece huecos.
+            Los días y horas en que el negocio recibe citas. Puedes definir turnos separados (ej. 09:00 a 13:00 y 14:00 a 19:00 con "+ otra franja") o un horario continuo (ej. 09:00 a 18:00). El bot de IA ofrecerá automáticamente turnos de mañana o de tarde según lo que solicite el cliente por WhatsApp.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -497,12 +496,25 @@ export function AgendaClient() {
           {slots && slots.length > 0 && (
             <div className="space-y-3">
               <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                {slots.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 rounded-md border bg-subtle/50 px-2.5 py-1.5 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    <span>{s.label}</span>
-                  </li>
-                ))}
+                {slots.map((s, i) => {
+                  const isTarde = /\b(1[2-9]|2[0-3]):\d{2}\b/.test(s.label);
+                  return (
+                    <li key={i} className="flex items-center justify-between gap-2 rounded-md border bg-subtle/50 px-2.5 py-1.5 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        <span>{s.label}</span>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                        isTarde
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                      )}>
+                        {isTarde ? "Tarde" : "Mañana"}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="text-[11px] text-muted-foreground border-t pt-2">
                 Nota: Esta lista muestra los primeros turnos más próximos como referencia. Si un cliente solicita fechas posteriores en WhatsApp (ej. la próxima semana o fin de mes), el bot consultará en vivo todo tu calendario semanal dentro de los {settings.maxDaysAhead} días configurados.

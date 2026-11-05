@@ -1,8 +1,15 @@
+import { and, asc, eq } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
+import { scoped } from "@/lib/db/tenant";
 import { computeAvailability } from "@/server/agenda/availability";
 import { getSettings } from "@/server/agenda/settings";
 import { spreadByDay } from "@/server/agenda/spread";
-import { replaceOffers } from "@/server/agenda/offers";
-import { BookingError, createSessionBooking } from "@/server/agenda/service";
+import { clearOffers, replaceOffers } from "@/server/agenda/offers";
+import {
+  BookingError,
+  cancelBooking,
+  createSessionBooking,
+} from "@/server/agenda/service";
 
 /**
  * 015 — Lo que el agente incluido puede hacer con la agenda.
@@ -19,7 +26,7 @@ import { BookingError, createSessionBooking } from "@/server/agenda/service";
 /** Cuántos huecos se le enseñan al cliente en un mensaje. */
 const SHOWN = 3;
 /** Cuántos se guardan como reservables: el catálogo es más ancho que el menú. */
-const OFFERED = 12;
+const OFFERED = 24;
 
 export type AgendaTurn = {
   /** Lo que hay que enviarle al cliente. */
@@ -32,6 +39,7 @@ export async function offerSlots(input: {
   organizationId: string;
   conversationId: string;
   intro?: string;
+  shiftPreference?: "morning" | "afternoon";
 }): Promise<AgendaTurn> {
   const settings = await getSettings(input.organizationId);
   const now = new Date();
@@ -39,12 +47,29 @@ export async function offerSlots(input: {
     settings,
     now,
   });
-  const spread = spreadByDay(all, {
+
+  const shift = input.shiftPreference;
+  let spread = spreadByDay(all, {
     timezone: settings.timezone,
     limit: OFFERED,
     perDay: 3,
     now,
+    shift,
   });
+
+  // Si el cliente pidió tarde pero no hay en la tarde, fallback a mañana avisando
+  let shiftFallback = false;
+  if (spread.length === 0 && shift) {
+    spread = spreadByDay(all, {
+      timezone: settings.timezone,
+      limit: OFFERED,
+      perDay: 3,
+      now,
+    });
+    if (spread.length > 0) {
+      shiftFallback = true;
+    }
+  }
 
   if (spread.length === 0) {
     // Agenda llena no es un error: es una respuesta que el cliente entiende.
@@ -52,7 +77,7 @@ export async function offerSlots(input: {
       ok: false,
       text:
         input.intro?.trim() ||
-        "Por ahora no me quedan horarios libres. Déjame confirmarlo con el equipo y te aviso.",
+        "Por ahora no me quedan horarios libres en los próximos días. Déjame confirmarlo con el equipo y te aviso.",
     };
   }
 
@@ -77,7 +102,22 @@ export async function offerSlots(input: {
   const shown = multiDay.length >= 2 ? multiDay : spread.slice(0, SHOWN);
 
   const lista = shown.map((s) => `• ${s.dayLabel} a las ${s.time}`).join("\n");
-  const intro = input.intro?.trim() || "Tengo estos horarios disponibles:";
+
+  let intro = input.intro?.trim();
+  if (shiftFallback) {
+    intro =
+      shift === "afternoon"
+        ? "Por ahora no contamos con turnos disponibles por la tarde, pero tengo estas opciones disponibles por la mañana:"
+        : "Por ahora no contamos con turnos disponibles en ese horario, pero tengo estas opciones:";
+  } else if (!intro) {
+    intro =
+      shift === "afternoon"
+        ? "Aquí tienes los horarios disponibles por la tarde:"
+        : shift === "morning"
+          ? "Aquí tienes los horarios disponibles por la mañana:"
+          : "Tengo estos horarios disponibles:";
+  }
+
   return { ok: true, text: `${intro}\n${lista}` };
 }
 
@@ -130,4 +170,75 @@ export async function bookSlot(input: {
       text: "No pude agendarlo en este momento. Lo reviso con el equipo y te confirmo.",
     };
   }
+}
+
+/**
+ * Cancela la cita activa del contacto de esta conversación directamente
+ * sin requerir intervención humana.
+ */
+export async function cancelSlot(input: {
+  organizationId: string;
+  conversationId: string;
+  confirmation?: string;
+}): Promise<AgendaTurn> {
+  const db = getDb();
+  const convRows = await db
+    .select({ contactId: schema.conversation.contactId })
+    .from(schema.conversation)
+    .where(
+      scoped(
+        schema.conversation.organizationId,
+        input.organizationId,
+        eq(schema.conversation.id, input.conversationId)
+      )
+    )
+    .limit(1);
+
+  const contactId = convRows[0]?.contactId;
+  if (!contactId) {
+    return {
+      ok: false,
+      text:
+        input.confirmation?.trim() ||
+        "No se encontró ninguna cita registrada para cancelar.",
+    };
+  }
+
+  const bookings = await db
+    .select()
+    .from(schema.booking)
+    .where(
+      scoped(
+        schema.booking.organizationId,
+        input.organizationId,
+        and(
+          eq(schema.booking.contactId, contactId),
+          eq(schema.booking.kind, "session"),
+          eq(schema.booking.status, "agendada")
+        )
+      )
+    )
+    .orderBy(asc(schema.booking.scheduledAt))
+    .limit(1);
+
+  const target = bookings[0];
+  if (!target) {
+    return {
+      ok: false,
+      text:
+        input.confirmation?.trim() ||
+        "No tienes ninguna cita activa agendada en este momento. Si deseas programar una nueva cita, dime y con gusto te muestro los horarios disponibles.",
+    };
+  }
+
+  await cancelBooking({
+    organizationId: input.organizationId,
+    bookingId: target.id,
+  });
+  await clearOffers(input.organizationId, input.conversationId).catch(() => {});
+
+  const base =
+    input.confirmation?.trim() ||
+    "Tu cita ha sido cancelada exitosamente. ¿Te gustaría reagendar para otro día u horario?";
+  return { ok: true, text: base };
 }

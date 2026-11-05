@@ -38,15 +38,19 @@ export function buildAgentSystemPrompt(input: {
 
   const agendaLines = input.agenda
     ? [
-        '- {"action":"offer_slots","reply":"..."} — ofrecer horarios para agendar (reply es solo la frase de entrada; los horarios los pone el sistema).',
+        '- {"action":"offer_slots","shift":"morning"|"afternoon"|"any","reply":"..."} — ofrecer horarios para agendar. Si el cliente pidió por la tarde usa shift:"afternoon"; si pidió mañana usa shift:"morning". Reply es solo la frase de entrada; los horarios los pone el sistema.',
         '- {"action":"book_slot","startUtc":"<uno de los horarios que el sistema ofreció, en ISO UTC>","reply":"..."} — agendar el horario que el cliente eligió.',
+        '- {"action":"cancel_slot","reply":"..."} — cancelar la cita agendada activa del cliente cuando este lo solicite directamente (sin transferir a un humano).',
       ]
     : [];
   const agendaRules = input.agenda
     ? [
         "- NUNCA escribas tú los horarios ni los inventes: usa offer_slots y el sistema pega los reales.",
-        "- book_slot solo acepta un horario que el sistema ofreció antes en ESTA conversación. Si el cliente pide otro, vuelve a ofrecer con offer_slots.",
-        "- Si el cliente quiere CANCELAR una cita → handoff: esa decisión no es tuya.",
+        "- book_slot solo acepta un horario que el sistema ofreció antes en ESTA conversación. Si el cliente pide otro día u horario, vuelve a ofrecer con offer_slots.",
+        "- Si el cliente pide CANCELAR su cita actual → usa la acción cancel_slot. Confírmale con amabilidad que su cita fue cancelada y pregúntale si desea reagendar.",
+        "- Si el cliente pide REAGENDAR o cambiar su cita → usa cancel_slot o ofrece nuevos horarios con offer_slots y luego confirma el nuevo horario con book_slot.",
+        "- Si el cliente pide horarios por la tarde o por la mañana → usa offer_slots con el turno correspondiente para entregarle opciones adecuadas.",
+        "- Solo transfiere a un asesor humano (handoff) si el cliente pide expresamente hablar con una persona, doctor o asesor.",
       ]
     : [];
 

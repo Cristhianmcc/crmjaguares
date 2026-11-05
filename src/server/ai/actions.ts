@@ -42,11 +42,16 @@ const baseActions = [
 const agendaActions = [
   z.object({
     action: z.literal("offer_slots"),
+    shift: z.enum(["morning", "afternoon", "any"]).optional(),
     reply: z.string().optional(),
   }),
   z.object({
     action: z.literal("book_slot"),
     startUtc: z.string().min(1),
+    reply: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal("cancel_slot"),
     reply: z.string().optional(),
   }),
 ] as const;
@@ -84,7 +89,8 @@ export function degradeAction(action: AgentActionType): AgentActionType {
   if (
     action.action === "move_stage" ||
     action.action === "offer_slots" ||
-    action.action === "book_slot"
+    action.action === "book_slot" ||
+    action.action === "cancel_slot"
   ) {
     return action.reply
       ? { action: "reply", text: action.reply }
