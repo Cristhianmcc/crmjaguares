@@ -65,6 +65,21 @@ El CRM opera bajo una arquitectura **multi-tenant**, permitiendo aislar organiza
   - Separación visual clara entre `☀️ *Turno Mañana:*` y `🌤️ *Turno Tarde:*`.
   - Horarios organizados en viñetas compactas (`• 09:00   • 09:30   • 10:00`) para una lectura rápida y atractiva en WhatsApp.
 
+### F. Captura de Datos del Paciente para la Base de Datos Clínica (`book_slot`)
+- **Problema previo:** Al elegir un horario (ej. *"13:30"*), el bot agendaba de inmediato a ciegas sin solicitar los datos del paciente (nombre completo, DNI, motivo de consulta).
+- **Mejora:**
+  - **Protocolo de Registro en dos fases:** Si el paciente aún no ha facilitado sus datos, el bot aparta tentativamente el horario elegido y le pide:
+    1. Nombre y Apellidos completos del paciente.
+    2. DNI o Documento de Identidad (esencial para historia clínica y ficha dental).
+    3. Motivo de consulta o tratamiento de interés.
+  - **Ampliación de acción `book_slot`:** Parámetros tipados `patientName`, `dni`, `serviceOrReason` y `notes` en `src/server/ai/actions.ts`.
+  - **Sincronización Total en el CRM y Google Calendar:**
+    - Actualiza el nombre verificado del contacto (`contact.name` y `nameSource: "manual"`).
+    - Guarda en la ficha estructurada (`contact.ficha`) `{ dni, motivo, paciente }`.
+    - Registra en `contact.notes` y `booking.notes` el detalle completo del paciente.
+    - Sincroniza con Google Calendar con el título `Cita — [Nombre del Paciente]` y descripción con su DNI y motivo.
+    - Emite una confirmación estructurada y formal por WhatsApp.
+
 ---
 
 ## 3. Mejoras de Interfaz de Usuario (UI/UX)
@@ -95,6 +110,7 @@ El CRM opera bajo una arquitectura **multi-tenant**, permitiendo aislar organiza
 
 | Commit | Descripción |
 |---|---|
+| Pendiente | `feat(agenda): captura obligatoria de datos del paciente (nombre, DNI y motivo) antes de agendar y sincronizacion en ficha` |
 | `6a080ac` | `feat(agenda): consulta por fecha especifica con horarios completos, flujo de cancelacion con motivo y diseno estructurado de mensajes` |
 | `5153126` | `feat(agenda): cancelacion automatica sin escalacion humana y soporte de turnos por la tarde` |
 | `0e33e4e` | `feat(agenda): soporte de variedad multifecha en turnos del bot y vista ampliada de agenda` |

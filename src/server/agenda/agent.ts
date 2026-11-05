@@ -329,6 +329,10 @@ export async function bookSlot(input: {
   organizationId: string;
   conversationId: string;
   startUtc: string;
+  patientName?: string;
+  dni?: string;
+  serviceOrReason?: string;
+  notes?: string;
   confirmation?: string;
 }): Promise<AgendaTurn> {
   try {
@@ -338,10 +342,27 @@ export async function bookSlot(input: {
       startUtc: input.startUtc,
       source: "ai",
       requireOffer: true,
+      patientName: input.patientName,
+      dni: input.dni,
+      serviceOrReason: input.serviceOrReason,
+      notes: input.notes,
     });
 
-    const base =
-      input.confirmation?.trim() || `¡Listo! Te agendé para ${result.label}.`;
+    let base = input.confirmation?.trim();
+    if (!base) {
+      const cardLines = [
+        `¡Listo! 🎉 Tu cita quedó confirmada con éxito:`,
+        `━━━━━━━━━━━━━━━━━━━━━━`,
+        `📅 *Fecha:* ${result.label}`,
+        input.patientName ? `👤 *Paciente:* ${input.patientName}` : null,
+        input.dni ? `🆔 *DNI:* ${input.dni}` : null,
+        input.serviceOrReason ? `🩺 *Motivo:* ${input.serviceOrReason}` : null,
+        `━━━━━━━━━━━━━━━━━━━━━━`,
+        `Le pedimos llegar 10 minutos antes. Si necesita reprogramar, avísenos con al menos 2 horas de anticipación. ¡Muchas gracias!`,
+      ].filter(Boolean);
+      base = cardLines.join("\n");
+    }
+
     if (result.meetingLink) {
       return { ok: true, text: `${base}\nEnlace: ${result.meetingLink}` };
     }

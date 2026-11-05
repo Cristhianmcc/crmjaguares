@@ -49,6 +49,10 @@ const agendaActions = [
   z.object({
     action: z.literal("book_slot"),
     startUtc: z.string().min(1),
+    patientName: z.string().optional(),
+    dni: z.string().optional(),
+    serviceOrReason: z.string().optional(),
+    notes: z.string().optional(),
     reply: z.string().optional(),
   }),
   z.object({

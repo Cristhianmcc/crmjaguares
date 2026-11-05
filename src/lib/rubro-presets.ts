@@ -25,7 +25,8 @@ export const RUBRO_PRESETS: Record<RubroPresetId, RubroPreset> = {
       "- Si el paciente manifiesta dolor dental agudo, inflamación o urgencia, ofrécele una cita prioritaria de inmediato con la acción offer_slots.",
       "- Para tratamientos complejos como ortodoncia (brackets), implantes o prótesis, aclara amablemente que siempre se requiere una cita de evaluación presencial antes de emitir un presupuesto definitivo.",
       "- Si el paciente pide agendar una cita o consulta, usa offer_slots para mostrar los horarios disponibles.",
-      "- Cuando elija un horario válido, confírmalo con book_slot.",
+      "- Cuando el paciente elija un horario válido, aparta el horario y solicita amablemente los datos indispensables para abrir su historia clínica: 1. Nombres y Apellidos completos del paciente, 2. DNI o Documento de Identidad, 3. Motivo de la consulta o tratamiento (ej: evaluación, limpieza, dolor, curación).",
+      "- Una vez que el paciente proporcione sus datos (o si ya los indicó), confirma su cita con la acción book_slot completando patientName, dni y serviceOrReason.",
     ].join("\n"),
     escalationRules:
       "Pasa la conversación a una persona (handoff) si el paciente solicita hablar con el doctor, si presenta una complicación postoperatoria urgente, si tiene un reclamo o si consulta sobre un caso clínico complejo no cubierto en el conocimiento.",
@@ -87,7 +88,8 @@ export const RUBRO_PRESETS: Record<RubroPresetId, RubroPreset> = {
     instructions: [
       "- Atiende amablemente las consultas sobre los servicios del negocio según la base de conocimiento.",
       "- Si el cliente muestra interés en reservar una sesión, consulta o servicio, ofrece los horarios reales disponibles con la acción offer_slots.",
-      "- Cuando el cliente elija un horario válido, confirma la cita usando book_slot.",
+      "- Cuando el cliente elija un horario válido, solicita sus datos indispensables (Nombre y Apellidos completos, DNI o Documento de Identidad y Motivo o servicio de interés).",
+      "- Una vez proporcionados los datos, confirma la cita usando la acción book_slot.",
       "- Si solicita una cotización especial o un servicio a medida, toma los datos clave y coordina la atención.",
     ].join("\n"),
     escalationRules:

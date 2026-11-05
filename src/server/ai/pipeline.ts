@@ -261,6 +261,33 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
     }
   }
 
+  let contactContextPrompt: string | null = null;
+  if (conversation.contactId) {
+    const contactRows = await db
+      .select({
+        name: schema.contact.name,
+        nameSource: schema.contact.nameSource,
+        ficha: schema.contact.ficha,
+      })
+      .from(schema.contact)
+      .where(
+        scoped(
+          schema.contact.organizationId,
+          organizationId,
+          eq(schema.contact.id, conversation.contactId)
+        )
+      )
+      .limit(1);
+    const c = contactRows[0];
+    if (c) {
+      const fichaObj = (c.ficha as Record<string, unknown>) || {};
+      const knownDni = fichaObj.dni ? String(fichaObj.dni) : null;
+      const knownReason = fichaObj.motivo ? String(fichaObj.motivo) : null;
+      const isManual = c.nameSource === "manual";
+      contactContextPrompt = `FICHA DEL CLIENTE EN CRM: Nombre actual: "${c.name}" (${isManual ? "nombre completo confirmado" : "nombre de perfil WhatsApp"}). ${knownDni ? `DNI registrado: ${knownDni}.` : "DNI: AÚN NO REGISTRADO (solicítalo para confirmar cita e historia clínica)."}${knownReason ? ` Motivo registrado: ${knownReason}.` : ""}`;
+    }
+  }
+
   /**
    * Catálogo de la escuela leído en vivo (planes, horarios y cupos). Es de
    * solo lectura y viene cacheado; si el backend de la escuela no responde,
@@ -294,6 +321,9 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
      */
     ...(activeBookingPrompt
       ? [{ role: "system" as const, content: activeBookingPrompt }]
+      : []),
+    ...(contactContextPrompt
+      ? [{ role: "system" as const, content: contactContextPrompt }]
       : []),
     ...(mapaDeHuecos
       ? [{ role: "system" as const, content: mapaDeHuecos }]
@@ -356,6 +386,10 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
             organizationId,
             conversationId,
             startUtc: action.startUtc,
+            patientName: action.patientName,
+            dni: action.dni,
+            serviceOrReason: action.serviceOrReason,
+            notes: action.notes,
             confirmation: action.reply,
           });
         } else {

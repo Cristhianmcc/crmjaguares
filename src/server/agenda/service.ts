@@ -89,6 +89,10 @@ export async function createSessionBooking(input: {
   /** Camino manual del operador. */
   contactId?: string | null;
   notes?: string | null;
+  /** Datos del paciente o cliente para la base de datos de la clínica */
+  patientName?: string | null;
+  dni?: string | null;
+  serviceOrReason?: string | null;
   /**
    * true ⇒ exige que el instante figure entre los ofrecidos a la conversación
    * (agente/bot). El operador elige de la disponibilidad que está viendo, así
@@ -167,6 +171,70 @@ export async function createSessionBooking(input: {
     );
   }
 
+  // Registro de datos del paciente en la ficha del CRM
+  const detailParts: string[] = [];
+  if (input.patientName?.trim()) detailParts.push(`Paciente: ${input.patientName.trim()}`);
+  if (input.dni?.trim()) detailParts.push(`DNI: ${input.dni.trim()}`);
+  if (input.serviceOrReason?.trim()) detailParts.push(`Motivo: ${input.serviceOrReason.trim()}`);
+
+  const contactRows = await db
+    .select({
+      id: schema.contact.id,
+      name: schema.contact.name,
+      notes: schema.contact.notes,
+      ficha: schema.contact.ficha,
+    })
+    .from(schema.contact)
+    .where(
+      scoped(
+        schema.contact.organizationId,
+        input.organizationId,
+        eq(schema.contact.id, contactId)
+      )
+    )
+    .limit(1);
+  const currentContact = contactRows[0];
+
+  const contactPatch: Partial<typeof schema.contact.$inferInsert> = {};
+  if (input.patientName?.trim()) {
+    contactPatch.name = input.patientName.trim();
+    contactPatch.nameSource = "manual";
+    contactName = input.patientName.trim();
+  } else if (currentContact?.name) {
+    contactName = currentContact.name;
+  }
+
+  if (input.dni?.trim() || input.serviceOrReason?.trim() || input.patientName?.trim()) {
+    const currentFicha = (currentContact?.ficha as Record<string, unknown>) || {};
+    const newFicha: Record<string, unknown> = { ...currentFicha };
+    if (input.dni?.trim()) newFicha.dni = input.dni.trim();
+    if (input.serviceOrReason?.trim()) newFicha.motivo = input.serviceOrReason.trim();
+    if (input.patientName?.trim()) newFicha.paciente = input.patientName.trim();
+    contactPatch.ficha = newFicha;
+  }
+
+  if (detailParts.length > 0) {
+    const detailSummary = `[Ficha Cita]: ${detailParts.join(" | ")}`;
+    contactPatch.notes = currentContact?.notes
+      ? `${currentContact.notes}\n${detailSummary}`
+      : detailSummary;
+  }
+
+  if (Object.keys(contactPatch).length > 0) {
+    contactPatch.updatedAt = new Date();
+    await db
+      .update(schema.contact)
+      .set(contactPatch)
+      .where(eq(schema.contact.id, contactId));
+  }
+
+  const combinedBookingNotes = [
+    detailParts.length > 0 ? detailParts.join(" | ") : null,
+    input.notes?.trim() || null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const leadRows = await db
     .select({ id: schema.lead.id })
     .from(schema.lead)
@@ -197,7 +265,7 @@ export async function createSessionBooking(input: {
         // el que le tocó y sigue hablando con él al moverse o cancelarse.
         connector: settings.connector,
         isTest,
-        notes: input.notes ?? null,
+        notes: combinedBookingNotes || null,
       })
       .returning();
     booking = inserted[0]!;

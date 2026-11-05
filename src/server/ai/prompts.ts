@@ -39,7 +39,7 @@ export function buildAgentSystemPrompt(input: {
   const agendaLines = input.agenda
     ? [
         '- {"action":"offer_slots","date":"YYYY-MM-DD","shift":"morning"|"afternoon"|"any","reply":"..."} — ofrecer horarios para agendar. Si el cliente pidió un día específico (ej. "el viernes", "mañana", "lunes"), pon "date":"YYYY-MM-DD" de ese día para entregarle todos sus turnos disponibles. Si pidió tarde pon shift:"afternoon"; si pidió mañana pon shift:"morning". Reply es opcional.',
-        '- {"action":"book_slot","startUtc":"<uno de los horarios que el sistema ofreció, en ISO UTC>","reply":"..."} — agendar el horario que el cliente eligió.',
+        '- {"action":"book_slot","startUtc":"<uno de los horarios que el sistema ofreció, en ISO UTC>","patientName":"<Nombre y Apellidos completos>","dni":"<DNI o documento>","serviceOrReason":"<motivo o tratamiento>","reply":"..."} — agendar el horario que el cliente eligió una vez obtenidos sus datos.',
         '- {"action":"cancel_slot","reason":"<motivo resumido de cancelación>","reply":"..."} — cancelar la cita activa del cliente. SOLO úsalo cuando el cliente ya haya indicado el motivo de cancelación.',
       ]
     : [];
@@ -47,6 +47,17 @@ export function buildAgentSystemPrompt(input: {
     ? [
         "- NUNCA redactes tú los horarios ni inventes horas: usa siempre offer_slots y el sistema formateará los horarios reales con tarjetas limpias y visuales.",
         "- book_slot solo acepta un horario que el sistema ofreció antes en ESTA conversación.",
+        "- PROTOCOLO OBLIGATORIO DE REGISTRO DE DATOS ANTES DE AGENDAR:",
+        "  • Para registrar cualquier cita en el sistema e historia clínica, es OBLIGATORIO recopilar los siguientes datos del paciente:",
+        "    1. Nombre y Apellidos completos del paciente",
+        "    2. DNI o Documento de Identidad",
+        "    3. Motivo de la consulta o tratamiento (ej. evaluación general, limpieza profunda, dolor, curación, ortodoncia)",
+        "  • Si el cliente elige un horario (ej: '13:30', 'a las 9 am', 'el miércoles a las 3') pero AÚN NO ha proporcionado su nombre y apellidos completos, su DNI o el motivo de consulta:",
+        "    -> NO confirmes la cita de inmediato con book_slot.",
+        "    -> Usa la acción 'reply' indicándole cordialmente que apartas ese horario para él y pidiéndole amablemente los datos faltantes para completar su ficha clínica y confirmar la cita.",
+        "  • Si el cliente ya dio sus datos (o responde proporcionándolos):",
+        "    -> Ejecuta book_slot incluyendo 'startUtc', 'patientName', 'dni' y 'serviceOrReason'.",
+        "    -> En 'reply' confírmale con un mensaje estructurado y formal que resuma la cita con sus datos (Fecha, Hora, Paciente, DNI, Motivo, Políticas).",
         "- PROTOCOLO OBLIGATORIO DE CANCELACIÓN:",
         "  • Si el cliente dice que quiere cancelar su cita pero NO ha dado el motivo (ej: 'Quiero cancelar esa cita', 'cancela mi turno'): NO canceles de inmediato. Responde primero con action 'reply' preguntando amablemente el motivo para tenerlo registrado y ofreciéndole también la posibilidad de reprogramar si lo prefiere.",
         "    Ejemplo: 'Lamento que tengas que cancelar tu cita. ¿Podrías indicarme el motivo de la cancelación para tenerlo registrado? (O si prefieres, con gusto podemos simplemente reprogramarla para otra fecha u horario).'",
@@ -105,7 +116,7 @@ export function buildAgentSystemPrompt(input: {
     ...(input.agenda
       ? [
           "- Si el cliente pregunta por disponibilidad o desea agendar una cita o consulta, ofrece los horarios reales con la acción offer_slots.",
-          "- Si el cliente escoge un horario válido que ya le ofreciste, resérvalo con book_slot.",
+          "- Si el cliente escoge un horario válido que ya le ofreciste, solicita sus datos indispensables (Nombre y Apellidos completos, DNI y Motivo) y, una vez recibidos, confirma la cita con book_slot.",
         ]
       : []),
     "- Si el cliente solicita hablar con una persona del equipo o asesor, responde con amabilidad que un asesor lo atenderá y ejecuta handoff.",
