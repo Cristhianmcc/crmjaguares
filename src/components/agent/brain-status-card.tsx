@@ -37,9 +37,11 @@ const DOT: Record<Tone, string> = {
 export function BrainStatusCard({
   status,
   now = Date.now(),
+  agentName,
 }: {
   status: BrainStatusDto;
   now?: number;
+  agentName?: string;
 }) {
   const lastSeenAt = status.external.lastSeenAt;
 
@@ -71,7 +73,7 @@ export function BrainStatusCard({
             icon={Cable}
             label="Tu agente"
             hint="El cerebro que contesta (Nea u otro), por la API del CRM."
-            view={externalView(status, now)}
+            view={externalView(status, now, agentName)}
           />
           {(status.dispatch.host !== null || status.dispatch.problem !== null) && (
             <BrainRow
@@ -120,7 +122,7 @@ function switchView(s: BrainStatusDto): RowView {
   return { tone: "ok", headline, detail: "El agente contesta automáticamente cada mensaje entrante." };
 }
 
-function externalView(s: BrainStatusDto, now: number): RowView {
+function externalView(s: BrainStatusDto, now: number, agentName?: string): RowView {
   const { keyConfigured, lastSeenAt, active, health } = s.external;
   const llamada = lastSeenAt
     ? `última llamada ${haceCuanto(lastSeenAt, now)}`
@@ -163,10 +165,12 @@ function externalView(s: BrainStatusDto, now: number): RowView {
     };
   }
   if (s.dispatch.active) {
+    const cleanName = agentName?.trim();
+    const headline = cleanName ? `Agente ${cleanName} (Conectado)` : "Agente de IA (Conectado)";
     return {
       tone: "ok",
-      headline: "Agente IA Jaguares (Conectado)",
-      detail: "Listo para responder turnos entrantes con DeepSeek y catálogo en vivo.",
+      headline,
+      detail: "Listo para responder turnos entrantes con IA y la información del negocio.",
     };
   }
   if (keyConfigured) {

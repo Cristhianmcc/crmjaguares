@@ -103,6 +103,14 @@ export async function POST(req: Request) {
       })
       .where(eq(schema.organization.id, orgId));
 
+    await db
+      .update(schema.agentProfile)
+      .set({
+        name: businessName,
+        greeting: `¡Hola! Te damos la bienvenida a ${businessName}. ¿En qué te podemos ayudar hoy?`,
+      })
+      .where(eq(schema.agentProfile.organizationId, orgId));
+
     return NextResponse.json({
       ok: true,
       orgId,

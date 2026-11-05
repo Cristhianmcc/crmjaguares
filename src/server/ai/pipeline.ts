@@ -114,6 +114,7 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
 
   const orgRows = await db
     .select({
+      name: schema.organization.name,
       rubro: schema.organization.rubro,
       plan: schema.organization.plan,
       trialEndsAt: schema.organization.trialEndsAt,
@@ -222,12 +223,21 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
    * solo lectura y viene cacheado; si el backend de la escuela no responde,
    * devuelve null y el turno sigue con el conocimiento base.
    */
-  const catalogo = await catalogoEnVivo();
+  const isSchool = org.rubro === "escuela" || (org.name ?? "").toLowerCase().includes("jaguares");
+  const catalogo = isSchool ? await catalogoEnVivo() : null;
 
   const messages: ChatMessage[] = [
     {
       role: "system",
-      content: buildAgentSystemPrompt({ profile, kb, stages, agenda, catalogo }),
+      content: buildAgentSystemPrompt({
+        profile,
+        kb,
+        stages,
+        agenda,
+        catalogo,
+        rubro: org.rubro ?? "servicios",
+        businessName: org.name ?? undefined,
+      }),
     },
     ...history
       .filter((m) => m.text)

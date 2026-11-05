@@ -166,7 +166,7 @@ async function pasoCerebro(iaActiva: boolean): Promise<ReadinessStep> {
     return {
       ...base,
       status: "ready",
-      nextAction: "Agente IA Jaguares conectado y listo",
+      nextAction: "Agente de IA conectado y listo",
       problem: null,
     };
   }

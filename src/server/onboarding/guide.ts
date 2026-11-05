@@ -96,7 +96,7 @@ export function guideFrom(status: OnboardingStatus): Guide {
       key: "brain",
       title: "Conecta tu agente",
       description:
-        "Tu agente IA responde las consultas de WhatsApp las 24 horas usando el catálogo de Jaguares en vivo y tu configuración.",
+        "Tu agente de IA responde las consultas de WhatsApp las 24 horas usando tu configuración y servicios.",
       done: ready(brain) || ready(ai),
       href: "/agent",
       cta: "Ver agente",

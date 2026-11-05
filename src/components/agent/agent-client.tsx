@@ -185,7 +185,7 @@ export function AgentClient() {
 
       {brain && (
         <div className="mx-4 mt-4 sm:mx-6 sm:mt-6">
-          <BrainStatusCard status={brain} />
+          <BrainStatusCard status={brain} agentName={profile.name} />
         </div>
       )}
 
