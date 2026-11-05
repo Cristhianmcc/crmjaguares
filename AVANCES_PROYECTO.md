@@ -110,7 +110,7 @@ El CRM opera bajo una arquitectura **multi-tenant**, permitiendo aislar organiza
 
 | Commit | Descripción |
 |---|---|
-| Pendiente | `feat(agenda): captura obligatoria de datos del paciente (nombre, DNI y motivo) antes de agendar y sincronizacion en ficha` |
+| `fb7b22c` | `feat(agenda): captura obligatoria de datos del paciente (nombre, DNI y motivo) antes de agendar y sincronizacion en ficha` |
 | `6a080ac` | `feat(agenda): consulta por fecha especifica con horarios completos, flujo de cancelacion con motivo y diseno estructurado de mensajes` |
 | `5153126` | `feat(agenda): cancelacion automatica sin escalacion humana y soporte de turnos por la tarde` |
 | `0e33e4e` | `feat(agenda): soporte de variedad multifecha en turnos del bot y vista ampliada de agenda` |
