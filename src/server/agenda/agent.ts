@@ -64,7 +64,18 @@ export async function offerSlots(input: {
     spread.map((s) => ({ startUtc: s.startUtc, label: s.label }))
   );
 
-  const shown = spread.slice(0, SHOWN);
+  // Variedad de fechas: si hay varios días con disponibilidad, selecciona
+  // turnos en días distintos para que el cliente tenga alternativas de fechas.
+  const daysMap = new Map<string, (typeof spread)[0]>();
+  for (const s of spread) {
+    if (!daysMap.has(s.dayIso)) {
+      daysMap.set(s.dayIso, s);
+      if (daysMap.size >= SHOWN) break;
+    }
+  }
+  const multiDay = Array.from(daysMap.values());
+  const shown = multiDay.length >= 2 ? multiDay : spread.slice(0, SHOWN);
+
   const lista = shown.map((s) => `• ${s.dayLabel} a las ${s.time}`).join("\n");
   const intro = input.intro?.trim() || "Tengo estos horarios disponibles:";
   return { ok: true, text: `${intro}\n${lista}` };

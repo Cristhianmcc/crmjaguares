@@ -79,7 +79,7 @@ export function AgendaClient() {
       }
       if (avail?.ok) {
         const data = (await avail.json()) as { slots: { label: string }[] };
-        setSlots(data.slots.slice(0, 5));
+        setSlots(data.slots.slice(0, 12));
       } else {
         setSlots([]);
       }
@@ -90,7 +90,7 @@ export function AgendaClient() {
     const res = await fetch("/api/calendar/availability").catch(() => null);
     if (!res?.ok) return setSlots([]);
     const data = (await res.json()) as { slots: { label: string }[] };
-    setSlots(data.slots.slice(0, 5));
+    setSlots(data.slots.slice(0, 12));
   }
 
   function patch(next: Partial<Settings>) {
@@ -383,6 +383,9 @@ export function AgendaClient() {
               value={settings.maxDaysAhead}
               onChange={(e) => patch({ maxDaysAhead: Number(e.target.value) })}
             />
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Cuántos días hacia el futuro puede agendar el bot (ej. 7, 14, 30 días).
+            </p>
           </div>
           <div className="col-span-1 sm:col-span-2 space-y-1.5">
             <Label htmlFor="tz">Zona horaria</Label>
@@ -481,7 +484,7 @@ export function AgendaClient() {
         <CardHeader>
           <CardTitle>Próximos turnos disponibles para el bot</CardTitle>
           <CardDescription>
-            Horarios reales en vivo que el asistente de IA ofrecerá por WhatsApp cuando un cliente solicite agendar cita.
+            Muestra en tiempo real de los turnos que el bot de IA ofrecerá por WhatsApp. Tus clientes pueden agendar en cualquiera de los días activos en tu Horario de Atención dentro del rango de Agenda abierta ({settings.maxDaysAhead} días).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -492,11 +495,19 @@ export function AgendaClient() {
             </p>
           )}
           {slots && slots.length > 0 && (
-            <ul className="space-y-1 text-sm">
-              {slots.map((s, i) => (
-                <li key={i}>{s.label}</li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                {slots.map((s, i) => (
+                  <li key={i} className="flex items-center gap-2 rounded-md border bg-subtle/50 px-2.5 py-1.5 font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span>{s.label}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-muted-foreground border-t pt-2">
+                Nota: Esta lista muestra los primeros turnos más próximos como referencia. Si un cliente solicita fechas posteriores en WhatsApp (ej. la próxima semana o fin de mes), el bot consultará en vivo todo tu calendario semanal dentro de los {settings.maxDaysAhead} días configurados.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
