@@ -422,14 +422,25 @@ export async function rescheduleForConversation(input: {
 export async function cancelBooking(input: {
   organizationId: string;
   bookingId: string;
+  reason?: string | null;
 }): Promise<void> {
   const db = getDb();
   const booking = await getOwnBooking(input.organizationId, input.bookingId);
   if (booking.status === "cancelada") return;
 
+  const notesUpdate = input.reason?.trim()
+    ? booking.notes
+      ? `${booking.notes}\n[Motivo de cancelación]: ${input.reason.trim()}`
+      : `[Motivo de cancelación]: ${input.reason.trim()}`
+    : booking.notes;
+
   await db
     .update(schema.booking)
-    .set({ status: "cancelada", updatedAt: new Date() })
+    .set({
+      status: "cancelada",
+      notes: notesUpdate,
+      updatedAt: new Date(),
+    })
     .where(eq(schema.booking.id, booking.id));
 
   const settings = await getSettings(input.organizationId);

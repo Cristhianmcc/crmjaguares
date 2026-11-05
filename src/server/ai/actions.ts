@@ -42,6 +42,7 @@ const baseActions = [
 const agendaActions = [
   z.object({
     action: z.literal("offer_slots"),
+    date: z.string().optional(),
     shift: z.enum(["morning", "afternoon", "any"]).optional(),
     reply: z.string().optional(),
   }),
@@ -52,6 +53,7 @@ const agendaActions = [
   }),
   z.object({
     action: z.literal("cancel_slot"),
+    reason: z.string().optional(),
     reply: z.string().optional(),
   }),
 ] as const;

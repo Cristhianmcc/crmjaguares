@@ -3,29 +3,26 @@ import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { computeAvailability } from "@/server/agenda/availability";
 import { getSettings } from "@/server/agenda/settings";
-import { spreadByDay } from "@/server/agenda/spread";
+import { spreadByDay, type SpreadSlot } from "@/server/agenda/spread";
 import { clearOffers, replaceOffers } from "@/server/agenda/offers";
 import {
   BookingError,
   cancelBooking,
   createSessionBooking,
 } from "@/server/agenda/service";
+import {
+  addDaysISO,
+  dayIsoInTz,
+  dayLabelInTz,
+  timeInTz,
+  todayInTz,
+  zonedWallClockToUtc,
+} from "@/lib/time/slots";
 
 /**
  * 015 — Lo que el agente incluido puede hacer con la agenda.
- *
- * Vive aquí y no en el pipeline para que el pipeline no aprenda de agendas: el
- * turno pide "ofrece" o "reserva" y recibe el texto que hay que mandar.
- *
- * Regla que atraviesa las dos operaciones: el modelo NO redacta horarios. Pide
- * ofrecer, y el motor pega las etiquetas reales. Si el modelo inventa un
- * instante al reservar, el motor lo rechaza y se re-ofrece — nunca se agenda
- * algo que el cliente no eligió.
  */
 
-/** Cuántos huecos se le enseñan al cliente en un mensaje. */
-const SHOWN = 3;
-/** Cuántos se guardan como reservables: el catálogo es más ancho que el menú. */
 const OFFERED = 24;
 
 export type AgendaTurn = {
@@ -35,14 +32,237 @@ export type AgendaTurn = {
   ok: boolean;
 };
 
+function capitalizeFirst(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Resuelve una fecha a partir del texto en lenguaje natural en español
+ * (ej: "viernes", "el lunes", "mañana", "el 6 de noviembre").
+ */
+export function resolveRequestedDate(
+  text: string,
+  timezone: string,
+  now: Date = new Date()
+): string | null {
+  const t = text.toLowerCase().trim();
+  const hoyIso = todayInTz(now, timezone);
+
+  if (/\bhoy\b/.test(t)) return hoyIso;
+  if (/\bpasado\s+mañana\b|\bpasado\s+manana\b/.test(t)) {
+    return addDaysISO(hoyIso, 2);
+  }
+  if (
+    /\bmañana\b|\bmanana\b/.test(t) &&
+    !/\b(en|por)\s+la\s+mañana\b|\b(en|por)\s+la\s+manana\b/.test(t)
+  ) {
+    return addDaysISO(hoyIso, 1);
+  }
+
+  const diasSemana: { key: string; weekdayIndex: number }[] = [
+    { key: "domingo", weekdayIndex: 0 },
+    { key: "lunes", weekdayIndex: 1 },
+    { key: "martes", weekdayIndex: 2 },
+    { key: "miercoles", weekdayIndex: 3 },
+    { key: "miércoles", weekdayIndex: 3 },
+    { key: "jueves", weekdayIndex: 4 },
+    { key: "viernes", weekdayIndex: 5 },
+    { key: "sabado", weekdayIndex: 6 },
+    { key: "sábado", weekdayIndex: 6 },
+  ];
+
+  for (const d of diasSemana) {
+    if (new RegExp(`\\b${d.key}\\b`).test(t)) {
+      const noon = zonedWallClockToUtc(hoyIso, "12:00", timezone) ?? now;
+      const currentDayOfWeek = noon.getUTCDay();
+      let diff = d.weekdayIndex - currentDayOfWeek;
+      if (diff <= 0) diff += 7;
+      return addDaysISO(hoyIso, diff);
+    }
+  }
+
+  const isoMatch = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(t);
+  if (isoMatch) return isoMatch[0];
+
+  const meses: Record<string, number> = {
+    enero: 1, ene: 1,
+    febrero: 2, feb: 2,
+    marzo: 3, mar: 3,
+    abril: 4, abr: 4,
+    mayo: 5, may: 5,
+    junio: 6, jun: 6,
+    julio: 7, jul: 7,
+    agosto: 8, ago: 8,
+    septiembre: 9, setiembre: 9, sep: 9, set: 9,
+    octubre: 10, oct: 10,
+    noviembre: 11, nov: 11,
+    diciembre: 12, dic: 12,
+  };
+
+  const regexMes =
+    /(\d{1,2})\s*(?:de)?\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)\b/;
+  const matchMes = regexMes.exec(t);
+  if (matchMes && matchMes[1] && matchMes[2]) {
+    const day = parseInt(matchMes[1], 10);
+    const month = meses[matchMes[2]];
+    if (month && day >= 1 && day <= 31) {
+      const year = now.getFullYear();
+      const mm = String(month).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    }
+  }
+
+  return null;
+}
+
+function buildMultiDayLines(
+  spread: SpreadSlot[],
+  shift?: "morning" | "afternoon"
+): string {
+  const byDay = new Map<
+    string,
+    { dayLabel: string; mornings: string[]; afternoons: string[] }
+  >();
+
+  for (const s of spread) {
+    let entry = byDay.get(s.dayIso);
+    if (!entry) {
+      entry = { dayLabel: s.dayLabel, mornings: [], afternoons: [] };
+      byDay.set(s.dayIso, entry);
+    }
+    if (s.time < "12:00") {
+      if (entry.mornings.length < 3) entry.mornings.push(s.time);
+    } else {
+      if (entry.afternoons.length < 3) entry.afternoons.push(s.time);
+    }
+  }
+
+  const dayEntries = Array.from(byDay.entries()).slice(0, 3);
+  return dayEntries
+    .map(([, data]) => {
+      const parts: string[] = [];
+      if (shift === "afternoon") {
+        parts.push(data.afternoons.join("   •   "));
+      } else if (shift === "morning") {
+        parts.push(data.mornings.join("   •   "));
+      } else {
+        if (data.mornings.length > 0) {
+          parts.push(`${data.mornings.join(", ")} (Mañana)`);
+        }
+        if (data.afternoons.length > 0) {
+          parts.push(`${data.afternoons.join(", ")} (Tarde)`);
+        }
+      }
+      return `• *${capitalizeFirst(data.dayLabel)}:*\n   ${parts.join("  ·  ")}`;
+    })
+    .join("\n\n");
+}
+
 export async function offerSlots(input: {
   organizationId: string;
   conversationId: string;
   intro?: string;
+  date?: string;
   shiftPreference?: "morning" | "afternoon";
 }): Promise<AgendaTurn> {
   const settings = await getSettings(input.organizationId);
   const now = new Date();
+  const tz = settings.timezone;
+
+  // 1. Consulta para una fecha específica
+  if (input.date) {
+    const requestedDate = input.date;
+    const daySlotsAll = await computeAvailability(input.organizationId, {
+      settings,
+      now,
+      fromISO: requestedDate,
+      toISO: requestedDate,
+    });
+
+    const shift = input.shiftPreference;
+    let daySlots = daySlotsAll;
+    if (shift === "morning") {
+      daySlots = daySlotsAll.filter((s) => timeInTz(s.startUtc, tz) < "12:00");
+    } else if (shift === "afternoon") {
+      daySlots = daySlotsAll.filter((s) => timeInTz(s.startUtc, tz) >= "12:00");
+    }
+
+    if (daySlots.length > 0) {
+      await replaceOffers(
+        input.organizationId,
+        input.conversationId,
+        daySlots.map((s) => ({ startUtc: s.startUtc, label: s.label }))
+      );
+
+      const firstSlot = daySlots[0];
+      const dayLabel = firstSlot ? capitalizeFirst(dayLabelInTz(firstSlot.startUtc, tz, now)) : requestedDate;
+      const mornings = daySlots.filter((s) => timeInTz(s.startUtc, tz) < "12:00");
+      const afternoons = daySlots.filter((s) => timeInTz(s.startUtc, tz) >= "12:00");
+
+      const sections: string[] = [];
+      if (mornings.length > 0) {
+        sections.push(
+          `☀️ *Turno Mañana:*\n${mornings.map((s) => `• ${timeInTz(s.startUtc, tz)}`).join("   ")}`
+        );
+      }
+      if (afternoons.length > 0) {
+        sections.push(
+          `🌤️ *Turno Tarde:*\n${afternoons.map((s) => `• ${timeInTz(s.startUtc, tz)}`).join("   ")}`
+        );
+      }
+
+      const card = [
+        `📅 *HORARIOS DISPONIBLES — ${dayLabel}*`,
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        ...sections,
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "¿Cuál de estos horarios te acomoda mejor?",
+      ].join("\n");
+
+      return { ok: true, text: card };
+    }
+
+    // Si ese día no tiene turnos, buscar alternativas en días cercanos
+    const allUpcoming = await computeAvailability(input.organizationId, {
+      settings,
+      now,
+    });
+    const spreadUpcoming = spreadByDay(allUpcoming, {
+      timezone: tz,
+      limit: OFFERED,
+      perDay: 3,
+      now,
+      shift,
+    });
+
+    if (spreadUpcoming.length > 0) {
+      await replaceOffers(
+        input.organizationId,
+        input.conversationId,
+        spreadUpcoming.map((s) => ({ startUtc: s.startUtc, label: s.label }))
+      );
+
+      const alternatives = buildMultiDayLines(spreadUpcoming, shift);
+      const card = [
+        `📅 *FECHA SOLICITADA (${requestedDate})*`,
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        shift === "afternoon"
+          ? "Por ahora no contamos con turnos disponibles por la tarde para esta fecha."
+          : "Por el momento no contamos con turnos disponibles para esta fecha.",
+        "",
+        "Aquí tienes las fechas más próximas con horarios disponibles:",
+        alternatives,
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "¿Te gustaría agendar en alguna de estas opciones?",
+      ].join("\n");
+
+      return { ok: true, text: card };
+    }
+  }
+
+  // 2. Consulta general multi-día
   const all = await computeAvailability(input.organizationId, {
     settings,
     now,
@@ -57,7 +277,6 @@ export async function offerSlots(input: {
     shift,
   });
 
-  // Si el cliente pidió tarde pero no hay en la tarde, fallback a mañana avisando
   let shiftFallback = false;
   if (spread.length === 0 && shift) {
     spread = spreadByDay(all, {
@@ -72,7 +291,6 @@ export async function offerSlots(input: {
   }
 
   if (spread.length === 0) {
-    // Agenda llena no es un error: es una respuesta que el cliente entiende.
     return {
       ok: false,
       text:
@@ -81,44 +299,30 @@ export async function offerSlots(input: {
     };
   }
 
-  // Se REGISTRA todo el catálogo, no solo lo que se enseña: si el cliente pide
-  // otro día, el agente tiene alternativas legítimas que aceptar.
   await replaceOffers(
     input.organizationId,
     input.conversationId,
     spread.map((s) => ({ startUtc: s.startUtc, label: s.label }))
   );
 
-  // Variedad de fechas: si hay varios días con disponibilidad, selecciona
-  // turnos en días distintos para que el cliente tenga alternativas de fechas.
-  const daysMap = new Map<string, (typeof spread)[0]>();
-  for (const s of spread) {
-    if (!daysMap.has(s.dayIso)) {
-      daysMap.set(s.dayIso, s);
-      if (daysMap.size >= SHOWN) break;
-    }
-  }
-  const multiDay = Array.from(daysMap.values());
-  const shown = multiDay.length >= 2 ? multiDay : spread.slice(0, SHOWN);
+  const lines = buildMultiDayLines(spread, shiftFallback ? undefined : shift);
 
-  const lista = shown.map((s) => `• ${s.dayLabel} a las ${s.time}`).join("\n");
-
-  let intro = input.intro?.trim();
-  if (shiftFallback) {
-    intro =
-      shift === "afternoon"
-        ? "Por ahora no contamos con turnos disponibles por la tarde, pero tengo estas opciones disponibles por la mañana:"
-        : "Por ahora no contamos con turnos disponibles en ese horario, pero tengo estas opciones:";
-  } else if (!intro) {
-    intro =
-      shift === "afternoon"
-        ? "Aquí tienes los horarios disponibles por la tarde:"
-        : shift === "morning"
-          ? "Aquí tienes los horarios disponibles por la mañana:"
-          : "Tengo estos horarios disponibles:";
+  let headerTitle = "PRÓXIMOS TURNOS DISPONIBLES";
+  if (!shiftFallback && shift === "afternoon") {
+    headerTitle = "TURNOS DISPONIBLES POR LA TARDE";
+  } else if (!shiftFallback && shift === "morning") {
+    headerTitle = "TURNOS DISPONIBLES POR LA MAÑANA";
   }
 
-  return { ok: true, text: `${intro}\n${lista}` };
+  const card = [
+    `📅 *${headerTitle}:*`,
+    "━━━━━━━━━━━━━━━━━━━━━━",
+    lines,
+    "━━━━━━━━━━━━━━━━━━━━━━",
+    "Dime qué día y horario prefieres, o si buscas una fecha específica indícanosla para ver todos sus horarios.",
+  ].join("\n");
+
+  return { ok: true, text: card };
 }
 
 export async function bookSlot(input: {
@@ -142,7 +346,6 @@ export async function bookSlot(input: {
       return { ok: true, text: `${base}\nEnlace: ${result.meetingLink}` };
     }
     if (result.linkPending) {
-      // La cita existe; el enlace no. No se promete lo que no se tiene.
       return {
         ok: true,
         text: `${base}\nEn un momento te comparto el enlace por aquí.`,
@@ -152,11 +355,9 @@ export async function bookSlot(input: {
   } catch (err) {
     if (!(err instanceof BookingError)) throw err;
 
-    // Se ocupó o el modelo inventó la hora: en ambos casos se re-ofrece con
-    // datos reales en vez de discutir con el cliente.
     if (err.slots.length > 0) {
       const lista = err.slots
-        .slice(0, SHOWN)
+        .slice(0, 3)
         .map((s) => `• ${s.label}`)
         .join("\n");
       const disculpa =
@@ -173,12 +374,12 @@ export async function bookSlot(input: {
 }
 
 /**
- * Cancela la cita activa del contacto de esta conversación directamente
- * sin requerir intervención humana.
+ * Cancela la cita activa del contacto registrando el motivo en el sistema.
  */
 export async function cancelSlot(input: {
   organizationId: string;
   conversationId: string;
+  reason?: string;
   confirmation?: string;
 }): Promise<AgendaTurn> {
   const db = getDb();
@@ -234,11 +435,18 @@ export async function cancelSlot(input: {
   await cancelBooking({
     organizationId: input.organizationId,
     bookingId: target.id,
+    reason: input.reason,
   });
   await clearOffers(input.organizationId, input.conversationId).catch(() => {});
 
-  const base =
-    input.confirmation?.trim() ||
-    "Tu cita ha sido cancelada exitosamente. ¿Te gustaría reagendar para otro día u horario?";
+  let base = input.confirmation?.trim();
+  if (!base) {
+    if (input.reason?.trim()) {
+      base = `Listo, tu cita ha sido cancelada. Registramos el motivo: *${input.reason.trim()}*.\n\n¿Te gustaría que la reprogramemos para otra fecha u horario?`;
+    } else {
+      base = "Listo, tu cita ha sido cancelada exitosamente. ¿Te gustaría reagendar para otro día u horario?";
+    }
+  }
+
   return { ok: true, text: base };
 }

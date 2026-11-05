@@ -30,6 +30,7 @@ import {
   bookSlot,
   cancelSlot,
   offerSlots,
+  resolveRequestedDate,
   type AgendaTurn,
 } from "@/server/agenda/agent";
 import { getOffers, mapaDeHuecosParaModelo } from "@/server/agenda/offers";
@@ -325,22 +326,30 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
         let turn: AgendaTurn;
         if (action.action === "offer_slots") {
           const userText = (lastInbound.text ?? "").toLowerCase();
+          const calSettings = await getSettings(organizationId);
+
+          const requestedDate =
+            action.date ??
+            resolveRequestedDate(lastInbound.text ?? "", calSettings.timezone, new Date());
+
           const isAfternoon =
             action.shift === "afternoon" ||
-            /\b(tarde|tardes|pm|noche)\b/i.test(userText);
+            /\b(tarde|tardes|pm|noche|despu[eé]s\s+de\s+almuerzo)\b/i.test(userText);
           const isMorning =
             action.shift === "morning" ||
-            /\b(en la mañana|por la mañana|am|temprano)\b/i.test(userText);
+            /\b(en\s+la\s+mañana|por\s+la\s+mañana|en\s+la\s+manana|por\s+la\s+manana|temprano|am)\b/i.test(userText);
+          const shiftPreference = isAfternoon
+            ? "afternoon"
+            : isMorning
+              ? "morning"
+              : undefined;
 
           turn = await offerSlots({
             organizationId,
             conversationId,
+            date: requestedDate ?? undefined,
+            shiftPreference,
             intro: action.reply,
-            shiftPreference: isAfternoon
-              ? "afternoon"
-              : isMorning
-                ? "morning"
-                : undefined,
           });
         } else if (action.action === "book_slot") {
           turn = await bookSlot({
@@ -353,6 +362,7 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
           turn = await cancelSlot({
             organizationId,
             conversationId,
+            reason: action.reason,
             confirmation: action.reply,
           });
         }

@@ -38,18 +38,23 @@ export function buildAgentSystemPrompt(input: {
 
   const agendaLines = input.agenda
     ? [
-        '- {"action":"offer_slots","shift":"morning"|"afternoon"|"any","reply":"..."} — ofrecer horarios para agendar. Si el cliente pidió por la tarde usa shift:"afternoon"; si pidió mañana usa shift:"morning". Reply es solo la frase de entrada; los horarios los pone el sistema.',
+        '- {"action":"offer_slots","date":"YYYY-MM-DD","shift":"morning"|"afternoon"|"any","reply":"..."} — ofrecer horarios para agendar. Si el cliente pidió un día específico (ej. "el viernes", "mañana", "lunes"), pon "date":"YYYY-MM-DD" de ese día para entregarle todos sus turnos disponibles. Si pidió tarde pon shift:"afternoon"; si pidió mañana pon shift:"morning". Reply es opcional.',
         '- {"action":"book_slot","startUtc":"<uno de los horarios que el sistema ofreció, en ISO UTC>","reply":"..."} — agendar el horario que el cliente eligió.',
-        '- {"action":"cancel_slot","reply":"..."} — cancelar la cita agendada activa del cliente cuando este lo solicite directamente (sin transferir a un humano).',
+        '- {"action":"cancel_slot","reason":"<motivo resumido de cancelación>","reply":"..."} — cancelar la cita activa del cliente. SOLO úsalo cuando el cliente ya haya indicado el motivo de cancelación.',
       ]
     : [];
   const agendaRules = input.agenda
     ? [
-        "- NUNCA escribas tú los horarios ni los inventes: usa offer_slots y el sistema pega los reales.",
-        "- book_slot solo acepta un horario que el sistema ofreció antes en ESTA conversación. Si el cliente pide otro día u horario, vuelve a ofrecer con offer_slots.",
-        "- Si el cliente pide CANCELAR su cita actual → usa la acción cancel_slot. Confírmale con amabilidad que su cita fue cancelada y pregúntale si desea reagendar.",
-        "- Si el cliente pide REAGENDAR o cambiar su cita → usa cancel_slot o ofrece nuevos horarios con offer_slots y luego confirma el nuevo horario con book_slot.",
-        "- Si el cliente pide horarios por la tarde o por la mañana → usa offer_slots con el turno correspondiente para entregarle opciones adecuadas.",
+        "- NUNCA redactes tú los horarios ni inventes horas: usa siempre offer_slots y el sistema formateará los horarios reales con tarjetas limpias y visuales.",
+        "- book_slot solo acepta un horario que el sistema ofreció antes en ESTA conversación.",
+        "- PROTOCOLO OBLIGATORIO DE CANCELACIÓN:",
+        "  • Si el cliente dice que quiere cancelar su cita pero NO ha dado el motivo (ej: 'Quiero cancelar esa cita', 'cancela mi turno'): NO canceles de inmediato. Responde primero con action 'reply' preguntando amablemente el motivo para tenerlo registrado y ofreciéndole también la posibilidad de reprogramar si lo prefiere.",
+        "    Ejemplo: 'Lamento que tengas que cancelar tu cita. ¿Podrías indicarme el motivo de la cancelación para tenerlo registrado? (O si prefieres, con gusto podemos simplemente reprogramarla para otra fecha u horario).'",
+        "  • Si el cliente ya dio el motivo (o responde con el motivo): usa la acción cancel_slot indicando 'reason' con el motivo resumido (ej: 'Emergencia laboral', 'Viaje', 'Salud'). En 'reply' confírmale con amabilidad que su cita fue cancelada y pregúntale si desea reagendar más adelante.",
+        "- CONSULTA DE HORARIOS Y DÍAS:",
+        "  • Si el cliente pide un día específico (ej: 'qué horarios tienes el viernes', 'tienes para mañana', 'el lunes qué horas hay'): usa offer_slots con 'date':'YYYY-MM-DD' de esa fecha para entregarle todos sus horarios de mañana y tarde.",
+        "  • Si el cliente pide ver más fechas o pregunta de forma general: usa offer_slots sin date.",
+        "  • Si pide en la tarde: usa offer_slots con shift:'afternoon'.",
         "- Solo transfiere a un asesor humano (handoff) si el cliente pide expresamente hablar con una persona, doctor o asesor.",
       ]
     : [];
