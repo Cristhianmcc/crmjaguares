@@ -5,6 +5,8 @@ import { isSuperAdminUser } from "@/server/auth/admin";
 import { getDb, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getPlan, type PlanId } from "@/lib/planes";
+import { newId } from "@/lib/db/ids";
+import { inferRubroPreset, RUBRO_PRESETS } from "@/lib/rubro-presets";
 
 export const dynamic = "force-dynamic";
 
@@ -103,13 +105,42 @@ export async function POST(req: Request) {
       })
       .where(eq(schema.organization.id, orgId));
 
+    const presetId = inferRubroPreset(rubro, businessName);
+    const preset = RUBRO_PRESETS[presetId];
+
     await db
       .update(schema.agentProfile)
       .set({
         name: businessName,
-        greeting: `¡Hola! Te damos la bienvenida a ${businessName}. ¿En qué te podemos ayudar hoy?`,
+        tone: preset.tone,
+        instructions: preset.instructions,
+        escalationRules: preset.escalationRules,
+        greeting: preset.greeting(businessName),
       })
       .where(eq(schema.agentProfile.organizationId, orgId));
+
+    const kbToInsert = [
+      ...preset.blocks.map((b) => ({
+        id: newId("kbEntry"),
+        organizationId: orgId,
+        kind: "block" as const,
+        content: b.content,
+        question: null,
+        answer: null,
+      })),
+      ...preset.qa.map((q) => ({
+        id: newId("kbEntry"),
+        organizationId: orgId,
+        kind: "qa" as const,
+        content: null,
+        question: q.question,
+        answer: q.answer,
+      })),
+    ];
+
+    if (kbToInsert.length > 0) {
+      await db.insert(schema.kbEntry).values(kbToInsert);
+    }
 
     return NextResponse.json({
       ok: true,

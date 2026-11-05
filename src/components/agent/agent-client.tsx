@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import type { RubroPresetId } from "@/lib/rubro-presets";
 import { BrainStatusCard } from "@/components/agent/brain-status-card";
 import { externalDown, type BrainStatusDto } from "@/lib/brain-status";
 import { Badge } from "@/components/ui/badge";
@@ -381,7 +382,29 @@ function KbSection({
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [block, setBlock] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState<RubroPresetId>("dental");
+  const [loadingPreset, setLoadingPreset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function loadRubroPreset(presetId: RubroPresetId) {
+    const ok = window.confirm(
+      "¿Deseas cargar la plantilla predefinida para este rubro? Se añadirán servicios, precios de referencia, preguntas frecuentes e instrucciones sugeridas para guiarte."
+    );
+    if (!ok) return;
+    setLoadingPreset(true);
+    try {
+      const res = await fetch("/api/agent/preset-rubro", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ presetId }),
+      });
+      if (res.ok) {
+        onChanged();
+      }
+    } finally {
+      setLoadingPreset(false);
+    }
+  }
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -448,6 +471,34 @@ function KbSection({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-brand-soft bg-brand-tint/40 p-2.5 text-xs">
+          <div className="flex items-center gap-1.5 text-foreground font-medium">
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
+            <span>Plantillas por rubro:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedPreset}
+              onChange={(e) => setSelectedPreset(e.target.value as RubroPresetId)}
+              className="h-8 rounded border bg-background px-2 text-xs"
+            >
+              <option value="dental">Clínica Dental / Odontología</option>
+              <option value="servicios">Servicios / Citas / Estética</option>
+              <option value="escuela">Escuela Deportiva / Talleres</option>
+              <option value="comercio">Comercio / Tienda</option>
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-medium"
+              onClick={() => void loadRubroPreset(selectedPreset)}
+              disabled={loadingPreset}
+            >
+              {loadingPreset ? "Cargando…" : "Cargar plantilla"}
+            </Button>
+          </div>
+        </div>
+
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Nuevo bloque de texto libre</p>
