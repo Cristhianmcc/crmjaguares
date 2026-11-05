@@ -42,6 +42,7 @@ export default async function AppLayout({
   const db = getDb();
   const orgRows = await db
     .select({
+      name: schema.organization.name,
       plan: schema.organization.plan,
       trialEndsAt: schema.organization.trialEndsAt,
       planExpiresAt: schema.organization.planExpiresAt,
@@ -52,7 +53,12 @@ export default async function AppLayout({
     .limit(1);
 
   const org = orgRows[0];
-  const rubro = org?.rubro ?? "servicios";
+  const isJaguaresOrSchool =
+    org?.rubro === "escuela" ||
+    (org?.name ?? "").toLowerCase().includes("jaguares") ||
+    branding.name.toLowerCase().includes("jaguares");
+
+  const rubro = isJaguaresOrSchool ? "escuela" : (org?.rubro ?? "servicios");
   const hasCupos = rubro === "escuela";
   const hasAgenda = rubro !== "escuela" && rubro !== "comercio";
 

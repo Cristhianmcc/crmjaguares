@@ -21,6 +21,7 @@ interface OrgItem {
   ownerEmail: string;
   ownerName: string;
   memberCount: number;
+  isCurrentOrg?: boolean;
 }
 
 export function AdminPanelClient() {
@@ -495,7 +496,14 @@ export function AdminPanelClient() {
                     return (
                       <tr key={org.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-semibold text-foreground">
-                          {org.name}
+                          <div className="flex items-center gap-2">
+                            <span>{org.name}</span>
+                            {org.isCurrentOrg && (
+                              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                                Tu cuenta actual
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-xs">
                           <p className="font-medium text-foreground">{org.ownerName}</p>

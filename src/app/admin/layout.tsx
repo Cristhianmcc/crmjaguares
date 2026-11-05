@@ -40,11 +40,11 @@ export default async function AdminLayout({
           <span className="text-xs text-muted-foreground hidden sm:inline">
             Admin: {session.user.email}
           </span>
-          <Link href="/inbox">
+          <a href="/inbox">
             <Button variant="outline" size="sm">
               Volver al CRM →
             </Button>
-          </Link>
+          </a>
         </div>
       </header>
       <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">{children}</main>

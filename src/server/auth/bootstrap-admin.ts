@@ -129,11 +129,12 @@ export async function syncSuperAdmin(): Promise<void> {
           .where(eq(schema.member.id, existingMembership[0].id));
       }
 
-      // Asegurar plan Pro ilimitado en la organización principal
+      // Asegurar plan Pro ilimitado y rubro escuela para la organización principal de Jaguares
       await db
         .update(schema.organization)
         .set({
           plan: "pro",
+          rubro: "escuela",
           planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000 * 10), // 10 años
         })
         .where(eq(schema.organization.id, primaryOrg.id));

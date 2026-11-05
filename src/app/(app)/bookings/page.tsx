@@ -22,13 +22,17 @@ export default async function BookingsPage({
 
   const db = getDb();
   const row = await db
-    .select({ rubro: schema.organization.rubro })
+    .select({ name: schema.organization.name, rubro: schema.organization.rubro })
     .from(schema.organization)
     .where(eq(schema.organization.id, session.organizationId))
     .limit(1);
 
-  const hasAgenda = agendaEnabled(row[0]?.rubro);
-  if (!hasAgenda) notFound();
+  const isSchool =
+    row[0]?.rubro === "escuela" ||
+    (row[0]?.name ?? "").toLowerCase().includes("jaguares") ||
+    (row[0]?.name ?? "").toLowerCase().includes("monterrial");
+
+  if (isSchool || !agendaEnabled(row[0]?.rubro)) notFound();
 
   const settings = await getSettings(session.organizationId);
   const params = await searchParams;

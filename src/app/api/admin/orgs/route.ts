@@ -60,10 +60,19 @@ export async function GET() {
     owners.map((o) => [o.organizationId, { email: o.ownerEmail, name: o.ownerName }])
   );
 
+  const adminMembership = await db
+    .select({ organizationId: schema.member.organizationId })
+    .from(schema.member)
+    .where(eq(schema.member.userId, session.user.id))
+    .limit(1);
+
+  const currentOrgId = adminMembership[0]?.organizationId;
+
   const result = orgs.map((org) => {
     const owner = ownerMap.get(org.id);
     return {
       ...org,
+      isCurrentOrg: org.id === currentOrgId,
       ownerEmail: owner?.email ?? "—",
       ownerName: owner?.name ?? "—",
       memberCount: memberMap.get(org.id) ?? 0,

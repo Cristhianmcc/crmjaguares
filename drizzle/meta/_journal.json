@@ -232,6 +232,13 @@
       "when": 1793836000000,
       "tag": "0032_rubro_and_verticals",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793838000000,
+      "tag": "0033_fix_primary_org_rubro",
+      "breakpoints": true
     }
   ]
 }
