@@ -7,6 +7,7 @@ import {
   getSettings,
   upsertSettings,
 } from "@/server/agenda/settings";
+import { getCalendarFeedToken } from "@/server/agenda/feed";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,35 @@ export const dynamic = "force-dynamic";
  * Jamás devuelve credenciales de un conector — esas viven en su propio
  * endpoint y solo salen como últimos 4 dígitos.
  */
-export const GET = withAuth(async (session) => {
+export const GET = withAuth(async (session, req: Request) => {
   if (!agendaEnabled()) return agendaDisabledResponse();
   const settings = await getSettings(session.organizationId);
-  return Response.json({ settings });
+  const token = getCalendarFeedToken(session.organizationId);
+
+  let host = "crm.jaguarescar.com";
+  let proto = "https";
+  if (req?.headers) {
+    host =
+      req.headers.get("x-forwarded-host") ||
+      req.headers.get("host") ||
+      "crm.jaguarescar.com";
+    proto =
+      req.headers.get("x-forwarded-proto") ||
+      (host.includes("localhost") ? "http" : "https");
+  }
+
+  const httpFeedUrl = `${proto}://${host}/api/calendar/feed?org=${session.organizationId}&token=${token}`;
+  const webcalUrl = `webcal://${host}/api/calendar/feed?org=${session.organizationId}&token=${token}`;
+  const googleCalUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`;
+
+  return Response.json({
+    settings,
+    sync: {
+      httpFeedUrl,
+      webcalUrl,
+      googleCalUrl,
+    },
+  });
 });
 
 const intervalSchema = z.object({

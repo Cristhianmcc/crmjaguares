@@ -39,6 +39,12 @@ type Settings = {
   meetingLink: string | null;
 };
 
+type SyncInfo = {
+  httpFeedUrl: string;
+  webcalUrl: string;
+  googleCalUrl: string;
+};
+
 const DAYS: { key: DayKey; label: string }[] = [
   { key: "mon", label: "Lunes" },
   { key: "tue", label: "Martes" },
@@ -53,6 +59,8 @@ const DEFAULT_INTERVAL: Interval = { start: "09:00", end: "18:00" };
 
 export function AgendaClient() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [sync, setSync] = useState<SyncInfo | null>(null);
+  const [copiedFeed, setCopiedFeed] = useState(false);
   const [slots, setSlots] = useState<{ label: string }[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +73,9 @@ export function AgendaClient() {
         fetch("/api/calendar/availability").catch(() => null),
       ]);
       if (cfg?.ok) {
-        const data = (await cfg.json()) as { settings: Settings };
+        const data = (await cfg.json()) as { settings: Settings; sync?: SyncInfo };
         setSettings(data.settings);
+        if (data.sync) setSync(data.sync);
       }
       if (avail?.ok) {
         const data = (await avail.json()) as { slots: { label: string }[] };
@@ -98,30 +107,28 @@ export function AgendaClient() {
     patch({ weeklyHours });
   }
 
-  function setIntervalAt(day: DayKey, index: number, next: Partial<Interval>) {
+  function updateInterval(day: DayKey, index: number, next: Partial<Interval>) {
     if (!settings) return;
-    const intervals = [...(settings.weeklyHours[day] ?? [])];
-    const current = intervals[index];
+    const list = [...(settings.weeklyHours[day] ?? [])];
+    const current = list[index];
     if (!current) return;
-    intervals[index] = { ...current, ...next };
-    patch({ weeklyHours: { ...settings.weeklyHours, [day]: intervals } });
+    list[index] = { ...current, ...next };
+    patch({ weeklyHours: { ...settings.weeklyHours, [day]: list } });
   }
 
   function addInterval(day: DayKey) {
     if (!settings) return;
-    const intervals = [...(settings.weeklyHours[day] ?? [])];
-    intervals.push({ start: "16:00", end: "18:00" });
-    patch({ weeklyHours: { ...settings.weeklyHours, [day]: intervals } });
+    const list = [...(settings.weeklyHours[day] ?? [])];
+    list.push({ start: "14:00", end: "18:00" });
+    patch({ weeklyHours: { ...settings.weeklyHours, [day]: list } });
   }
 
   function removeInterval(day: DayKey, index: number) {
     if (!settings) return;
-    const intervals = (settings.weeklyHours[day] ?? []).filter(
-      (_, i) => i !== index
-    );
+    const list = (settings.weeklyHours[day] ?? []).filter((_, i) => i !== index);
     const weeklyHours = { ...settings.weeklyHours };
-    if (intervals.length === 0) delete weeklyHours[day];
-    else weeklyHours[day] = intervals;
+    if (list.length === 0) delete weeklyHours[day];
+    else weeklyHours[day] = list;
     patch({ weeklyHours });
   }
 
@@ -130,107 +137,200 @@ export function AgendaClient() {
     setSaving(true);
     setError(null);
     setSaved(false);
-    const res = await fetch("/api/calendar/settings", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        weeklyHours: settings.weeklyHours,
-        slotMinutes: settings.slotMinutes,
-        bufferMinutes: settings.bufferMinutes,
-        minNoticeHours: settings.minNoticeHours,
-        maxDaysAhead: settings.maxDaysAhead,
-        timezone: settings.timezone.trim(),
-        connector: settings.connector,
-        meetingLink: settings.meetingLink?.trim()
-          ? settings.meetingLink.trim()
-          : null,
-      }),
-    }).catch(() => null);
-    setSaving(false);
-    if (!res?.ok) {
-      const data = (await res?.json().catch(() => null)) as {
-        error?: { message?: string };
-      } | null;
-      setError(data?.error?.message ?? "No se pudo guardar");
-      return;
+    try {
+      const res = await fetch("/api/calendar/settings", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? `Error HTTP ${res.status}`);
+      }
+      setSaved(true);
+      await refreshPreview();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
     }
-    const data = (await res.json()) as { settings: Settings };
-    setSettings(data.settings);
-    setSaved(true);
-    void refreshPreview();
   }
 
-  if (!settings) return <p className="text-sm text-text-3">Cargando…</p>;
+  if (!settings) {
+    return <p className="text-sm text-text-3">Cargando configuración…</p>;
+  }
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-6">
+      {/* Sincronización con iPhone y Google Calendar con alertas */}
+      {sync && (
+        <Card className="border-primary/40 bg-gradient-to-r from-primary/5 via-card to-card shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">📲</span>
+              <div>
+                <CardTitle className="text-base font-bold text-foreground">
+                  Sincronizar Citas con tu Celular (Google Calendar & iPhone)
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Recibe notificaciones automáticas y alertas en tu teléfono cada vez que el bot agende una cita, sin necesidad de entrar al CRM.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3.5">
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <a
+                href={sync.webcalUrl}
+                className="flex-1"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  variant="default"
+                  className="w-full gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-xs h-9.5 shadow-sm"
+                >
+                  <span>🍏</span>
+                  <span>Suscribirse en iPhone / iPad / Mac</span>
+                </Button>
+              </a>
+
+              <a
+                href={sync.googleCalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1"
+              >
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-primary/40 hover:bg-primary/10 text-primary font-semibold text-xs h-9.5 shadow-sm"
+                >
+                  <span>📅</span>
+                  <span>Abrir en Google Calendar (Android / PC)</span>
+                </Button>
+              </a>
+
+              <Button
+                variant="outline"
+                className="text-xs h-9.5 px-3.5 gap-1.5 font-medium"
+                onClick={() => {
+                  navigator.clipboard.writeText(sync.httpFeedUrl);
+                  setCopiedFeed(true);
+                  setTimeout(() => setCopiedFeed(false), 3000);
+                }}
+              >
+                <span>{copiedFeed ? "✓ ¡Enlace Copiado!" : "📋 Copiar Enlace"}</span>
+              </Button>
+            </div>
+
+            <div className="rounded-lg border bg-background/90 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <span>🔔</span>
+                <span>¿Cómo funciona la sincronización automática?</span>
+              </p>
+              <p>
+                • <strong>En iPhone / iPad / Mac:</strong> Toca el botón negro y presiona <em>«Suscribirse»</em>. Las citas del bot aparecerán en tu app nativa Calendario con alarma de aviso 30 minutos antes.
+              </p>
+              <p>
+                • <strong>En Android / Google Calendar:</strong> Toca <em>«Abrir en Google Calendar»</em> o copia el enlace y pégalo en <em>Google Calendar → Otros calendarios (+) → Desde URL</em>. Te sonarán las notificaciones en tu app de Google Calendar.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Horario de atención</CardTitle>
           <CardDescription>
-            En qué franjas puede agendarte un cliente. Las horas son las de tu
-            zona; un día sin franjas está cerrado.
+            Los días y horas en que el negocio recibe citas. Fuera de aquí el
+            agente no ofrece huecos.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {DAYS.map((day) => {
-            const intervals = settings.weeklyHours[day.key] ?? [];
-            const open = intervals.length > 0;
+          {DAYS.map(({ key, label }) => {
+            const intervals = settings.weeklyHours[key];
+            const active = Boolean(intervals && intervals.length > 0);
             return (
-              <div key={day.key} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => toggleDay(day.key)}
-                  className={cn(
-                    "w-24 shrink-0 rounded-sm px-2 py-1 text-left text-sm font-medium transition-colors sm:mt-1",
-                    open
-                      ? "bg-brand-tint text-brand-text"
-                      : "text-text-3 hover:bg-accent"
-                  )}
-                >
-                  {day.label}
-                </button>
-                <div className="flex-1 space-y-1.5">
-                  {!open && <span className="text-sm text-text-3">Cerrado</span>}
-                  {intervals.map((iv, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={iv.start}
-                        onChange={(e) =>
-                          setIntervalAt(day.key, i, { start: e.target.value })
-                        }
-                        className="min-w-0 flex-1 sm:w-36 sm:flex-none"
-                      />
-                      <span className="text-text-3">a</span>
-                      <Input
-                        type="time"
-                        value={iv.end}
-                        onChange={(e) =>
-                          setIntervalAt(day.key, i, { end: e.target.value })
-                        }
-                        className="min-w-0 flex-1 sm:w-36 sm:flex-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeInterval(day.key, i)}
-                        className="text-sm text-text-3 hover:text-foreground"
-                        aria-label="Quitar franja"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {open && (
+              <div
+                key={key}
+                className={cn(
+                  "flex flex-col gap-2 rounded-sm border p-3 sm:flex-row sm:items-center sm:justify-between",
+                  active ? "border-border" : "border-dashed border-border-soft"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(key)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded-xs border text-xs font-semibold transition-colors",
+                      active
+                        ? "border-brand bg-brand text-brand-contrast"
+                        : "border-border bg-surface"
+                    )}
+                    aria-label={`Alternar ${label}`}
+                  >
+                    {active ? "✓" : ""}
+                  </button>
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      !active && "text-text-3"
+                    )}
+                  >
+                    {label}
+                  </span>
+                </div>
+
+                {active && (
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    {intervals?.map((it, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={it.start}
+                          onChange={(e) =>
+                            updateInterval(key, i, { start: e.target.value })
+                          }
+                          className="h-8 w-28 text-xs"
+                        />
+                        <span className="text-xs text-text-3">a</span>
+                        <Input
+                          type="time"
+                          value={it.end}
+                          onChange={(e) =>
+                            updateInterval(key, i, { end: e.target.value })
+                          }
+                          className="h-8 w-28 text-xs"
+                        />
+                        {intervals.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeInterval(key, i)}
+                            className="text-xs text-text-3 hover:text-danger-text"
+                            aria-label="Quitar franja"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
                     <button
                       type="button"
-                      onClick={() => addInterval(day.key)}
+                      onClick={() => addInterval(key)}
                       className="text-xs text-brand-text hover:underline"
                     >
                       + otra franja
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {!active && (
+                  <span className="text-xs text-text-3">Cerrado</span>
+                )}
               </div>
             );
           })}
@@ -240,8 +340,12 @@ export function AgendaClient() {
       <Card>
         <CardHeader>
           <CardTitle>Cómo se generan los huecos</CardTitle>
+          <CardDescription>
+            La duración de cada cita, cuánto margen dejar y con cuánta
+            anticipación se puede agendar.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="slot">Duración de la cita (min)</Label>
             <Input
@@ -249,6 +353,7 @@ export function AgendaClient() {
               type="number"
               min={10}
               max={240}
+              step={5}
               value={settings.slotMinutes}
               onChange={(e) => patch({ slotMinutes: Number(e.target.value) })}
             />
@@ -259,7 +364,8 @@ export function AgendaClient() {
               id="buffer"
               type="number"
               min={0}
-              max={120}
+              max={60}
+              step={5}
               value={settings.bufferMinutes}
               onChange={(e) => patch({ bufferMinutes: Number(e.target.value) })}
             />
@@ -286,14 +392,17 @@ export function AgendaClient() {
               onChange={(e) => patch({ maxDaysAhead: Number(e.target.value) })}
             />
           </div>
-          <div className="col-span-2 space-y-1.5">
+          <div className="col-span-1 sm:col-span-2 space-y-1.5">
             <Label htmlFor="tz">Zona horaria</Label>
             <Input
               id="tz"
               value={settings.timezone}
               onChange={(e) => patch({ timezone: e.target.value })}
-              placeholder="America/Mexico_City"
+              placeholder="America/Lima"
             />
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Zona horaria oficial de Perú: <span className="font-mono text-foreground font-semibold">America/Lima</span> (UTC -05:00).
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -302,9 +411,8 @@ export function AgendaClient() {
         <CardHeader>
           <CardTitle>Cómo se entrega la reunión</CardTitle>
           <CardDescription>
-            El enlace fijo no depende de nadie. Los demás conectan con tu propia
-            cuenta del proveedor y, si alguna vez falla, la cita se agenda igual
-            y el enlace queda pendiente de reintentar.
+            El enlace fijo no depende de nadie y es ideal para citas presenciales. Los demás conectan con tu propia
+            cuenta del proveedor si realizas videollamadas.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -332,7 +440,7 @@ export function AgendaClient() {
                   {meta.label}
                   {!meta.external && (
                     <span className="ml-2 text-[11px] font-normal text-text-3">
-                      sin dependencias
+                      sin dependencias (recomendado para locales físicos)
                     </span>
                   )}
                 </span>
@@ -348,18 +456,16 @@ export function AgendaClient() {
       {settings.connector === "enlace-fijo" && (
         <Card>
           <CardHeader>
-            <CardTitle>Tu sala de siempre</CardTitle>
+            <CardTitle>Dirección del local o Sala virtual</CardTitle>
             <CardDescription>
-              Se comparte tal cual al confirmar una cita. Si lo dejas vacío, las
-              citas se agendan igual y sin enlace — nadie promete un enlace que
-              no existe.
+              Se comparte tal cual al confirmar una cita. Si atiendes de forma presencial, puedes colocar aquí la dirección del consultorio o local.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Input
               value={settings.meetingLink ?? ""}
               onChange={(e) => patch({ meetingLink: e.target.value })}
-              placeholder="https://…  (opcional)"
+              placeholder="Ej: Av. Larco 456, Consultorio 301 (opcional)"
             />
           </CardContent>
         </Card>
@@ -367,9 +473,9 @@ export function AgendaClient() {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} disabled={saving}>
-          {saving ? "Guardando…" : "Guardar"}
+          {saving ? "Guardando…" : "Guardar Configuración"}
         </Button>
-        {saved && <span className="text-sm text-brand-text">Guardado</span>}
+        {saved && <span className="text-sm text-brand-text">✓ Guardado</span>}
         {error && <span className="text-sm text-destructive">{error}</span>}
       </div>
 
@@ -383,7 +489,7 @@ export function AgendaClient() {
         <CardHeader>
           <CardTitle>Próximos huecos</CardTitle>
           <CardDescription>
-            Lo que se le ofrecería a un cliente ahora mismo.
+            Lo que se le ofrecería a un cliente ahora mismo según tu zona horaria.
           </CardDescription>
         </CardHeader>
         <CardContent>

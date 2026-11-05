@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Smartphone } from "lucide-react";
 import { MAX_RANGE_DAYS, type CalendarView } from "@/lib/time/calendar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function CalendarToolbar({
   onView,
   onListRange,
   onBlock,
+  onSync,
 }: {
   view: CalendarView;
   anchor: string;
@@ -51,6 +52,7 @@ export function CalendarToolbar({
   onView: (view: CalendarView) => void;
   onListRange: (from: string, to: string) => void;
   onBlock: () => void;
+  onSync?: () => void;
 }) {
   const picker = useRef<HTMLInputElement>(null);
 
@@ -58,75 +60,73 @@ export function CalendarToolbar({
     <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 sm:px-6">
       <h2 className="mr-1 text-[17px] font-bold tracking-tight">Citas</h2>
 
-      <div className="flex items-center gap-1">
-        <Button variant="outline" size="sm" onClick={onToday}>
-          Hoy
-        </Button>
-        <NavButton label={`${PERIOD[view]} anterior`} onClick={() => onShift(-1)}>
+      <Button variant="outline" size="sm" onClick={onToday}>
+        Hoy
+      </Button>
+
+      <div className="flex items-center">
+        <NavButton label={`anterior ${PERIOD[view]}`} onClick={() => onShift(-1)}>
           <ChevronLeft className="h-4 w-4" />
         </NavButton>
-        <NavButton label={`${PERIOD[view]} siguiente`} onClick={() => onShift(1)}>
+        <NavButton label={`siguiente ${PERIOD[view]}`} onClick={() => onShift(1)}>
           <ChevronRight className="h-4 w-4" />
         </NavButton>
       </div>
 
-      {view === "lista" ? (
-        <div className="flex flex-wrap items-center gap-1.5 text-sm">
-          <label className="sr-only" htmlFor="lista-desde">
-            Desde
-          </label>
-          <input
-            id="lista-desde"
-            type="date"
-            value={anchor}
-            onChange={(e) => e.target.value && onListRange(e.target.value, listTo)}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand-soft"
-          />
-          <span className="text-text-3">al</span>
-          <label className="sr-only" htmlFor="lista-hasta">
-            Hasta
-          </label>
-          <input
-            id="lista-hasta"
-            type="date"
-            value={listTo}
-            min={anchor}
-            onChange={(e) => e.target.value && onListRange(anchor, e.target.value)}
-            title={`Hasta ${MAX_RANGE_DAYS} días`}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand-soft"
-          />
-        </div>
-      ) : (
-        <span className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              const el = picker.current;
-              if (!el) return;
-              try {
-                el.showPicker();
-              } catch {
-                el.focus();
-              }
-            }}
-            className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[17px] font-semibold tracking-tight hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft"
-            aria-label={`${label}. Elegir otra fecha`}
-          >
-            {label}
-            <ChevronDown className="h-4 w-4 text-text-3" />
-          </button>
-          {/* El selector nativo, anclado bajo la etiqueta: el del sistema es el
-              que mejor funciona en el celular. */}
+      {view !== "lista" ? (
+        <button
+          type="button"
+          onClick={() => {
+            if (!picker.current) return;
+            if (typeof picker.current.showPicker === "function") {
+              picker.current.showPicker();
+            } else {
+              picker.current.focus();
+            }
+          }}
+          className="relative inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-base font-semibold tracking-tight hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft"
+          aria-label={`Saltar a fecha. Mostrando: ${label}`}
+        >
+          <span>{label}</span>
+          <ChevronDown className="h-4 w-4 text-text-3" />
           <input
             ref={picker}
             type="date"
             tabIndex={-1}
-            aria-hidden
+            aria-hidden="true"
             value={anchor}
-            onChange={(e) => e.target.value && onJump(e.target.value)}
-            className="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0"
+            onChange={(e) => {
+              if (e.target.value) onJump(e.target.value);
+            }}
+            className="pointer-events-none absolute bottom-0 left-0 h-0 w-0 opacity-0"
           />
-        </span>
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1.5 text-sm">
+          <span className="text-text-3">Del</span>
+          <input
+            type="date"
+            aria-label="Inicio del rango"
+            value={anchor}
+            max={listTo}
+            onChange={(e) => {
+              if (e.target.value) onListRange(e.target.value, listTo);
+            }}
+            className="h-8 rounded-sm border bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft"
+          />
+          <span className="text-text-3">al</span>
+          <input
+            type="date"
+            aria-label="Fin del rango"
+            value={listTo}
+            min={anchor}
+            onChange={(e) => {
+              if (e.target.value) onListRange(anchor, e.target.value);
+            }}
+            className="h-8 rounded-sm border bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft"
+          />
+          <span className="text-xs text-text-3">({label})</span>
+        </div>
       )}
 
       {loading && (
@@ -150,6 +150,20 @@ export function CalendarToolbar({
             </button>
           ))}
         </div>
+
+        {onSync && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onSync}
+            className="gap-1.5 text-xs h-8 border-primary/30 hover:bg-primary/10 text-primary font-medium"
+            title="Sincronizar citas con Google Calendar y iPhone"
+          >
+            <Smartphone className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Sincronizar Celular</span>
+          </Button>
+        )}
+
         <Button size="sm" onClick={onBlock} aria-label="Bloquear horario">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Bloquear horario</span>

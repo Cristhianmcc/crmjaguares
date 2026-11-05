@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvents } from "@/components/use-events";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   LIST_DEFAULT_DAYS,
   MAX_RANGE_DAYS,
@@ -104,6 +112,28 @@ export function BookingsClient({
   const [notice, setNotice] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
   const seq = useRef(0);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncInfo, setSyncInfo] = useState<{
+    webcalUrl: string;
+    googleCalUrl: string;
+    httpFeedUrl: string;
+  } | null>(null);
+  const [copiedSync, setCopiedSync] = useState(false);
+
+  async function openSyncModal() {
+    setSyncModalOpen(true);
+    if (!syncInfo) {
+      try {
+        const res = await fetch("/api/calendar/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.sync) setSyncInfo(data.sync);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   useEffect(() => {
     setShowCancelled(readPref(CANCELLED_KEY) === "1");
@@ -332,6 +362,7 @@ export function BookingsClient({
         onView={changeView}
         onListRange={changeListRange}
         onBlock={() => openBlock()}
+        onSync={openSyncModal}
       />
 
       {/* En escritorio ancho el panel de la cita EMPUJA el calendario en vez
@@ -429,6 +460,92 @@ export function BookingsClient({
           />
         )}
       </div>
+
+
+      {syncModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-lg shadow-2xl border-primary/40 bg-card">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                  <span>📲</span>
+                  <span>Sincronizar Citas con tu Celular</span>
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setSyncModalOpen(false)}>
+                  ✕
+                </Button>
+              </div>
+              <CardDescription className="text-xs text-muted-foreground mt-1">
+                Conecta tus citas con iPhone (Apple Calendar) o Android (Google Calendar) para recibir notificaciones automáticas y alarmas en tu teléfono.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {syncInfo ? (
+                <>
+                  <div className="flex flex-col gap-2.5">
+                    <a
+                      href={syncInfo.webcalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full"
+                    >
+                      <Button
+                        variant="default"
+                        className="w-full gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-xs h-10 shadow-sm"
+                      >
+                        <span>🍏</span>
+                        <span>Suscribirse en iPhone / iPad / Mac (1 Clic)</span>
+                      </Button>
+                    </a>
+
+                    <a
+                      href={syncInfo.googleCalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full"
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 border-primary/40 hover:bg-primary/10 text-primary font-semibold text-xs h-10 shadow-sm"
+                      >
+                        <span>📅</span>
+                        <span>Abrir en Google Calendar (Android / PC)</span>
+                      </Button>
+                    </a>
+
+                    <Button
+                      variant="outline"
+                      className="w-full text-xs h-9.5 gap-2 font-medium"
+                      onClick={() => {
+                        navigator.clipboard.writeText(syncInfo.httpFeedUrl);
+                        setCopiedSync(true);
+                        setTimeout(() => setCopiedSync(false), 3000);
+                      }}
+                    >
+                      <span>{copiedSync ? "✓ ¡Enlace de suscripción copiado!" : "📋 Copiar Enlace Directo (iCal)"}</span>
+                    </Button>
+                  </div>
+
+                  <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1.5 leading-relaxed">
+                    <p className="font-semibold text-foreground flex items-center gap-1.5">
+                      <span>🔔</span>
+                      <span>¿Cómo funciona la sincronización?</span>
+                    </p>
+                    <p>
+                      • <strong>En iPhone / Mac:</strong> Haz clic en el botón negro y dale a <em>«Suscribirse»</em>. Las citas agendadas por la IA aparecerán en tu calendario del celular con alarma 30 minutos antes.
+                    </p>
+                    <p>
+                      • <strong>En Android / Google Calendar:</strong> Haz clic en <em>«Abrir en Google Calendar»</em> o copia el enlace y pégalo en <em>Google Calendar → Otros calendarios (+) → Desde URL</em>.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-center py-4 text-muted-foreground">Cargando enlaces de sincronización…</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {blockDraft && (
         <BlockDialog

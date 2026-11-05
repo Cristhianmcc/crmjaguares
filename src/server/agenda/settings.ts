@@ -21,7 +21,7 @@ import {
 
 export type WeeklyHours = Partial<Record<WeekdayKey, Interval[]>>;
 
-export const DEFAULT_TIMEZONE = "America/Mexico_City";
+export const DEFAULT_TIMEZONE = "America/Lima";
 
 /** L-V 09:00-18:00 — se ajusta en Ajustes → Agenda. */
 export const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
@@ -84,7 +84,7 @@ export async function getSettings(
     bufferMinutes: row.bufferMinutes,
     minNoticeHours: row.minNoticeHours,
     maxDaysAhead: row.maxDaysAhead,
-    timezone: row.timezone,
+    timezone: row.timezone === "America/Mexico_City" ? "America/Lima" : row.timezone,
     // Un conector que ya no existe en el código (p. ej. venías de un fork) no
     // puede dejar la agenda inservible: se degrada al soberano.
     connector: isConnectorId(row.connector) ? row.connector : DEFAULT_CONNECTOR,
