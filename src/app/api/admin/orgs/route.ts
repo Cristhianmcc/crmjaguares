@@ -27,6 +27,7 @@ export async function GET() {
       id: schema.organization.id,
       name: schema.organization.name,
       plan: schema.organization.plan,
+      rubro: schema.organization.rubro,
       createdAt: schema.organization.createdAt,
       trialEndsAt: schema.organization.trialEndsAt,
       planExpiresAt: schema.organization.planExpiresAt,

@@ -5,28 +5,30 @@ import { clampListTo, isCalendarView, isIsoDate } from "@/lib/time/calendar";
 import { todayInTz } from "@/lib/time/slots";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { getSettings } from "@/server/agenda/settings";
+import { getDb, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 type Params = { vista?: string; fecha?: string; desde?: string; hasta?: string };
 
-/**
- * 215 — Citas en calendario. La vista y la fecha viven en la URL
- * (`?vista=semana&fecha=2026-09-18`, o `desde`/`hasta` en la Lista) para que
- * recargar o compartir el enlace abra en el mismo sitio.
- *
- * "Hoy" se decide aquí, en la zona del NEGOCIO: el navegador de quien mira
- * puede estar en otra.
- */
 export default async function BookingsPage({
   searchParams,
 }: {
   searchParams: Promise<Params>;
 }) {
-  // Sin la bandera esta pantalla no existe en esta instancia.
-  if (!agendaEnabled()) notFound();
   const session = await getSessionOrNull();
   if (!session) redirect("/login");
+
+  const db = getDb();
+  const row = await db
+    .select({ rubro: schema.organization.rubro })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, session.organizationId))
+    .limit(1);
+
+  const hasAgenda = agendaEnabled(row[0]?.rubro);
+  if (!hasAgenda) notFound();
 
   const settings = await getSettings(session.organizationId);
   const params = await searchParams;

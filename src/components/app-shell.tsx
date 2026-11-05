@@ -29,6 +29,7 @@ export function AppShell({
   apariencia,
   commit,
   agenda = false,
+  cupos = true,
   kicker,
   aviso = null,
   children,
@@ -41,6 +42,7 @@ export function AppShell({
   apariencia: Apariencia;
   commit?: ResolvedCommit;
   agenda?: boolean;
+  cupos?: boolean;
   kicker?: string;
   aviso?: React.ReactNode;
   children: React.ReactNode;
@@ -83,6 +85,7 @@ export function AppShell({
         planExpired={planExpired}
         apariencia={apariencia}
         agenda={agenda}
+        cupos={cupos}
         kicker={kicker}
         open={navOpen}
         onClose={() => setNavOpen(false)}

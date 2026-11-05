@@ -18,10 +18,8 @@ import { canConfigure } from "@/lib/auth/roles";
  * #87 — El modelo del menú, separado del componente que lo pinta.
  *
  * Qué entradas existen lo deciden dos cosas que el nav de cliente no puede
- * leer solo: las banderas de la instancia (`AGENDA`, `CHANNELS`, `ATRIBUCION`,
- * que bajan por prop desde el servidor) y el rol de quien mira. Tenerlo aquí,
- * sin React, deja que una prueba unitaria afirme qué aparece y qué no sin
- * dibujar nada.
+ * leer solo: las banderas de la instancia y de la organización (`rubro`),
+ * y el rol de quien mira.
  */
 
 export type NavItem = {
@@ -51,10 +49,13 @@ export const SETTINGS_ITEM: NavItem = {
  */
 export function appNavGroups({
   agenda = false,
+  cupos = true,
   role,
 }: {
-  /** 015 — "Citas" solo existe si esta instancia encendió la agenda. */
+  /** "Citas" solo existe si esta organización encendió la agenda (salud, dental, servicios). */
   agenda?: boolean;
+  /** "Cupos" solo existe si esta organización es escuela deportiva / academia. */
+  cupos?: boolean;
   /** #86 — La guía de inicio solo para quien puede configurar. */
   role?: string | null;
 }): NavGroup[] {
@@ -62,14 +63,17 @@ export function appNavGroups({
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
     { href: "/pipeline", label: "Embudo", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
-    // La malla de horarios de la escuela: se consulta al contestar, no es una
-    // pantalla de administración, por eso va con el trabajo del día.
-    { href: "/cupos", label: "Cupos", icon: CalendarClock },
-    { href: "/campanas", label: "Campañas", icon: Megaphone },
   ];
-  // Citas va después de Contactos: es el paso siguiente de un trato, no una
-  // sección aparte.
-  if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });
+
+  if (cupos) {
+    trabajo.push({ href: "/cupos", label: "Cupos", icon: CalendarClock });
+  }
+
+  trabajo.push({ href: "/campanas", label: "Campañas", icon: Megaphone });
+
+  if (agenda) {
+    trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });
+  }
 
   const agente: NavItem[] = [];
   // Un miembro del equipo no puede hacer ninguno de los pasos de la guía.
@@ -98,12 +102,7 @@ export type SettingsSection = {
 
 /**
  * Ajustes en tres secciones: por dónde entran los mensajes, qué hace el agente
- * con ellos y lo que es del negocio. Una pestaña por canal no escala; una
- * sección por canal, sí: cada canal nuevo cae en "Canales" sin tocar el resto.
- *
- * Instagram no tiene pantalla propia todavía: sus credenciales se guardan
- * por API (`/api/settings/instagram`). Cuando la tenga, va aquí tras
- * `CHANNELS`, igual que Messenger.
+ * con ellos y lo que es del negocio.
  */
 export function settingsSections({
   agenda = false,
@@ -123,8 +122,6 @@ export function settingsSections({
   tiktok?: boolean;
 }): SettingsSection[] {
   const canales: SettingsLink[] = [];
-  // 023 — "Estado" reúne todos los canales; con WhatsApp solo no aporta nada
-  // que su pantalla no diga, así que no existe (ADR-001).
   if (instagram || messenger || tiktok) {
     canales.push({ href: "/settings/channels", label: "Estado" });
   }
@@ -133,16 +130,13 @@ export function settingsSections({
   if (messenger) canales.push({ href: "/settings/messenger", label: "Messenger" });
   if (tiktok) canales.push({ href: "/settings/tiktok", label: "TikTok" });
 
-  // #85 — el proveedor de IA se configura aquí; el entorno queda de respaldo.
   const agente: SettingsLink[] = [{ href: "/settings/ai", label: "IA" }];
   if (agenda) agente.push({ href: "/settings/calendar", label: "Agenda" });
 
   const negocio: SettingsLink[] = [
     { href: "/settings/branding", label: "Marca" },
-    // 062 — Tema, letra, tamaño y densidad (cada quien la suya).
     { href: "/settings/appearance", label: "Apariencia" },
     { href: "/settings/templates", label: "Plantillas" },
-    // 049 — lo que el equipo inserta con «/atajo» en la Bandeja.
     { href: "/settings/quick-replies", label: "Respuestas rápidas" },
     { href: "/settings/team", label: "Equipo" },
   ];

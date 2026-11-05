@@ -167,7 +167,13 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
     .where(eq(schema.pipelineStage.organizationId, organizationId))
     .orderBy(asc(schema.pipelineStage.position));
 
-  const agenda = agendaEnabled();
+  const orgRow = await db
+    .select({ rubro: schema.organization.rubro })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, organizationId))
+    .limit(1);
+
+  const agenda = agendaEnabled(orgRow[0]?.rubro);
 
   /**
    * 015 — Los huecos vigentes, con su instante exacto.

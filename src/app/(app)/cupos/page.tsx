@@ -1,14 +1,30 @@
+import { notFound, redirect } from "next/navigation";
 import { CuposClient } from "@/components/escuela/cupos-client";
 import { cargarCupos } from "@/server/escuela/client";
+import { getSessionOrNull } from "@/lib/auth/session";
+import { getDb, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Cupos de la escuela. La primera carga se hace en el servidor para que la
- * pantalla no parpadee; el botón «Actualizar» vuelve a preguntar por la API
- * con `refresh=true` (salta el caché de 300 s del backend de la escuela).
+ * Cupos de la escuela. Solo accesible para organizaciones cuyo rubro sea "escuela".
  */
 export default async function CuposPage() {
+  const session = await getSessionOrNull();
+  if (!session) redirect("/login");
+
+  const db = getDb();
+  const row = await db
+    .select({ rubro: schema.organization.rubro })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, session.organizationId))
+    .limit(1);
+
+  if (row[0]?.rubro !== "escuela") {
+    notFound();
+  }
+
   const data = await cargarCupos();
   return (
     <CuposClient

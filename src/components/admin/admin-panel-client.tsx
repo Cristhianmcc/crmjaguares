@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
+export type RubroId = "servicios" | "escuela" | "comercio";
+
 interface OrgItem {
   id: string;
   name: string;
   plan: PlanId;
+  rubro?: string;
   createdAt: string;
   trialEndsAt: string | null;
   planExpiresAt: string | null;
@@ -30,6 +33,7 @@ export function AdminPanelClient() {
     email: string;
     password: string;
     planNombre: string;
+    rubro: string;
   } | null>(null);
 
   // Formulario de creación
@@ -38,6 +42,7 @@ export function AdminPanelClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("trial");
+  const [selectedRubro, setSelectedRubro] = useState<RubroId>("servicios");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -85,6 +90,7 @@ export function AdminPanelClient() {
           email,
           password,
           plan: selectedPlan,
+          rubro: selectedRubro,
           durationDays: selectedPlan === "trial" ? 14 : 30,
         }),
       });
@@ -100,6 +106,7 @@ export function AdminPanelClient() {
         email,
         password,
         planNombre: PLANES[selectedPlan].nombre,
+        rubro: selectedRubro,
       });
 
       // Limpiar formulario y recargar
@@ -108,6 +115,7 @@ export function AdminPanelClient() {
       setEmail("");
       setPassword("");
       setSelectedPlan("trial");
+      setSelectedRubro("servicios");
       setShowCreateModal(false);
       void fetchOrgs();
     } catch (err: unknown) {
@@ -122,9 +130,38 @@ export function AdminPanelClient() {
       const res = await fetch(`/api/admin/orgs/${orgId}/plan`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: newPlan }),
+        body: JSON.stringify({ plan: newPlan, durationDays: 30 }),
       });
       if (res.ok) {
+        setNoticeModal({
+          title: "Plan actualizado",
+          message: `El plan del cliente ha sido cambiado a ${PLANES[newPlan].nombre}.`,
+        });
+        void fetchOrgs();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleRubroChange(orgId: string, newRubro: string) {
+    try {
+      const res = await fetch(`/api/admin/orgs/${orgId}/rubro`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rubro: newRubro }),
+      });
+      if (res.ok) {
+        setNoticeModal({
+          title: "Módulo / Rubro actualizado",
+          message: `El negocio ahora tiene activo el módulo de ${
+            newRubro === "servicios"
+              ? "Citas y Calendario con Google Calendar"
+              : newRubro === "escuela"
+              ? "Malla de Cupos de Escuela"
+              : "Comercio General"
+          }.`,
+        });
         void fetchOrgs();
       }
     } catch {
@@ -141,7 +178,10 @@ export function AdminPanelClient() {
         body: JSON.stringify({ plan: planToSet, durationDays: 30 }),
       });
       if (res.ok) {
-        setNoticeModal({ title: "Suscripción Extendida", message: "Se han añadido exitosamente +30 días de servicio al negocio." });
+        setNoticeModal({
+          title: "Suscripción Extendida",
+          message: "Se han añadido exitosamente +30 días de servicio al negocio.",
+        });
         void fetchOrgs();
       }
     } catch {
@@ -149,14 +189,22 @@ export function AdminPanelClient() {
     }
   }
 
+  const moduloTexto =
+    createdData?.rubro === "servicios"
+      ? "📅 Módulo: Citas, Calendario interactivo y agendamiento con Google Calendar\n"
+      : createdData?.rubro === "escuela"
+      ? "⚽ Módulo: Malla de Cupos y horarios por categoría\n"
+      : "";
+
   const whatsappMessage = createdData
     ? `¡Hola ${createdData.clientName}! Tu cuenta en el CRM de WhatsApp ya está lista:\n\n` +
       `🏢 Negocio: ${createdData.businessName}\n` +
-      `🌐 Acceso: ${window.location.origin}\n` +
+      `🌐 Acceso: ${typeof window !== "undefined" ? window.location.origin : "https://crm.jaguarescar.com"}\n` +
       `📧 Usuario: ${createdData.email}\n` +
       `🔑 Contraseña: ${createdData.password}\n` +
-      `📊 Plan: ${createdData.planNombre}\n\n` +
-      `Inicia sesión para conectar tu WhatsApp y comenzar a responder a tus clientes.`
+      `📊 Plan: ${createdData.planNombre}\n` +
+      moduloTexto +
+      `\nInicia sesión para conectar tu WhatsApp y comenzar a responder a tus clientes.`
     : "";
 
   function copyWhatsApp() {
@@ -174,25 +222,31 @@ export function AdminPanelClient() {
 
   return (
     <div className="space-y-6">
-      {/* Barra superior con métricas y botón de creación */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Administración de Clientes</h1>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            Administración de Clientes
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Crea cuentas llave en mano para tus clientes, administra sus planes y vigencias.
+            Crea cuentas llave en mano para tus clientes, administra sus planes y módulos según su rubro.
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2 font-semibold">
-          <span>+</span>
-          <span>Crear Nueva Cuenta de Cliente</span>
+        <Button
+          onClick={() => {
+            generatePassword();
+            setShowCreateModal(true);
+          }}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
+        >
+          + Crear Nueva Cuenta de Cliente
         </Button>
       </div>
 
-      {/* Tarjetas de estadísticas */}
+      {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Negocios</p>
-          <p className="text-2xl font-bold">{totalOrgs}</p>
+          <p className="text-2xl font-bold text-foreground">{totalOrgs}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Prueba Gratuita</p>
@@ -247,7 +301,7 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* Modal vistoso de confirmación para acciones (como +30 días) */}
+      {/* Modal vistoso de confirmación para acciones (como +30 días o cambio de rubro) */}
       {noticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-50">
           <Card className="w-full max-w-sm shadow-2xl border-emerald-500/30 text-center p-6 space-y-4 bg-card">
@@ -271,7 +325,7 @@ export function AdminPanelClient() {
       {/* Modal de Creación */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <Card className="w-full max-w-lg shadow-xl animate-in fade-in-50">
+          <Card className="w-full max-w-lg shadow-xl animate-in fade-in-50 max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Crear Cuenta para Cliente</CardTitle>
@@ -280,7 +334,7 @@ export function AdminPanelClient() {
                 </Button>
               </div>
               <CardDescription>
-                Habilita al cliente al instante. El sistema creará su usuario, su organización y su embudo.
+                Habilita al cliente al instante con su rubro y módulos a medida.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -290,20 +344,40 @@ export function AdminPanelClient() {
                   <Input
                     id="clientName"
                     required
-                    placeholder="Ej: Carlos Ramos"
+                    placeholder="Ej: Dra. Valeria Gómez"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="businessName">Nombre del Negocio / Colegio</Label>
+                  <Label htmlFor="businessName">Nombre del Negocio / Empresa</Label>
                   <Input
                     id="businessName"
                     required
-                    placeholder="Ej: Colegio San Agustín"
+                    placeholder="Ej: Clínica Dental Sonrisas"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="rubro">Rubro / Módulos de Trabajo</Label>
+                  <select
+                    id="rubro"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium"
+                    value={selectedRubro}
+                    onChange={(e) => setSelectedRubro(e.target.value as RubroId)}
+                  >
+                    <option value="servicios">🦷 Citas / Salud / Dental / Consultorio (Calendario con IA + Google Calendar)</option>
+                    <option value="escuela">⚽ Escuela Deportiva / Talleres (Malla de Cupos por categorías)</option>
+                    <option value="comercio">🛍️ Comercio / Ventas Generales (Sin citas ni cupos)</option>
+                  </select>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {selectedRubro === "servicios"
+                      ? "✓ Activa Citas, horarios semanales, Google Calendar y agendamiento automático por IA."
+                      : selectedRubro === "escuela"
+                      ? "✓ Activa la malla de Cupos por categorías para academias deportivas."
+                      : "✓ Deja la interfaz limpia: Bandeja, Embudo, Contactos y Campañas masivas."}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="email">Correo del Cliente (Usuario de acceso)</Label>
@@ -311,7 +385,7 @@ export function AdminPanelClient() {
                     id="email"
                     type="email"
                     required
-                    placeholder="director@sanagustin.edu.pe"
+                    placeholder="contacto@clinicasonrisas.pe"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -353,12 +427,16 @@ export function AdminPanelClient() {
 
                 {formError && <p className="text-xs text-destructive">{formError}</p>}
 
-                <div className="flex justify-end gap-2 pt-3">
-                  <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? "Creando…" : "Crear y Habilitar Cliente"}
+                    {submitting ? "Creando cuenta…" : "Dar de Alta Cliente"}
                   </Button>
                 </div>
               </form>
@@ -367,12 +445,12 @@ export function AdminPanelClient() {
         </div>
       )}
 
-      {/* Tabla de organizaciones */}
+      {/* Lista de clientes registrados */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Clientes Registrados ({orgs.length})</CardTitle>
+        <CardHeader>
+          <CardTitle>Clientes Registrados ({orgs.length})</CardTitle>
           <CardDescription>
-            Puedes cambiar el plan de cualquier cliente o añadirle +30 días con un clic.
+            Puedes cambiar el plan de cualquier cliente, añadirle +30 días o cambiar su rubro/módulo con un clic.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -382,6 +460,7 @@ export function AdminPanelClient() {
                 <tr>
                   <th className="py-3 px-4 text-left">Negocio</th>
                   <th className="py-3 px-4 text-left">Dueño / Correo</th>
+                  <th className="py-3 px-4 text-left">Rubro / Módulo</th>
                   <th className="py-3 px-4 text-left">Plan Actual</th>
                   <th className="py-3 px-4 text-left">Vigencia / Vencimiento</th>
                   <th className="py-3 px-4 text-left">Creado</th>
@@ -391,13 +470,13 @@ export function AdminPanelClient() {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
                       Cargando clientes…
                     </td>
                   </tr>
                 ) : orgs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
                       No hay negocios registrados aún.
                     </td>
                   </tr>
@@ -421,6 +500,17 @@ export function AdminPanelClient() {
                         <td className="py-3 px-4 text-xs">
                           <p className="font-medium text-foreground">{org.ownerName}</p>
                           <p className="text-muted-foreground">{org.ownerEmail}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <select
+                            className="text-xs rounded border bg-background px-2 py-1 font-medium"
+                            value={org.rubro || "servicios"}
+                            onChange={(e) => void handleRubroChange(org.id, e.target.value)}
+                          >
+                            <option value="servicios">🦷 Citas / Dental</option>
+                            <option value="escuela">⚽ Escuela (Cupos)</option>
+                            <option value="comercio">🛍️ Comercio</option>
+                          </select>
                         </td>
                         <td className="py-3 px-4">
                           <select
@@ -467,4 +557,3 @@ export function AdminPanelClient() {
     </div>
   );
 }
-

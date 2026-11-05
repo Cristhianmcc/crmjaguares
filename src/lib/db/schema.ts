@@ -83,6 +83,7 @@ export const organization = pgTable("organization", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
   plan: text("plan").notNull().default("trial"),
+  rubro: text("rubro").notNull().default("servicios"),
   trialEndsAt: timestamp("trial_ends_at"),
   planExpiresAt: timestamp("plan_expires_at"),
   stripeCustomerId: text("stripe_customer_id"),

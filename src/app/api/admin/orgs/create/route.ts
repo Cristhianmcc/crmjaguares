@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     const email = (body.email || "").trim().toLowerCase();
     const password = (body.password || "").trim();
     const planId = (body.plan || "trial") as PlanId;
+    const rubro = (body.rubro || "servicios").trim();
     const durationDays = Number(body.durationDays) || (planId === "trial" ? 14 : 30);
 
     if (!clientName || !businessName || !email || !password) {
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       .set({
         name: businessName,
         plan: plan.id,
+        rubro,
         trialEndsAt: isTrial ? expiresAt : null,
         planExpiresAt: !isTrial ? expiresAt : null,
       })
@@ -111,6 +113,7 @@ export async function POST(req: Request) {
       password,
       plan: plan.id,
       planNombre: plan.nombre,
+      rubro,
       durationDays,
       expiresAt: expiresAt.toISOString(),
     });

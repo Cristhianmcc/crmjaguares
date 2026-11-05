@@ -38,19 +38,24 @@ export default async function AppLayout({
   // Verificación de Super Admin (solo el dueño real de la plataforma ve el panel)
   const isSuperAdmin = await isSuperAdminUser(session.userId, authSession?.user.email ?? "");
 
-  // Verificación de expiración de plan
+  // Verificación de expiración de plan y rubro de negocio
   const db = getDb();
   const orgRows = await db
     .select({
       plan: schema.organization.plan,
       trialEndsAt: schema.organization.trialEndsAt,
       planExpiresAt: schema.organization.planExpiresAt,
+      rubro: schema.organization.rubro,
     })
     .from(schema.organization)
     .where(eq(schema.organization.id, session.organizationId))
     .limit(1);
 
   const org = orgRows[0];
+  const rubro = org?.rubro ?? "servicios";
+  const hasCupos = rubro === "escuela";
+  const hasAgenda = rubro !== "escuela" && rubro !== "comercio";
+
   const planActive = isSuperAdmin || !org || isPlanActive({
     plan: (org.plan || "trial") as PlanId,
     trialEndsAt: org.trialEndsAt,
@@ -66,7 +71,8 @@ export default async function AppLayout({
       planExpired={!planActive}
       apariencia={apariencia}
       commit={resolveCommit()}
-      agenda={agendaEnabled()}
+      agenda={hasAgenda}
+      cupos={hasCupos}
       kicker={navKicker([...enabledChannels()])}
       aviso={<AvisoIaBanner aviso={aviso} />}
     >
